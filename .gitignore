@@ -1,0 +1,30 @@
+# 依赖
+node_modules/
+.pnpm-store/
+
+# 构建产物
+dist/
+.tmp/
+*.tsbuildinfo
+
+# 音频（体积大，本地生成；见 scripts/build-audio.py）
+public/audio/tracks/
+public/audio/words/
+public/audio/manifest.json
+
+# 密钥（绝不入库）
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# 系统
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 截图/临时
+shot-*.png
+_*.png

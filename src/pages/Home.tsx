@@ -1,0 +1,148 @@
+import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import Shell from '../components/Shell'
+import { useStore } from '../lib/store'
+import { levelOf, BADGES } from '../lib/gamify'
+import { DAILY, UNITS, FINALS } from '../lib/data'
+import { dueWrongWords, todayStr } from '../lib/storage'
+import type { Track } from '../types'
+
+type Tab = 'daily' | 'unit' | 'final'
+
+export default function Home() {
+  const nav = useNavigate()
+  const { progress } = useStore()
+  const [tab, setTab] = useState<Tab>('daily')
+
+  const lv = levelOf(progress.points)
+  const pct = Math.min(100, Math.round(((progress.points - lv.cur) / Math.max(1, lv.next - lv.cur)) * 100))
+  const due = dueWrongWords(progress)
+
+  // 下一个该做的
+  const nextTask = useMemo(() => {
+    const un = DAILY.find(d => !progress.best[d.id])
+    return un || DAILY[0]
+  }, [progress.best])
+
+  const todayMin = progress.minutes[todayStr()] || 0
+  const doneCount = Object.keys(progress.best).length
+  const wrongCount = Object.keys(progress.wrong).length
+  const acc = progress.totalAnswers ? Math.round((progress.totalRight / progress.totalAnswers) * 100) : 0
+
+  const list = tab === 'daily' ? DAILY : tab === 'unit' ? UNITS : FINALS
+
+  return (
+    <Shell title="英语听写" right={
+      <button className="iconbtn" onClick={() => nav('/settings')} aria-label="设置">⚙️</button>
+    }>
+      {/* 等级总览 */}
+      <div className="hero">
+        <div className="lv">LEVEL {lv.lv}</div>
+        <div className="nm">{lv.name}</div>
+        <div className="bar"><i style={{ width: pct + '%' }} /></div>
+        <div className="meta">
+          <div><b>{progress.points}</b>积分</div>
+          <div><b>{progress.streakDays}</b>连续天数</div>
+          <div><b>{todayMin}</b>今日分钟</div>
+        </div>
+      </div>
+
+      {/* 继续上次 */}
+      {nextTask && (
+        <div className="card pad" style={{ marginBottom: 14 }}>
+          <div className="between" style={{ marginBottom: 12 }}>
+            <div>
+              <div className="sub">接下来练习</div>
+              <div style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>
+                {nextTask.label || `第 ${nextTask.order} 天`}
+                <span className="sub" style={{ fontWeight: 400, marginLeft: 8, fontSize: 13 }}>
+                  {nextTask.wordCount} 词
+                </span>
+              </div>
+            </div>
+            <div style={{ fontSize: 30 }}>🎧</div>
+          </div>
+          <button className="btn" onClick={() => nav(`/d/${nextTask.id}`)}>
+            ▶ 开始听写
+          </button>
+        </div>
+      )}
+
+      {/* 待复习提示 */}
+      {due.length > 0 && (
+        <div className="card pad" style={{ marginBottom: 14, borderColor: '#f0d69a', background: 'linear-gradient(180deg,#fffdf5,#fff)' }}>
+          <div className="between">
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 15 }}>
+                🔔 今天该复习 {due.length} 个错词
+              </div>
+              <div className="sub small" style={{ marginTop: 3 }}>
+                按遗忘曲线排的，现在复习效果最好
+              </div>
+            </div>
+            <button className="btn gold sm" onClick={() => nav('/review')}>去复习</button>
+          </div>
+        </div>
+      )}
+
+      {/* 统计格 */}
+      <div className="stats">
+        <div className="stat"><b>{doneCount}</b><span>完成任务</span></div>
+        <div className="stat"><b>{acc}%</b><span>总正确率</span></div>
+        <div className="stat"><b>{wrongCount}</b><span>待巩固</span></div>
+        <div className="stat"><b>{Object.keys(progress.badges).length}</b><span>成就</span></div>
+      </div>
+
+      {/* 任务列表 */}
+      <div className="tabs">
+        {([['daily', '每日课程'], ['unit', '单元测试'], ['final', '期末模考']] as const).map(([k, t]) => (
+          <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{t}</button>
+        ))}
+      </div>
+
+      <div className="grid">
+        {list.map(t => <Cell key={t.id} t={t} />)}
+      </div>
+
+      {/* 成就墙 */}
+      <div className="card pad" style={{ marginTop: 16 }}>
+        <div style={{ fontWeight: 800, marginBottom: 12 }}>
+          🏅 成就墙
+          <span className="sub small" style={{ fontWeight: 400, marginLeft: 8 }}>
+            {Object.keys(progress.badges).length} / {BADGES.length}
+          </span>
+        </div>
+        <div className="badges">
+          {BADGES.map(b => (
+            <div key={b.id} className={'bg' + (progress.badges[b.id] ? ' got' : '')} title={b.desc}>
+              <div className="i">{b.icon}</div>
+              <div className="n">{b.name}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Shell>
+  )
+}
+
+function Cell({ t }: { t: Track }) {
+  const nav = useNavigate()
+  const { progress } = useStore()
+  const best = progress.best[t.id]
+
+  const cls = !best ? '' : best.score >= 90 ? 's100' : best.score >= 60 ? 's60' : 's0'
+  const title = t.kind === 'daily' ? `第 ${t.order} 天`
+    : t.kind === 'unit' ? `Unit ${String(t.order).padStart(2, '0')}`
+      : `期末 ${String(t.order).padStart(2, '0')}`
+
+  // 每日听写 → 逐题反馈模式；单元/期末 → 整卷模考模式
+  const go = () => t.kind === 'daily' ? nav(`/d/${t.id}`) : nav(`/exam/${t.id}`)
+
+  return (
+    <button className={'cell' + (best ? ' done' : '')} onClick={go}>
+      <div className="n">{title}</div>
+      <div className="t">{t.wordCount} 词</div>
+      {best ? <div className={'s ' + cls}>{best.score}%</div> : <div className="t">未做</div>}
+    </button>
+  )
+}

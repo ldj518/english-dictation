@@ -1,0 +1,3314 @@
+[
+ {
+  "word": "hold on",
+  "pos": "",
+  "cn": "别挂断电话；等一等",
+  "cnFull": "别挂断电话；等一等",
+  "firstTask": "day01",
+  "dayNo": 1,
+  "unit": "unit01"
+ },
+ {
+  "word": "darling",
+  "pos": "n",
+  "cn": "亲爱的；宝贝",
+  "cnFull": "n.亲爱的；宝贝",
+  "firstTask": "day01",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "right now",
+  "pos": "",
+  "cn": "现在；立刻",
+  "cnFull": "现在；立刻",
+  "firstTask": "day01",
+  "dayNo": 3,
+  "unit": "unit01"
+ },
+ {
+  "word": "at the moment",
+  "pos": "",
+  "cn": "现在；此刻",
+  "cnFull": "现在；此刻",
+  "firstTask": "day01",
+  "dayNo": 4,
+  "unit": "unit01"
+ },
+ {
+  "word": "work on",
+  "pos": "",
+  "cn": "做；从事",
+  "cnFull": "做；从事",
+  "firstTask": "day01",
+  "dayNo": 5,
+  "unit": "unit01"
+ },
+ {
+  "word": "programme",
+  "pos": "n",
+  "cn": "节目；课程；程序",
+  "cnFull": "n.节目；课程；程序",
+  "firstTask": "day01",
+  "dayNo": 6,
+  "unit": "unit01"
+ },
+ {
+  "word": "hold",
+  "pos": "v",
+  "cn": "拿着；抓住",
+  "cnFull": "v.拿着；抓住",
+  "firstTask": "day01",
+  "dayNo": 7,
+  "unit": ""
+ },
+ {
+  "word": "ride",
+  "pos": "v",
+  "cn": "骑 n.旅程",
+  "cnFull": "v.骑 n.旅程",
+  "firstTask": "day01",
+  "dayNo": 8,
+  "unit": "unit01"
+ },
+ {
+  "word": "moment",
+  "pos": "n",
+  "cn": "某个时刻；片刻；瞬间",
+  "cnFull": "n.某个时刻；片刻；瞬间",
+  "firstTask": "day01",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "voice",
+  "pos": "n",
+  "cn": "嗓音；声音",
+  "cnFull": "n.嗓音；声音",
+  "firstTask": "day01",
+  "dayNo": 10,
+  "unit": ""
+ },
+ {
+  "word": "call back",
+  "pos": "",
+  "cn": "回电话",
+  "cnFull": "回电话",
+  "firstTask": "day02",
+  "dayNo": 1,
+  "unit": "unit01"
+ },
+ {
+  "word": "shuttlecock",
+  "pos": "n",
+  "cn": "羽毛球",
+  "cnFull": "n.羽毛球",
+  "firstTask": "day02",
+  "dayNo": 2,
+  "unit": "unit03"
+ },
+ {
+  "word": "could",
+  "pos": "modal v",
+  "cn": "能；可以",
+  "cnFull": "modal v.能；可以",
+  "firstTask": "day02",
+  "dayNo": 3,
+  "unit": "unit01"
+ },
+ {
+  "word": "somebody",
+  "pos": "pron",
+  "cn": "某人；有人",
+  "cnFull": "pron.某人；有人",
+  "firstTask": "day02",
+  "dayNo": 4,
+  "unit": "unit01"
+ },
+ {
+  "word": "kick",
+  "pos": "v",
+  "cn": "踢；踹",
+  "cnFull": "v.踢；踹",
+  "firstTask": "day02",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "take a message",
+  "pos": "",
+  "cn": "捎个口信",
+  "cnFull": "捎个口信",
+  "firstTask": "day02",
+  "dayNo": 6,
+  "unit": "unit01"
+ },
+ {
+  "word": "wow",
+  "pos": "interj",
+  "cn": "哇；呀",
+  "cnFull": "interj.哇；呀",
+  "firstTask": "day02",
+  "dayNo": 7,
+  "unit": "unit01"
+ },
+ {
+  "word": "leave a message",
+  "pos": "",
+  "cn": "留个口信",
+  "cnFull": "留个口信",
+  "firstTask": "day02",
+  "dayNo": 8,
+  "unit": "unit01"
+ },
+ {
+  "word": "sight",
+  "pos": "n",
+  "cn": "名胜；风景；视力",
+  "cnFull": "n.名胜；风景；视力",
+  "firstTask": "day02",
+  "dayNo": 9,
+  "unit": "unit02"
+ },
+ {
+  "word": "message",
+  "pos": "n",
+  "cn": "消息；信息",
+  "cnFull": "n.消息；信息",
+  "firstTask": "day02",
+  "dayNo": 10,
+  "unit": ""
+ },
+ {
+  "word": "happen",
+  "pos": "v",
+  "cn": "发生",
+  "cnFull": "v.发生",
+  "firstTask": "day03",
+  "dayNo": 1,
+  "unit": "unit01"
+ },
+ {
+  "word": "exam",
+  "pos": "n",
+  "cn": "考试",
+  "cnFull": "n.考试",
+  "firstTask": "day03",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "in a hurry",
+  "pos": "",
+  "cn": "匆忙",
+  "cnFull": "匆忙",
+  "firstTask": "day03",
+  "dayNo": 3,
+  "unit": "unit01"
+ },
+ {
+  "word": "around the world",
+  "pos": "",
+  "cn": "世界各地",
+  "cnFull": "世界各地",
+  "firstTask": "day03",
+  "dayNo": 4,
+  "unit": "unit01"
+ },
+ {
+  "word": "forward",
+  "pos": "adv",
+  "cn": "向前",
+  "cnFull": "adv.向前",
+  "firstTask": "day03",
+  "dayNo": 5,
+  "unit": "unit03"
+ },
+ {
+  "word": "look forward to",
+  "pos": "",
+  "cn": "盼望",
+  "cnFull": "盼望",
+  "firstTask": "day03",
+  "dayNo": 6,
+  "unit": "unit01"
+ },
+ {
+  "word": "time zone",
+  "pos": "",
+  "cn": "时区",
+  "cnFull": "时区",
+  "firstTask": "day03",
+  "dayNo": 7,
+  "unit": "unit01"
+ },
+ {
+  "word": "skate",
+  "pos": "v",
+  "cn": "滑冰",
+  "cnFull": "v.滑冰",
+  "firstTask": "day03",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "rush",
+  "pos": "v",
+  "cn": "& n.冲；奔",
+  "cnFull": "v. & n.冲；奔",
+  "firstTask": "day03",
+  "dayNo": 9,
+  "unit": "unit02"
+ },
+ {
+  "word": "zone",
+  "pos": "n",
+  "cn": "地区；地带；区域",
+  "cnFull": "n.地区；地带；区域",
+  "firstTask": "day03",
+  "dayNo": 10,
+  "unit": "unit01"
+ },
+ {
+  "word": "subway",
+  "pos": "n",
+  "cn": "地铁",
+  "cnFull": "n.地铁",
+  "firstTask": "day04",
+  "dayNo": 1,
+  "unit": ""
+ },
+ {
+  "word": "side by side",
+  "pos": "",
+  "cn": "并排；并肩地",
+  "cnFull": "并排；并肩地",
+  "firstTask": "day04",
+  "dayNo": 2,
+  "unit": "unit01"
+ },
+ {
+  "word": "such",
+  "pos": "adj",
+  "cn": "这样的；那样的 pron.这样（那样）的人或事物",
+  "cnFull": "adj.这样的；那样的 pron.这样（那样）的人或事物",
+  "firstTask": "day04",
+  "dayNo": 3,
+  "unit": "unit01"
+ },
+ {
+  "word": "slowly",
+  "pos": "adv",
+  "cn": "缓慢地",
+  "cnFull": "adv.缓慢地",
+  "firstTask": "day04",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "brightly",
+  "pos": "adv",
+  "cn": "明亮地",
+  "cnFull": "adv.明亮地",
+  "firstTask": "day04",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "painting",
+  "pos": "n",
+  "cn": "绘画作品；绘画；油画",
+  "cnFull": "n.绘画作品；绘画；油画",
+  "firstTask": "day04",
+  "dayNo": 6,
+  "unit": ""
+ },
+ {
+  "word": "colourful",
+  "pos": "adj",
+  "cn": "色彩鲜艳的",
+  "cnFull": "adj.色彩鲜艳的",
+  "firstTask": "day04",
+  "dayNo": 7,
+  "unit": ""
+ },
+ {
+  "word": "shine",
+  "pos": "v",
+  "cn": "发光；照耀 n.光亮",
+  "cnFull": "v.发光；照耀 n.光亮",
+  "firstTask": "day04",
+  "dayNo": 8,
+  "unit": "unit01"
+ },
+ {
+  "word": "market",
+  "pos": "n",
+  "cn": "市场",
+  "cnFull": "n.市场",
+  "firstTask": "day04",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "side",
+  "pos": "n",
+  "cn": "边；侧",
+  "cnFull": "n.边；侧",
+  "firstTask": "day04",
+  "dayNo": 10,
+  "unit": ""
+ },
+ {
+  "word": "central",
+  "pos": "adj",
+  "cn": "中心的；中央的",
+  "cnFull": "adj.中心的；中央的",
+  "firstTask": "day05",
+  "dayNo": 1,
+  "unit": "unit01"
+ },
+ {
+  "word": "drop off",
+  "pos": "",
+  "cn": "开车）把某人送到某处",
+  "cnFull": "开车）把某人送到某处",
+  "firstTask": "day05",
+  "dayNo": 2,
+  "unit": "unit01"
+ },
+ {
+  "word": "explain",
+  "pos": "v",
+  "cn": "解释；说明",
+  "cnFull": "v.解释；说明",
+  "firstTask": "day05",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "sunshine",
+  "pos": "n",
+  "cn": "阳光",
+  "cnFull": "n.阳光",
+  "firstTask": "day05",
+  "dayNo": 4,
+  "unit": "unit02"
+ },
+ {
+  "word": "drop",
+  "pos": "v",
+  "cn": "中途卸客；落下 n.滴；下降",
+  "cnFull": "v.中途卸客；落下 n.滴；下降",
+  "firstTask": "day05",
+  "dayNo": 5,
+  "unit": "unit01"
+ },
+ {
+  "word": "drive",
+  "pos": "v",
+  "cn": "开车；驾驶",
+  "cnFull": "v.开车；驾驶",
+  "firstTask": "day05",
+  "dayNo": 6,
+  "unit": ""
+ },
+ {
+  "word": "take part in",
+  "pos": "",
+  "cn": "参加",
+  "cnFull": "参加",
+  "firstTask": "day05",
+  "dayNo": 7,
+  "unit": "unit01"
+ },
+ {
+  "word": "passenger",
+  "pos": "n",
+  "cn": "乘客",
+  "cnFull": "n.乘客",
+  "firstTask": "day05",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "bright",
+  "pos": "adj",
+  "cn": "鲜艳的；明亮的；聪明的",
+  "cnFull": "adj.鲜艳的；明亮的；聪明的",
+  "firstTask": "day05",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "Beth",
+  "pos": "",
+  "cn": "贝丝",
+  "cnFull": "贝丝",
+  "firstTask": "day06",
+  "dayNo": 1,
+  "unit": "unit01"
+ },
+ {
+  "word": "Kenya",
+  "pos": "",
+  "cn": "肯尼亚",
+  "cnFull": "肯尼亚",
+  "firstTask": "day06",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "Central Park",
+  "pos": "",
+  "cn": "中央公园",
+  "cnFull": "中央公园",
+  "firstTask": "day06",
+  "dayNo": 3,
+  "unit": "unit01"
+ },
+ {
+  "word": "rush hour",
+  "pos": "",
+  "cn": "上下班时的）交通高峰期",
+  "cnFull": "上下班时的）交通高峰期",
+  "firstTask": "day06",
+  "dayNo": 4,
+  "unit": "unit01"
+ },
+ {
+  "word": "Nairobi",
+  "pos": "",
+  "cn": "内罗毕",
+  "cnFull": "内罗毕",
+  "firstTask": "day06",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "USA",
+  "pos": "",
+  "cn": "美国",
+  "cnFull": "美国",
+  "firstTask": "day06",
+  "dayNo": 6,
+  "unit": "unit02"
+ },
+ {
+  "word": "New York",
+  "pos": "",
+  "cn": "纽约",
+  "cnFull": "纽约",
+  "firstTask": "day06",
+  "dayNo": 7,
+  "unit": "unit01"
+ },
+ {
+  "word": "Mid-Autumn Festival",
+  "pos": "",
+  "cn": "中秋节",
+  "cnFull": "中秋节",
+  "firstTask": "day06",
+  "dayNo": 8,
+  "unit": "unit01"
+ },
+ {
+  "word": "Adam",
+  "pos": "",
+  "cn": "亚当",
+  "cnFull": "亚当",
+  "firstTask": "day06",
+  "dayNo": 9,
+  "unit": "unit01"
+ },
+ {
+  "word": "stormy",
+  "pos": "adj",
+  "cn": "有暴风雨（或暴风雪）的",
+  "cnFull": "adj.有暴风雨（或暴风雪）的",
+  "firstTask": "day08",
+  "dayNo": 1,
+  "unit": "unit02"
+ },
+ {
+  "word": "east",
+  "pos": "n",
+  "cn": "东部；东；东方",
+  "cnFull": "n.东部；东；东方",
+  "firstTask": "day08",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "dry",
+  "pos": "adj",
+  "cn": "干的；干旱的",
+  "cnFull": "adj.干的；干旱的",
+  "firstTask": "day08",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "north",
+  "pos": "n",
+  "cn": "北部；北；北方",
+  "cnFull": "n.北部；北；北方",
+  "firstTask": "day08",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "stay in",
+  "pos": "",
+  "cn": "待在家里；没有外出",
+  "cnFull": "待在家里；没有外出",
+  "firstTask": "day08",
+  "dayNo": 5,
+  "unit": "unit02"
+ },
+ {
+  "word": "lightning",
+  "pos": "n",
+  "cn": "闪电",
+  "cnFull": "n.闪电",
+  "firstTask": "day08",
+  "dayNo": 6,
+  "unit": ""
+ },
+ {
+  "word": "lucky you",
+  "pos": "",
+  "cn": "你真幸运",
+  "cnFull": "你真幸运",
+  "firstTask": "day08",
+  "dayNo": 7,
+  "unit": "unit02"
+ },
+ {
+  "word": "lucky",
+  "pos": "adj",
+  "cn": "运气好的；带来好运的",
+  "cnFull": "adj.运气好的；带来好运的",
+  "firstTask": "day08",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "affect",
+  "pos": "v",
+  "cn": "影响",
+  "cnFull": "v.影响",
+  "firstTask": "day08",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "rain or shine",
+  "pos": "",
+  "cn": "不论是雨或是晴；不管发生什么事",
+  "cnFull": "不论是雨或是晴；不管发生什么事",
+  "firstTask": "day08",
+  "dayNo": 10,
+  "unit": "unit02"
+ },
+ {
+  "word": "south",
+  "pos": "n",
+  "cn": "南部；南；南方",
+  "cnFull": "n.南部；南；南方",
+  "firstTask": "day08",
+  "dayNo": 11,
+  "unit": ""
+ },
+ {
+  "word": "freezing",
+  "pos": "adj",
+  "cn": "极冷的；冰冻的",
+  "cnFull": "adj.极冷的；冰冻的",
+  "firstTask": "day09",
+  "dayNo": 1,
+  "unit": "unit02"
+ },
+ {
+  "word": "beach volleyball",
+  "pos": "",
+  "cn": "沙滩排球",
+  "cnFull": "沙滩排球",
+  "firstTask": "day09",
+  "dayNo": 2,
+  "unit": "unit02"
+ },
+ {
+  "word": "snowman",
+  "pos": "n",
+  "cn": "雪人（pl. snowmen）",
+  "cnFull": "n.雪人（pl. snowmen）",
+  "firstTask": "day09",
+  "dayNo": 3,
+  "unit": "unit03"
+ },
+ {
+  "word": "someday",
+  "pos": "adv",
+  "cn": "将来；有朝一日",
+  "cnFull": "adv.将来；有朝一日",
+  "firstTask": "day09",
+  "dayNo": 4,
+  "unit": "unit04"
+ },
+ {
+  "word": "magical",
+  "pos": "adj",
+  "cn": "魔法的；神奇的",
+  "cnFull": "adj.魔法的；神奇的",
+  "firstTask": "day09",
+  "dayNo": 5,
+  "unit": "unit02"
+ },
+ {
+  "word": "sunbathe",
+  "pos": "v",
+  "cn": "沐日光浴；晒太阳",
+  "cnFull": "v.沐日光浴；晒太阳",
+  "firstTask": "day09",
+  "dayNo": 6,
+  "unit": "unit03"
+ },
+ {
+  "word": "rock",
+  "pos": "n",
+  "cn": "岩石",
+  "cnFull": "n.岩石",
+  "firstTask": "day09",
+  "dayNo": 7,
+  "unit": ""
+ },
+ {
+  "word": "heavily",
+  "pos": "adv",
+  "cn": "大量地；猛烈地",
+  "cnFull": "adv.大量地；猛烈地",
+  "firstTask": "day09",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "feel like",
+  "pos": "",
+  "cn": "感觉像",
+  "cnFull": "感觉像",
+  "firstTask": "day09",
+  "dayNo": 9,
+  "unit": "unit02"
+ },
+ {
+  "word": "snowy",
+  "pos": "adj",
+  "cn": "下雪的；雪白的",
+  "cnFull": "adj.下雪的；雪白的",
+  "firstTask": "day09",
+  "dayNo": 10,
+  "unit": "unit02"
+ },
+ {
+  "word": "temperature",
+  "pos": "n",
+  "cn": "温度",
+  "cnFull": "n.温度",
+  "firstTask": "day09",
+  "dayNo": 11,
+  "unit": ""
+ },
+ {
+  "word": "through",
+  "pos": "prep",
+  "cn": "穿过；凭借",
+  "cnFull": "prep.穿过；凭借",
+  "firstTask": "day10",
+  "dayNo": 1,
+  "unit": "unit02"
+ },
+ {
+  "word": "rest",
+  "pos": "n",
+  "cn": "休息；剩余部分",
+  "cnFull": "n.休息；剩余部分",
+  "firstTask": "day10",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "glad",
+  "pos": "adj",
+  "cn": "高兴的",
+  "cnFull": "adj.高兴的",
+  "firstTask": "day10",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "peak",
+  "pos": "n",
+  "cn": "山顶；顶点",
+  "cnFull": "n.山顶；顶点",
+  "firstTask": "day10",
+  "dayNo": 4,
+  "unit": "unit02"
+ },
+ {
+  "word": "in high spirits",
+  "pos": "",
+  "cn": "情绪高涨；兴高采烈",
+  "cnFull": "情绪高涨；兴高采烈",
+  "firstTask": "day10",
+  "dayNo": 5,
+  "unit": "unit02"
+ },
+ {
+  "word": "area",
+  "pos": "n",
+  "cn": "场地；地区",
+  "cnFull": "n.场地；地区",
+  "firstTask": "day10",
+  "dayNo": 6,
+  "unit": "unit04"
+ },
+ {
+  "word": "experience",
+  "pos": "n",
+  "cn": "经历；经验 v.经历",
+  "cnFull": "n.经历；经验 v.经历",
+  "firstTask": "day10",
+  "dayNo": 7,
+  "unit": "unit02"
+ },
+ {
+  "word": "make progress",
+  "pos": "",
+  "cn": "取得进展",
+  "cnFull": "取得进展",
+  "firstTask": "day10",
+  "dayNo": 8,
+  "unit": "unit02"
+ },
+ {
+  "word": "although",
+  "pos": "conj",
+  "cn": "虽然；尽管",
+  "cnFull": "conj.虽然；尽管",
+  "firstTask": "day10",
+  "dayNo": 9,
+  "unit": "unit02"
+ },
+ {
+  "word": "still",
+  "pos": "adv",
+  "cn": "还；仍然",
+  "cnFull": "adv.还；仍然",
+  "firstTask": "day10",
+  "dayNo": 10,
+  "unit": "unit02"
+ },
+ {
+  "word": "rest area",
+  "pos": "",
+  "cn": "休息区",
+  "cnFull": "休息区",
+  "firstTask": "day10",
+  "dayNo": 11,
+  "unit": "unit02"
+ },
+ {
+  "word": "grey",
+  "pos": "adj",
+  "cn": "灰色的",
+  "cnFull": "adj.灰色的",
+  "firstTask": "day11",
+  "dayNo": 1,
+  "unit": "unit02"
+ },
+ {
+  "word": "at the start",
+  "pos": "",
+  "cn": "开始；起初",
+  "cnFull": "开始；起初",
+  "firstTask": "day11",
+  "dayNo": 2,
+  "unit": "unit02"
+ },
+ {
+  "word": "thought",
+  "pos": "n",
+  "cn": "想法",
+  "cnFull": "n.想法",
+  "firstTask": "day11",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "seem",
+  "pos": "v",
+  "cn": "似乎；好像",
+  "cnFull": "v.似乎；好像",
+  "firstTask": "day11",
+  "dayNo": 4,
+  "unit": "unit02"
+ },
+ {
+  "word": "ground",
+  "pos": "n",
+  "cn": "地面",
+  "cnFull": "n.地面",
+  "firstTask": "day11",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "because of",
+  "pos": "",
+  "cn": "因为",
+  "cnFull": "因为",
+  "firstTask": "day11",
+  "dayNo": 6,
+  "unit": "unit02"
+ },
+ {
+  "word": "tiring",
+  "pos": "adj",
+  "cn": "令人疲倦的；累人的",
+  "cnFull": "adj.令人疲倦的；累人的",
+  "firstTask": "day11",
+  "dayNo": 7,
+  "unit": ""
+ },
+ {
+  "word": "sunlight",
+  "pos": "n",
+  "cn": "阳光；日光",
+  "cnFull": "n.阳光；日光",
+  "firstTask": "day11",
+  "dayNo": 8,
+  "unit": "unit02"
+ },
+ {
+  "word": "wet",
+  "pos": "adj",
+  "cn": "湿的",
+  "cnFull": "adj.湿的",
+  "firstTask": "day11",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "at the top",
+  "pos": "",
+  "cn": "在顶部；在顶端",
+  "cnFull": "在顶部；在顶端",
+  "firstTask": "day11",
+  "dayNo": 10,
+  "unit": "unit02"
+ },
+ {
+  "word": "fog",
+  "pos": "n",
+  "cn": "雾",
+  "cnFull": "n.雾",
+  "firstTask": "day11",
+  "dayNo": 11,
+  "unit": ""
+ },
+ {
+  "word": "end",
+  "pos": "n",
+  "cn": "末尾；结束",
+  "cnFull": "n.末尾；结束",
+  "firstTask": "day12",
+  "dayNo": 1,
+  "unit": "unit02"
+ },
+ {
+  "word": "pour",
+  "pos": "v",
+  "cn": "倾倒；倒出",
+  "cnFull": "v.倾倒；倒出",
+  "firstTask": "day12",
+  "dayNo": 2,
+  "unit": "unit02"
+ },
+ {
+  "word": "Bright Peak",
+  "pos": "",
+  "cn": "光明顶",
+  "cnFull": "光明顶",
+  "firstTask": "day12",
+  "dayNo": 3,
+  "unit": "unit02"
+ },
+ {
+  "word": "John",
+  "pos": "",
+  "cn": "约翰",
+  "cnFull": "约翰",
+  "firstTask": "day12",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "run after",
+  "pos": "",
+  "cn": "追逐",
+  "cnFull": "追逐",
+  "firstTask": "day12",
+  "dayNo": 5,
+  "unit": "unit02"
+ },
+ {
+  "word": "shout",
+  "pos": "v",
+  "cn": "&n.喊叫；呼唤",
+  "cnFull": "v.&n.喊叫；呼唤",
+  "firstTask": "day12",
+  "dayNo": 6,
+  "unit": ""
+ },
+ {
+  "word": "at the end",
+  "pos": "",
+  "cn": "最后；在末尾",
+  "cnFull": "最后；在末尾",
+  "firstTask": "day12",
+  "dayNo": 7,
+  "unit": "unit02"
+ },
+ {
+  "word": "Anna",
+  "pos": "",
+  "cn": "安娜",
+  "cnFull": "安娜",
+  "firstTask": "day12",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "storm",
+  "pos": "n",
+  "cn": "暴风雨；暴风雪",
+  "cnFull": "n.暴风雨；暴风雪",
+  "firstTask": "day12",
+  "dayNo": 9,
+  "unit": "unit02"
+ },
+ {
+  "word": "Stockholm",
+  "pos": "",
+  "cn": "斯德哥尔摩",
+  "cnFull": "斯德哥尔摩",
+  "firstTask": "day12",
+  "dayNo": 10,
+  "unit": "unit02"
+ },
+ {
+  "word": "wind",
+  "pos": "n",
+  "cn": "风",
+  "cnFull": "n.风",
+  "firstTask": "day12",
+  "dayNo": 11,
+  "unit": ""
+ },
+ {
+  "word": "remove",
+  "pos": "v",
+  "cn": "移开；拿走",
+  "cnFull": "v.移开；拿走",
+  "firstTask": "day14",
+  "dayNo": 1,
+  "unit": "unit03"
+ },
+ {
+  "word": "wastewater",
+  "pos": "n",
+  "cn": "废水",
+  "cnFull": "n.废水",
+  "firstTask": "day14",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "museum",
+  "pos": "n",
+  "cn": "博物馆",
+  "cnFull": "n.博物馆",
+  "firstTask": "day14",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "piece",
+  "pos": "n",
+  "cn": "片；块",
+  "cnFull": "n.片；块",
+  "firstTask": "day14",
+  "dayNo": 4,
+  "unit": "unit03"
+ },
+ {
+  "word": "direction",
+  "pos": "n",
+  "cn": "方向",
+  "cnFull": "n.方向",
+  "firstTask": "day14",
+  "dayNo": 5,
+  "unit": "unit03"
+ },
+ {
+  "word": "waste",
+  "pos": "v",
+  "cn": "浪费 n.废弃物",
+  "cnFull": "v.浪费 n.废弃物",
+  "firstTask": "day14",
+  "dayNo": 6,
+  "unit": ""
+ },
+ {
+  "word": "plant",
+  "pos": "n",
+  "cn": "工厂",
+  "cnFull": "n.工厂",
+  "firstTask": "day14",
+  "dayNo": 7,
+  "unit": "unit03"
+ },
+ {
+  "word": "meet up",
+  "pos": "",
+  "cn": "碰头；相聚",
+  "cnFull": "碰头；相聚",
+  "firstTask": "day14",
+  "dayNo": 8,
+  "unit": "unit03"
+ },
+ {
+  "word": "into",
+  "pos": "prep",
+  "cn": "到……里面；进入",
+  "cnFull": "prep.到……里面；进入",
+  "firstTask": "day14",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "exhibition",
+  "pos": "n",
+  "cn": "展览",
+  "cnFull": "n.展览",
+  "firstTask": "day14",
+  "dayNo": 10,
+  "unit": "unit03"
+ },
+ {
+  "word": "step",
+  "pos": "n",
+  "cn": "步骤；脚步",
+  "cnFull": "n.步骤；脚步",
+  "firstTask": "day15",
+  "dayNo": 1,
+  "unit": "unit03"
+ },
+ {
+  "word": "used to",
+  "pos": "",
+  "cn": "过去常常（做）",
+  "cnFull": "过去常常（做）",
+  "firstTask": "day15",
+  "dayNo": 2,
+  "unit": "unit03"
+ },
+ {
+  "word": "machine",
+  "pos": "n",
+  "cn": "机器",
+  "cnFull": "n.机器",
+  "firstTask": "day15",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "factory",
+  "pos": "n",
+  "cn": "工厂",
+  "cnFull": "n.工厂",
+  "firstTask": "day15",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "inside",
+  "pos": "prep",
+  "cn": "在……里面 adv.在里面",
+  "cnFull": "prep.在……里面 adv.在里面",
+  "firstTask": "day15",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "process",
+  "pos": "n",
+  "cn": "过程",
+  "cnFull": "n.过程",
+  "firstTask": "day15",
+  "dayNo": 6,
+  "unit": ""
+ },
+ {
+  "word": "realise",
+  "pos": "v",
+  "cn": "认识到；实现",
+  "cnFull": "v.认识到；实现",
+  "firstTask": "day15",
+  "dayNo": 7,
+  "unit": "unit03"
+ },
+ {
+  "word": "theatre",
+  "pos": "n",
+  "cn": "戏院；剧场；电影院",
+  "cnFull": "n.戏院；剧场；电影院",
+  "firstTask": "day15",
+  "dayNo": 8,
+  "unit": "unit04"
+ },
+ {
+  "word": "germ",
+  "pos": "n",
+  "cn": "微生物；细菌",
+  "cnFull": "n.微生物；细菌",
+  "firstTask": "day15",
+  "dayNo": 9,
+  "unit": "unit03"
+ },
+ {
+  "word": "go on a trip",
+  "pos": "",
+  "cn": "去旅行",
+  "cnFull": "去旅行",
+  "firstTask": "day15",
+  "dayNo": 10,
+  "unit": "unit03"
+ },
+ {
+  "word": "road",
+  "pos": "n",
+  "cn": "道路",
+  "cnFull": "n.道路",
+  "firstTask": "day16",
+  "dayNo": 1,
+  "unit": "unit03"
+ },
+ {
+  "word": "along",
+  "pos": "prep",
+  "cn": "沿着；顺着",
+  "cnFull": "prep.沿着；顺着",
+  "firstTask": "day16",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "actor",
+  "pos": "n",
+  "cn": "演员",
+  "cnFull": "n.演员",
+  "firstTask": "day16",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "terrible",
+  "pos": "adj",
+  "cn": "糟糕的",
+  "cnFull": "adj.糟糕的",
+  "firstTask": "day16",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "skill",
+  "pos": "n",
+  "cn": "技能",
+  "cnFull": "n.技能",
+  "firstTask": "day16",
+  "dayNo": 5,
+  "unit": "unit05"
+ },
+ {
+  "word": "try on",
+  "pos": "",
+  "cn": "试穿",
+  "cnFull": "试穿",
+  "firstTask": "day16",
+  "dayNo": 6,
+  "unit": "unit03"
+ },
+ {
+  "word": "write down",
+  "pos": "",
+  "cn": "写下；记下",
+  "cnFull": "写下；记下",
+  "firstTask": "day16",
+  "dayNo": 7,
+  "unit": "unit03"
+ },
+ {
+  "word": "create",
+  "pos": "v",
+  "cn": "创造",
+  "cnFull": "v.创造",
+  "firstTask": "day16",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "gun",
+  "pos": "n",
+  "cn": "枪",
+  "cnFull": "n.枪",
+  "firstTask": "day16",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "record",
+  "pos": "v",
+  "cn": "记录 n.记录",
+  "cnFull": "v.记录 n.记录",
+  "firstTask": "day16",
+  "dayNo": 10,
+  "unit": ""
+ },
+ {
+  "word": "basket",
+  "pos": "n",
+  "cn": "篮子；筐",
+  "cnFull": "n.篮子；筐",
+  "firstTask": "day17",
+  "dayNo": 1,
+  "unit": "unit03"
+ },
+ {
+  "word": "straight",
+  "pos": "adv",
+  "cn": "直接；立即；笔直地 adj.直的",
+  "cnFull": "adv.直接；立即；笔直地 adj.直的",
+  "firstTask": "day17",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "fill",
+  "pos": "v",
+  "cn": "装满；盛满",
+  "cnFull": "v.装满；盛满",
+  "firstTask": "day17",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "tent",
+  "pos": "n",
+  "cn": "帐篷",
+  "cnFull": "n.帐篷",
+  "firstTask": "day17",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "explore",
+  "pos": "v",
+  "cn": "探索",
+  "cnFull": "v.探索",
+  "firstTask": "day17",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "teach",
+  "pos": "v",
+  "cn": "教",
+  "cnFull": "v.教",
+  "firstTask": "day17",
+  "dayNo": 6,
+  "unit": ""
+ },
+ {
+  "word": "from ...to...",
+  "pos": "",
+  "cn": "从……到……",
+  "cnFull": "从……到……",
+  "firstTask": "day17",
+  "dayNo": 7,
+  "unit": "unit03"
+ },
+ {
+  "word": "branch",
+  "pos": "n",
+  "cn": "分支；树枝",
+  "cnFull": "n.分支；树枝",
+  "firstTask": "day17",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "leaf",
+  "pos": "n",
+  "cn": "叶；叶子",
+  "cnFull": "n.叶；叶子",
+  "firstTask": "day17",
+  "dayNo": 9,
+  "unit": "unit03"
+ },
+ {
+  "word": "cucumber",
+  "pos": "n",
+  "cn": "黄瓜",
+  "cnFull": "n.黄瓜",
+  "firstTask": "day17",
+  "dayNo": 10,
+  "unit": "unit03"
+ },
+ {
+  "word": "entry",
+  "pos": "n",
+  "cn": "（日记的）一则；入口",
+  "cnFull": "n.（日记的）一则；入口",
+  "firstTask": "day18",
+  "dayNo": 1,
+  "unit": ""
+ },
+ {
+  "word": "diary",
+  "pos": "n",
+  "cn": "日记；日记本",
+  "cnFull": "n.日记；日记本",
+  "firstTask": "day18",
+  "dayNo": 2,
+  "unit": "unit03"
+ },
+ {
+  "word": "think of",
+  "pos": "",
+  "cn": "考虑；想起",
+  "cnFull": "考虑；想起",
+  "firstTask": "day18",
+  "dayNo": 3,
+  "unit": "unit03"
+ },
+ {
+  "word": "agree with",
+  "pos": "",
+  "cn": "赞成；同意",
+  "cnFull": "赞成；同意",
+  "firstTask": "day18",
+  "dayNo": 4,
+  "unit": "unit03"
+ },
+ {
+  "word": "fresh",
+  "pos": "adj",
+  "cn": "新鲜的",
+  "cnFull": "adj.新鲜的",
+  "firstTask": "day18",
+  "dayNo": 5,
+  "unit": "unit03"
+ },
+ {
+  "word": "grain",
+  "pos": "n",
+  "cn": "谷物；谷粒",
+  "cnFull": "n.谷物；谷粒",
+  "firstTask": "day18",
+  "dayNo": 6,
+  "unit": "unit03"
+ },
+ {
+  "word": "certainly",
+  "pos": "adv",
+  "cn": "肯定地",
+  "cnFull": "adv.肯定地",
+  "firstTask": "day18",
+  "dayNo": 7,
+  "unit": ""
+ },
+ {
+  "word": "agree",
+  "pos": "v",
+  "cn": "赞成；同意",
+  "cnFull": "v.赞成；同意",
+  "firstTask": "day18",
+  "dayNo": 8,
+  "unit": "unit03"
+ },
+ {
+  "word": "finally",
+  "pos": "adv",
+  "cn": "终于",
+  "cnFull": "adv.终于",
+  "firstTask": "day18",
+  "dayNo": 9,
+  "unit": "unit03"
+ },
+ {
+  "word": "once upon a time",
+  "pos": "",
+  "cn": "从前；很久以前",
+  "cnFull": "从前；很久以前",
+  "firstTask": "day20",
+  "dayNo": 1,
+  "unit": "unit04"
+ },
+ {
+  "word": "promise",
+  "pos": "v",
+  "cn": "&n.承诺；保证",
+  "cnFull": "v.&n.承诺；保证",
+  "firstTask": "day20",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "long ago",
+  "pos": "",
+  "cn": "很久以前",
+  "cnFull": "很久以前",
+  "firstTask": "day20",
+  "dayNo": 3,
+  "unit": "unit04"
+ },
+ {
+  "word": "wise",
+  "pos": "adj",
+  "cn": "明智的；高明的",
+  "cnFull": "adj.明智的；高明的",
+  "firstTask": "day20",
+  "dayNo": 4,
+  "unit": "unit06"
+ },
+ {
+  "word": "upon",
+  "pos": "prep",
+  "cn": "在……上",
+  "cnFull": "prep.在……上",
+  "firstTask": "day20",
+  "dayNo": 5,
+  "unit": "unit04"
+ },
+ {
+  "word": "neighbour",
+  "pos": "n",
+  "cn": "邻居",
+  "cnFull": "n.邻居",
+  "firstTask": "day20",
+  "dayNo": 6,
+  "unit": ""
+ },
+ {
+  "word": "bite through",
+  "pos": "",
+  "cn": "咬穿",
+  "cnFull": "咬穿",
+  "firstTask": "day20",
+  "dayNo": 7,
+  "unit": "unit04"
+ },
+ {
+  "word": "war",
+  "pos": "n",
+  "cn": "战争",
+  "cnFull": "n.战争",
+  "firstTask": "day20",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "bite",
+  "pos": "v",
+  "cn": "咬；咬伤",
+  "cnFull": "v.咬；咬伤",
+  "firstTask": "day20",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "hunter",
+  "pos": "n",
+  "cn": "猎人；搜寻者",
+  "cnFull": "n.猎人；搜寻者",
+  "firstTask": "day20",
+  "dayNo": 10,
+  "unit": ""
+ },
+ {
+  "word": "net",
+  "pos": "n",
+  "cn": "网；网状物",
+  "cnFull": "n.网；网状物",
+  "firstTask": "day20",
+  "dayNo": 11,
+  "unit": ""
+ },
+ {
+  "word": "official",
+  "pos": "n",
+  "cn": "官员；高级职员",
+  "cnFull": "n.官员；高级职员",
+  "firstTask": "day21",
+  "dayNo": 1,
+  "unit": "unit04"
+ },
+ {
+  "word": "silly",
+  "pos": "adj",
+  "cn": "愚蠢的；傻的",
+  "cnFull": "adj.愚蠢的；傻的",
+  "firstTask": "day21",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "praise",
+  "pos": "v",
+  "cn": "&n.赞美；表扬",
+  "cnFull": "v.&n.赞美；表扬",
+  "firstTask": "day21",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "decide",
+  "pos": "v",
+  "cn": "决定",
+  "cnFull": "v.决定",
+  "firstTask": "day21",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "truth",
+  "pos": "n",
+  "cn": "真相；事实",
+  "cnFull": "n.真相；事实",
+  "firstTask": "day21",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "suddenly",
+  "pos": "adv",
+  "cn": "突然地；出乎意料地",
+  "cnFull": "adv.突然地；出乎意料地",
+  "firstTask": "day21",
+  "dayNo": 6,
+  "unit": ""
+ },
+ {
+  "word": "emperor",
+  "pos": "n",
+  "cn": "皇帝",
+  "cnFull": "n.皇帝",
+  "firstTask": "day21",
+  "dayNo": 7,
+  "unit": "unit04"
+ },
+ {
+  "word": "lie",
+  "pos": "v",
+  "cn": "撒谎 n.谎言",
+  "cnFull": "v.撒谎 n.谎言",
+  "firstTask": "day21",
+  "dayNo": 8,
+  "unit": "unit04"
+ },
+ {
+  "word": "at first",
+  "pos": "",
+  "cn": "起初，最初",
+  "cnFull": "起初，最初",
+  "firstTask": "day21",
+  "dayNo": 9,
+  "unit": "unit04"
+ },
+ {
+  "word": "pretend",
+  "pos": "v",
+  "cn": "假装；伪装",
+  "cnFull": "v.假装；伪装",
+  "firstTask": "day21",
+  "dayNo": 10,
+  "unit": "unit04"
+ },
+ {
+  "word": "afraid",
+  "pos": "adj",
+  "cn": "害怕的；担心的",
+  "cnFull": "adj.害怕的；担心的",
+  "firstTask": "day21",
+  "dayNo": 11,
+  "unit": "unit05"
+ },
+ {
+  "word": "hate",
+  "pos": "v",
+  "cn": "不喜欢；厌恶；讨厌",
+  "cnFull": "v.不喜欢；厌恶；讨厌",
+  "firstTask": "day22",
+  "dayNo": 1,
+  "unit": ""
+ },
+ {
+  "word": "artist",
+  "pos": "n",
+  "cn": "美术家；艺术家",
+  "cnFull": "n.美术家；艺术家",
+  "firstTask": "day22",
+  "dayNo": 2,
+  "unit": "unit04"
+ },
+ {
+  "word": "quickly",
+  "pos": "adv",
+  "cn": "快速地；很快",
+  "cnFull": "adv.快速地；很快",
+  "firstTask": "day22",
+  "dayNo": 3,
+  "unit": "unit04"
+ },
+ {
+  "word": "ugly",
+  "pos": "adj",
+  "cn": "丑陋的；难看的",
+  "cnFull": "adj.丑陋的；难看的",
+  "firstTask": "day22",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "tell the truth",
+  "pos": "",
+  "cn": "说实话",
+  "cnFull": "说实话",
+  "firstTask": "day22",
+  "dayNo": 5,
+  "unit": "unit04"
+ },
+ {
+  "word": "all over",
+  "pos": "",
+  "cn": "到处；遍及",
+  "cnFull": "到处；遍及",
+  "firstTask": "day22",
+  "dayNo": 6,
+  "unit": "unit04"
+ },
+ {
+  "word": "king",
+  "pos": "n",
+  "cn": "君主；国王",
+  "cnFull": "n.君主；国王",
+  "firstTask": "day22",
+  "dayNo": 7,
+  "unit": ""
+ },
+ {
+  "word": "make money",
+  "pos": "",
+  "cn": "赚钱",
+  "cnFull": "赚钱",
+  "firstTask": "day22",
+  "dayNo": 8,
+  "unit": "unit04"
+ },
+ {
+  "word": "get out",
+  "pos": "",
+  "cn": "逃脱；离开",
+  "cnFull": "逃脱；离开",
+  "firstTask": "day22",
+  "dayNo": 9,
+  "unit": "unit04"
+ },
+ {
+  "word": "true",
+  "pos": "adj",
+  "cn": "符合事实的；真正的",
+  "cnFull": "adj.符合事实的；真正的",
+  "firstTask": "day22",
+  "dayNo": 10,
+  "unit": ""
+ },
+ {
+  "word": "smile",
+  "pos": "v",
+  "cn": "微笑 n.微笑；笑容",
+  "cnFull": "v.微笑 n.微笑；笑容",
+  "firstTask": "day22",
+  "dayNo": 11,
+  "unit": "unit05"
+ },
+ {
+  "word": "purr",
+  "pos": "v",
+  "cn": "（猫愉快时）发出呼噜声",
+  "cnFull": "v.（猫愉快时）发出呼噜声",
+  "firstTask": "day23",
+  "dayNo": 1,
+  "unit": ""
+ },
+ {
+  "word": "hopefully",
+  "pos": "adv",
+  "cn": "有希望地",
+  "cnFull": "adv.有希望地",
+  "firstTask": "day23",
+  "dayNo": 2,
+  "unit": "unit04"
+ },
+ {
+  "word": "laugh at",
+  "pos": "",
+  "cn": "嘲笑",
+  "cnFull": "嘲笑",
+  "firstTask": "day23",
+  "dayNo": 3,
+  "unit": "unit04"
+ },
+ {
+  "word": "search",
+  "pos": "v",
+  "cn": "寻找；搜寻",
+  "cnFull": "v.寻找；搜寻",
+  "firstTask": "day23",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "duckling",
+  "pos": "n",
+  "cn": "小鸭子",
+  "cnFull": "n.小鸭子",
+  "firstTask": "day23",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "lay",
+  "pos": "v",
+  "cn": "下（蛋）；放置；搁",
+  "cnFull": "v.下（蛋）；放置；搁",
+  "firstTask": "day23",
+  "dayNo": 6,
+  "unit": "unit04"
+ },
+ {
+  "word": "swan",
+  "pos": "n",
+  "cn": "天鹅",
+  "cnFull": "n.天鹅",
+  "firstTask": "day23",
+  "dayNo": 7,
+  "unit": "unit04"
+ },
+ {
+  "word": "go away",
+  "pos": "",
+  "cn": "走开",
+  "cnFull": "走开",
+  "firstTask": "day23",
+  "dayNo": 8,
+  "unit": "unit04"
+ },
+ {
+  "word": "search for",
+  "pos": "",
+  "cn": "寻找",
+  "cnFull": "寻找",
+  "firstTask": "day23",
+  "dayNo": 9,
+  "unit": "unit04"
+ },
+ {
+  "word": "hen",
+  "pos": "n",
+  "cn": "母鸡",
+  "cnFull": "n.母鸡",
+  "firstTask": "day23",
+  "dayNo": 10,
+  "unit": ""
+ },
+ {
+  "word": "real",
+  "pos": "adj",
+  "cn": "真的；真正的",
+  "cnFull": "adj.真的；真正的",
+  "firstTask": "day23",
+  "dayNo": 11,
+  "unit": ""
+ },
+ {
+  "word": "die",
+  "pos": "v",
+  "cn": "死亡；消失",
+  "cnFull": "v.死亡；消失",
+  "firstTask": "day24",
+  "dayNo": 1,
+  "unit": ""
+ },
+ {
+  "word": "feather",
+  "pos": "n",
+  "cn": "羽毛",
+  "cnFull": "n.羽毛",
+  "firstTask": "day24",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "fisherman",
+  "pos": "n",
+  "cn": "渔夫",
+  "cnFull": "n.渔夫",
+  "firstTask": "day24",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "fishing",
+  "pos": "n",
+  "cn": "钓鱼；捕鱼",
+  "cnFull": "n.钓鱼；捕鱼",
+  "firstTask": "day24",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "come out",
+  "pos": "",
+  "cn": "出现；盛开",
+  "cnFull": "出现；盛开",
+  "firstTask": "day24",
+  "dayNo": 5,
+  "unit": "unit04"
+ },
+ {
+  "word": "genie",
+  "pos": "n",
+  "cn": "妖怪",
+  "cnFull": "n.妖怪",
+  "firstTask": "day24",
+  "dayNo": 6,
+  "unit": "unit04"
+ },
+ {
+  "word": "make a promise",
+  "pos": "",
+  "cn": "许下诺言",
+  "cnFull": "许下诺言",
+  "firstTask": "day24",
+  "dayNo": 7,
+  "unit": "unit04"
+ },
+ {
+  "word": "someone",
+  "pos": "pron",
+  "cn": "某人；有人",
+  "cnFull": "pron.某人；有人",
+  "firstTask": "day24",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "to one's surprise",
+  "pos": "",
+  "cn": "出乎某人的意料",
+  "cnFull": "出乎某人的意料",
+  "firstTask": "day24",
+  "dayNo": 9,
+  "unit": "unit04"
+ },
+ {
+  "word": "only if",
+  "pos": "",
+  "cn": "只有",
+  "cnFull": "只有",
+  "firstTask": "day24",
+  "dayNo": 10,
+  "unit": "unit04"
+ },
+ {
+  "word": "himself",
+  "pos": "pron",
+  "cn": "他自己；他本人",
+  "cnFull": "pron.他自己；他本人",
+  "firstTask": "day25",
+  "dayNo": 1,
+  "unit": "unit04"
+ },
+ {
+  "word": "anyone",
+  "pos": "pron",
+  "cn": "任何人；某个人",
+  "cnFull": "pron.任何人；某个人",
+  "firstTask": "day25",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "Hans Christian Andersen",
+  "pos": "",
+  "cn": "汉斯·克里斯蒂安·安徒生",
+  "cnFull": "汉斯·克里斯蒂安·安徒生",
+  "firstTask": "day25",
+  "dayNo": 3,
+  "unit": "unit04"
+ },
+ {
+  "word": "set",
+  "pos": "v",
+  "cn": "使处于某种状况；使开始",
+  "cnFull": "v.使处于某种状况；使开始",
+  "firstTask": "day25",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "rich",
+  "pos": "adj",
+  "cn": "富有的；富含……的",
+  "cnFull": "adj.富有的；富含……的",
+  "firstTask": "day25",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "instead of",
+  "pos": "",
+  "cn": "而不是；代替",
+  "cnFull": "而不是；代替",
+  "firstTask": "day25",
+  "dayNo": 6,
+  "unit": "unit04"
+ },
+ {
+  "word": "in the end",
+  "pos": "",
+  "cn": "最后；终究",
+  "cnFull": "最后；终究",
+  "firstTask": "day25",
+  "dayNo": 7,
+  "unit": "unit04"
+ },
+ {
+  "word": "set ...free",
+  "pos": "",
+  "cn": "释放",
+  "cnFull": "释放",
+  "firstTask": "day25",
+  "dayNo": 8,
+  "unit": "unit04"
+ },
+ {
+  "word": "succeed in doing sth",
+  "pos": "",
+  "cn": "成功做成某事",
+  "cnFull": "成功做成某事",
+  "firstTask": "day25",
+  "dayNo": 9,
+  "unit": "unit04"
+ },
+ {
+  "word": "powerful",
+  "pos": "adj",
+  "cn": "强大的；有影响力的",
+  "cnFull": "adj.强大的；有影响力的",
+  "firstTask": "day25",
+  "dayNo": 10,
+  "unit": "unit04"
+ },
+ {
+  "word": "breath",
+  "pos": "n",
+  "cn": "呼吸的空气；一口气",
+  "cnFull": "n.呼吸的空气；一口气",
+  "firstTask": "day27",
+  "dayNo": 1,
+  "unit": "unit05"
+ },
+ {
+  "word": "take one's breath away",
+  "pos": "",
+  "cn": "令人惊叹；让人叹绝",
+  "cnFull": "令人惊叹；让人叹绝",
+  "firstTask": "day27",
+  "dayNo": 2,
+  "unit": "unit05"
+ },
+ {
+  "word": "camp",
+  "pos": "n",
+  "cn": "度假营；营地 v.露营；宿营",
+  "cnFull": "n.度假营；营地 v.露营；宿营",
+  "firstTask": "day27",
+  "dayNo": 3,
+  "unit": "unit05"
+ },
+ {
+  "word": "especially",
+  "pos": "adv",
+  "cn": "尤其；特别",
+  "cnFull": "adv.尤其；特别",
+  "firstTask": "day27",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "ancient",
+  "pos": "adj",
+  "cn": "古代的；古老的",
+  "cnFull": "adj.古代的；古老的",
+  "firstTask": "day27",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "vacation",
+  "pos": "n",
+  "cn": "假期；度假",
+  "cnFull": "n.假期；度假",
+  "firstTask": "day27",
+  "dayNo": 6,
+  "unit": ""
+ },
+ {
+  "word": "landscape",
+  "pos": "n",
+  "cn": "风景；景色",
+  "cnFull": "n.风景；景色",
+  "firstTask": "day27",
+  "dayNo": 7,
+  "unit": "unit05"
+ },
+ {
+  "word": "town",
+  "pos": "n",
+  "cn": "镇；商业区",
+  "cnFull": "n.镇；商业区",
+  "firstTask": "day27",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "strange",
+  "pos": "adj",
+  "cn": "奇怪的；陌生的",
+  "cnFull": "adj.奇怪的；陌生的",
+  "firstTask": "day27",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "fantastic",
+  "pos": "adj",
+  "cn": "极好的；吸引人的",
+  "cnFull": "adj.极好的；吸引人的",
+  "firstTask": "day27",
+  "dayNo": 10,
+  "unit": "unit05"
+ },
+ {
+  "word": "ready to do sth",
+  "pos": "",
+  "cn": "马上要（做某事）；愿意做（某事）",
+  "cnFull": "马上要（做某事）；愿意做（某事）",
+  "firstTask": "day28",
+  "dayNo": 1,
+  "unit": "unit05"
+ },
+ {
+  "word": "guide",
+  "pos": "n",
+  "cn": "导游；指南；手册 v.给某人领路；指导",
+  "cnFull": "n.导游；指南；手册 v.给某人领路；指导",
+  "firstTask": "day28",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "anywhere",
+  "pos": "adv",
+  "cn": "&pron.在任何地方；随便哪个地方",
+  "cnFull": "adv.&pron.在任何地方；随便哪个地方",
+  "firstTask": "day28",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "nothing but",
+  "pos": "",
+  "cn": "只有；只是",
+  "cnFull": "只有；只是",
+  "firstTask": "day28",
+  "dayNo": 4,
+  "unit": "unit05"
+ },
+ {
+  "word": "nothing",
+  "pos": "pron",
+  "cn": "没有事；没有任何东西",
+  "cnFull": "pron.没有事；没有任何东西",
+  "firstTask": "day28",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "somewhere",
+  "pos": "adv",
+  "cn": "在某处；到某处 pron.某处；某个地方",
+  "cnFull": "adv.在某处；到某处 pron.某处；某个地方",
+  "firstTask": "day28",
+  "dayNo": 6,
+  "unit": ""
+ },
+ {
+  "word": "ready",
+  "pos": "adj",
+  "cn": "准备好的；现成的 adv.已做完；已完成",
+  "cnFull": "adj.准备好的；现成的 adv.已做完；已完成",
+  "firstTask": "day28",
+  "dayNo": 7,
+  "unit": "unit05"
+ },
+ {
+  "word": "silk",
+  "pos": "n",
+  "cn": "丝绸；（蚕）丝",
+  "cnFull": "n.丝绸；（蚕）丝",
+  "firstTask": "day28",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "steamed chicken soup",
+  "pos": "",
+  "cn": "汽锅鸡",
+  "cnFull": "汽锅鸡",
+  "firstTask": "day28",
+  "dayNo": 9,
+  "unit": "unit05"
+ },
+ {
+  "word": "scenery",
+  "pos": "n",
+  "cn": "风景；景色",
+  "cnFull": "n.风景；景色",
+  "firstTask": "day28",
+  "dayNo": 10,
+  "unit": ""
+ },
+ {
+  "word": "against",
+  "pos": "prep",
+  "cn": "反对；与……相反；紧靠",
+  "cnFull": "prep.反对；与……相反；紧靠",
+  "firstTask": "day29",
+  "dayNo": 1,
+  "unit": ""
+ },
+ {
+  "word": "victory",
+  "pos": "n",
+  "cn": "胜利；成功",
+  "cnFull": "n.胜利；成功",
+  "firstTask": "day29",
+  "dayNo": 2,
+  "unit": "unit05"
+ },
+ {
+  "word": "rainbow",
+  "pos": "n",
+  "cn": "虹；彩虹",
+  "cnFull": "n.虹；彩虹",
+  "firstTask": "day29",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "comfortable",
+  "pos": "adj",
+  "cn": "使人舒服的；舒适的",
+  "cnFull": "adj.使人舒服的；舒适的",
+  "firstTask": "day29",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "Russian",
+  "pos": "adj",
+  "cn": "俄罗斯的；俄罗斯人的 n.俄罗斯人；俄语",
+  "cnFull": "adj.俄罗斯的；俄罗斯人的 n.俄罗斯人；俄语",
+  "firstTask": "day29",
+  "dayNo": 5,
+  "unit": "unit05"
+ },
+ {
+  "word": "hotel",
+  "pos": "n",
+  "cn": "旅馆；旅社",
+  "cnFull": "n.旅馆；旅社",
+  "firstTask": "day29",
+  "dayNo": 6,
+  "unit": "unit05"
+ },
+ {
+  "word": "square",
+  "pos": "n",
+  "cn": "广场；正方形 adj.正方形的；平方的",
+  "cnFull": "n.广场；正方形 adj.正方形的；平方的",
+  "firstTask": "day29",
+  "dayNo": 7,
+  "unit": ""
+ },
+ {
+  "word": "fight",
+  "pos": "v",
+  "cn": "打仗；打架 n.战斗；搏斗；斗争",
+  "cnFull": "v.打仗；打架 n.战斗；搏斗；斗争",
+  "firstTask": "day29",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "towards",
+  "pos": "prep",
+  "cn": "向；朝",
+  "cnFull": "prep.向；朝",
+  "firstTask": "day29",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "bored",
+  "pos": "adj",
+  "cn": "厌倦的；烦闷的",
+  "cnFull": "adj.厌倦的；烦闷的",
+  "firstTask": "day29",
+  "dayNo": 10,
+  "unit": ""
+ },
+ {
+  "word": "remind",
+  "pos": "v",
+  "cn": "提醒；使想起",
+  "cnFull": "v.提醒；使想起",
+  "firstTask": "day30",
+  "dayNo": 1,
+  "unit": "unit05"
+ },
+ {
+  "word": "thousands of",
+  "pos": "",
+  "cn": "数以千计的；成千上万的",
+  "cnFull": "数以千计的；成千上万的",
+  "firstTask": "day30",
+  "dayNo": 2,
+  "unit": "unit05"
+ },
+ {
+  "word": "fight against sb/sth",
+  "pos": "",
+  "cn": "与……作战；与……作斗争",
+  "cnFull": "与……作战；与……作斗争",
+  "firstTask": "day30",
+  "dayNo": 3,
+  "unit": "unit05"
+ },
+ {
+  "word": "noon",
+  "pos": "n",
+  "cn": "正午；中午",
+  "cnFull": "n.正午；中午",
+  "firstTask": "day30",
+  "dayNo": 4,
+  "unit": "unit05"
+ },
+ {
+  "word": "forget",
+  "pos": "v",
+  "cn": "忘记；遗忘",
+  "cnFull": "v.忘记；遗忘",
+  "firstTask": "day30",
+  "dayNo": 5,
+  "unit": "unit05"
+ },
+ {
+  "word": "peace",
+  "pos": "n",
+  "cn": "和平；太平",
+  "cnFull": "n.和平；太平",
+  "firstTask": "day30",
+  "dayNo": 6,
+  "unit": "unit05"
+ },
+ {
+  "word": "during",
+  "pos": "prep",
+  "cn": "在……期间",
+  "cnFull": "prep.在……期间",
+  "firstTask": "day30",
+  "dayNo": 7,
+  "unit": "unit07"
+ },
+ {
+  "word": "tear",
+  "pos": "n",
+  "cn": "眼泪；泪水",
+  "cnFull": "n.眼泪；泪水",
+  "firstTask": "day30",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "easily",
+  "pos": "adv",
+  "cn": "容易地；轻易地",
+  "cnFull": "adv.容易地；轻易地",
+  "firstTask": "day30",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "artwork",
+  "pos": "n",
+  "cn": "艺术作品；插图",
+  "cnFull": "n.艺术作品；插图",
+  "firstTask": "day30",
+  "dayNo": 10,
+  "unit": "unit05"
+ },
+ {
+  "word": "metro",
+  "pos": "n",
+  "cn": "地下铁道系统",
+  "cnFull": "n.地下铁道系统",
+  "firstTask": "day31",
+  "dayNo": 1,
+  "unit": ""
+ },
+ {
+  "word": "accordion",
+  "pos": "n",
+  "cn": "手风琴",
+  "cnFull": "n.手风琴",
+  "firstTask": "day31",
+  "dayNo": 2,
+  "unit": "unit05"
+ },
+ {
+  "word": "sick",
+  "pos": "adj",
+  "cn": "恶心的；生病的",
+  "cnFull": "adj.恶心的；生病的",
+  "firstTask": "day31",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "Sea of Clouds",
+  "pos": "",
+  "cn": "云海",
+  "cnFull": "云海",
+  "firstTask": "day31",
+  "dayNo": 4,
+  "unit": "unit05"
+ },
+ {
+  "word": "Seattle",
+  "pos": "",
+  "cn": "西雅图",
+  "cnFull": "西雅图",
+  "firstTask": "day31",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "station",
+  "pos": "n",
+  "cn": "车站；所；局",
+  "cnFull": "n.车站；所；局",
+  "firstTask": "day31",
+  "dayNo": 6,
+  "unit": ""
+ },
+ {
+  "word": "Guest-Greeting Pine",
+  "pos": "",
+  "cn": "迎客松",
+  "cnFull": "迎客松",
+  "firstTask": "day31",
+  "dayNo": 7,
+  "unit": "unit05"
+ },
+ {
+  "word": "get together",
+  "pos": "",
+  "cn": "聚会；相聚",
+  "cnFull": "聚会；相聚",
+  "firstTask": "day31",
+  "dayNo": 8,
+  "unit": "unit05"
+ },
+ {
+  "word": "palace",
+  "pos": "n",
+  "cn": "王宫；宫殿",
+  "cnFull": "n.王宫；宫殿",
+  "firstTask": "day31",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "Russia",
+  "pos": "",
+  "cn": "俄罗斯",
+  "cnFull": "俄罗斯",
+  "firstTask": "day32",
+  "dayNo": 1,
+  "unit": ""
+ },
+ {
+  "word": "World War II",
+  "pos": "",
+  "cn": "第二次世界大战",
+  "cnFull": "第二次世界大战",
+  "firstTask": "day32",
+  "dayNo": 2,
+  "unit": "unit05"
+ },
+ {
+  "word": "Moscow",
+  "pos": "",
+  "cn": "莫斯科",
+  "cnFull": "莫斯科",
+  "firstTask": "day32",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "Alexander Garden",
+  "pos": "",
+  "cn": "亚历山大花园",
+  "cnFull": "亚历山大花园",
+  "firstTask": "day32",
+  "dayNo": 4,
+  "unit": "unit05"
+ },
+ {
+  "word": "Moscow Metro",
+  "pos": "",
+  "cn": "莫斯科地铁",
+  "cnFull": "莫斯科地铁",
+  "firstTask": "day32",
+  "dayNo": 5,
+  "unit": "unit05"
+ },
+ {
+  "word": "Nazi",
+  "pos": "n",
+  "cn": "纳粹党人；纳粹分子",
+  "cnFull": "n.纳粹党人；纳粹分子",
+  "firstTask": "day32",
+  "dayNo": 6,
+  "unit": "unit05"
+ },
+ {
+  "word": "the Victory Museum",
+  "pos": "",
+  "cn": "胜利博物馆",
+  "cnFull": "胜利博物馆",
+  "firstTask": "day32",
+  "dayNo": 7,
+  "unit": "unit05"
+ },
+ {
+  "word": "Red Square",
+  "pos": "",
+  "cn": "红场",
+  "cnFull": "红场",
+  "firstTask": "day32",
+  "dayNo": 8,
+  "unit": "unit05"
+ },
+ {
+  "word": "Vincent",
+  "pos": "",
+  "cn": "文森特",
+  "cnFull": "文森特",
+  "firstTask": "day32",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "bathroom",
+  "pos": "n",
+  "cn": "浴室；洗手间",
+  "cnFull": "n.浴室；洗手间",
+  "firstTask": "day34",
+  "dayNo": 1,
+  "unit": "unit06"
+ },
+ {
+  "word": "bedroom",
+  "pos": "n",
+  "cn": "卧室",
+  "cnFull": "n.卧室",
+  "firstTask": "day34",
+  "dayNo": 2,
+  "unit": "unit06"
+ },
+ {
+  "word": "living room",
+  "pos": "",
+  "cn": "客厅",
+  "cnFull": "客厅",
+  "firstTask": "day34",
+  "dayNo": 3,
+  "unit": "unit06"
+ },
+ {
+  "word": "pack up",
+  "pos": "",
+  "cn": "打包",
+  "cnFull": "打包",
+  "firstTask": "day34",
+  "dayNo": 4,
+  "unit": "unit06"
+ },
+ {
+  "word": "invite",
+  "pos": "v",
+  "cn": "邀请",
+  "cnFull": "v.邀请",
+  "firstTask": "day34",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "balcony",
+  "pos": "n",
+  "cn": "阳台",
+  "cnFull": "n.阳台",
+  "firstTask": "day34",
+  "dayNo": 6,
+  "unit": "unit06"
+ },
+ {
+  "word": "sort",
+  "pos": "v",
+  "cn": "把……分类；整理 n.种类",
+  "cnFull": "v.把……分类；整理 n.种类",
+  "firstTask": "day34",
+  "dayNo": 7,
+  "unit": "unit06"
+ },
+ {
+  "word": "arrival",
+  "pos": "n",
+  "cn": "到达",
+  "cnFull": "n.到达",
+  "firstTask": "day34",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "pack",
+  "pos": "v",
+  "cn": "打包；收拾",
+  "cnFull": "v.打包；收拾",
+  "firstTask": "day34",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "hang up",
+  "pos": "",
+  "cn": "挂起；挂断电话",
+  "cnFull": "挂起；挂断电话",
+  "firstTask": "day34",
+  "dayNo": 10,
+  "unit": "unit06"
+ },
+ {
+  "word": "yet",
+  "pos": "adv",
+  "cn": "（用于否定句和疑问句）还 conj.但是",
+  "cnFull": "adv.（用于否定句和疑问句）还 conj.但是",
+  "firstTask": "day34",
+  "dayNo": 11,
+  "unit": ""
+ },
+ {
+  "word": "add sth to sth",
+  "pos": "",
+  "cn": "把……加入……",
+  "cnFull": "把……加入……",
+  "firstTask": "day35",
+  "dayNo": 1,
+  "unit": "unit06"
+ },
+ {
+  "word": "treasure",
+  "pos": "n",
+  "cn": "宝物；财富 v.珍视",
+  "cnFull": "n.宝物；财富 v.珍视",
+  "firstTask": "day35",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "add",
+  "pos": "v",
+  "cn": "添加；加",
+  "cnFull": "v.添加；加",
+  "firstTask": "day35",
+  "dayNo": 3,
+  "unit": "unit06"
+ },
+ {
+  "word": "lift",
+  "pos": "v",
+  "cn": "举起；抬起 n.搭便车；电梯",
+  "cnFull": "v.举起；抬起 n.搭便车；电梯",
+  "firstTask": "day35",
+  "dayNo": 4,
+  "unit": "unit06"
+ },
+ {
+  "word": "borrow",
+  "pos": "v",
+  "cn": "借",
+  "cnFull": "v.借",
+  "firstTask": "day35",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "plan",
+  "pos": "v",
+  "cn": "策划；打算 n.计划；方案",
+  "cnFull": "v.策划；打算 n.计划；方案",
+  "firstTask": "day35",
+  "dayNo": 6,
+  "unit": ""
+ },
+ {
+  "word": "biscuit",
+  "pos": "n",
+  "cn": "饼干",
+  "cnFull": "n.饼干",
+  "firstTask": "day35",
+  "dayNo": 7,
+  "unit": ""
+ },
+ {
+  "word": "go shopping",
+  "pos": "",
+  "cn": "去购物",
+  "cnFull": "去购物",
+  "firstTask": "day35",
+  "dayNo": 8,
+  "unit": "unit06"
+ },
+ {
+  "word": "give sb a lift",
+  "pos": "",
+  "cn": "开车顺便送某人",
+  "cnFull": "开车顺便送某人",
+  "firstTask": "day35",
+  "dayNo": 9,
+  "unit": "unit06"
+ },
+ {
+  "word": "hunt",
+  "pos": "v",
+  "cn": "搜寻；打猎 n.搜寻；狩猎",
+  "cnFull": "v.搜寻；打猎 n.搜寻；狩猎",
+  "firstTask": "day35",
+  "dayNo": 10,
+  "unit": "unit06"
+ },
+ {
+  "word": "treasure hunt",
+  "pos": "",
+  "cn": "寻宝游戏",
+  "cnFull": "寻宝游戏",
+  "firstTask": "day35",
+  "dayNo": 11,
+  "unit": "unit06"
+ },
+ {
+  "word": "movie",
+  "pos": "n",
+  "cn": "电影",
+  "cnFull": "n.电影",
+  "firstTask": "day36",
+  "dayNo": 1,
+  "unit": ""
+ },
+ {
+  "word": "almost",
+  "pos": "adv",
+  "cn": "差不多；几乎",
+  "cnFull": "adv.差不多；几乎",
+  "firstTask": "day36",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "community",
+  "pos": "n",
+  "cn": "社区；社团",
+  "cnFull": "n.社区；社团",
+  "firstTask": "day36",
+  "dayNo": 3,
+  "unit": "unit06"
+ },
+ {
+  "word": "dead",
+  "pos": "adj",
+  "cn": "不运行的；死的",
+  "cnFull": "adj.不运行的；死的",
+  "firstTask": "day36",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "until",
+  "pos": "prep",
+  "cn": "到……时；直到……为止",
+  "cnFull": "prep.到……时；直到……为止",
+  "firstTask": "day36",
+  "dayNo": 5,
+  "unit": "unit06"
+ },
+ {
+  "word": "be careful with",
+  "pos": "",
+  "cn": "注意；当心",
+  "cnFull": "注意；当心",
+  "firstTask": "day36",
+  "dayNo": 6,
+  "unit": "unit06"
+ },
+ {
+  "word": "the movies",
+  "pos": "",
+  "cn": "电影院；电影产业",
+  "cnFull": "电影院；电影产业",
+  "firstTask": "day36",
+  "dayNo": 7,
+  "unit": "unit06"
+ },
+ {
+  "word": "clean up",
+  "pos": "",
+  "cn": "清扫",
+  "cnFull": "清扫",
+  "firstTask": "day36",
+  "dayNo": 8,
+  "unit": "unit06"
+ },
+ {
+  "word": "take notes",
+  "pos": "",
+  "cn": "做笔记",
+  "cnFull": "做笔记",
+  "firstTask": "day36",
+  "dayNo": 9,
+  "unit": "unit06"
+ },
+ {
+  "word": "rubbish",
+  "pos": "n",
+  "cn": "垃圾",
+  "cnFull": "n.垃圾",
+  "firstTask": "day36",
+  "dayNo": 10,
+  "unit": "unit06"
+ },
+ {
+  "word": "note",
+  "pos": "n",
+  "cn": "笔记；记录；便条 v.注意；指出",
+  "cnFull": "n.笔记；记录；便条 v.注意；指出",
+  "firstTask": "day36",
+  "dayNo": 11,
+  "unit": ""
+ },
+ {
+  "word": "share sth with sb",
+  "pos": "",
+  "cn": "把……与……分享",
+  "cnFull": "把……与……分享",
+  "firstTask": "day37",
+  "dayNo": 1,
+  "unit": "unit06"
+ },
+ {
+  "word": "ah",
+  "pos": "interj",
+  "cn": "啊（表示高兴、惊奇等）",
+  "cnFull": "interj.啊（表示高兴、惊奇等）",
+  "firstTask": "day37",
+  "dayNo": 2,
+  "unit": "unit06"
+ },
+ {
+  "word": "several",
+  "pos": "pron",
+  "cn": "几个；一些",
+  "cnFull": "pron.几个；一些",
+  "firstTask": "day37",
+  "dayNo": 3,
+  "unit": "unit06"
+ },
+ {
+  "word": "familiar",
+  "pos": "adj",
+  "cn": "熟悉的",
+  "cnFull": "adj.熟悉的",
+  "firstTask": "day37",
+  "dayNo": 4,
+  "unit": "unit06"
+ },
+ {
+  "word": "luggage",
+  "pos": "n",
+  "cn": "行李",
+  "cnFull": "n.行李",
+  "firstTask": "day37",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "joke",
+  "pos": "n",
+  "cn": "笑话 v.开玩笑",
+  "cnFull": "n.笑话 v.开玩笑",
+  "firstTask": "day37",
+  "dayNo": 6,
+  "unit": ""
+ },
+ {
+  "word": "pull",
+  "pos": "v",
+  "cn": "&n.拉；拖；拽",
+  "cnFull": "v.&n.拉；拖；拽",
+  "firstTask": "day37",
+  "dayNo": 7,
+  "unit": ""
+ },
+ {
+  "word": "mm",
+  "pos": "interj",
+  "cn": "嗯（表示喜欢、同意等）",
+  "cnFull": "interj.嗯（表示喜欢、同意等）",
+  "firstTask": "day37",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "journey",
+  "pos": "n",
+  "cn": "旅行；历程 v.旅行",
+  "cnFull": "n.旅行；历程 v.旅行",
+  "firstTask": "day37",
+  "dayNo": 9,
+  "unit": ""
+ },
+ {
+  "word": "nod",
+  "pos": "v",
+  "cn": "&n.点头",
+  "cnFull": "v.&n.点头",
+  "firstTask": "day37",
+  "dayNo": 10,
+  "unit": ""
+ },
+ {
+  "word": "describe",
+  "pos": "v",
+  "cn": "描述；形容",
+  "cnFull": "v.描述；形容",
+  "firstTask": "day38",
+  "dayNo": 1,
+  "unit": ""
+ },
+ {
+  "word": "childish",
+  "pos": "adj",
+  "cn": "孩子的；孩子气的；稚嫩的",
+  "cnFull": "adj.孩子的；孩子气的；稚嫩的",
+  "firstTask": "day38",
+  "dayNo": 2,
+  "unit": "unit06"
+ },
+ {
+  "word": "glue",
+  "pos": "n",
+  "cn": "胶水 v.粘贴",
+  "cnFull": "n.胶水 v.粘贴",
+  "firstTask": "day38",
+  "dayNo": 3,
+  "unit": ""
+ },
+ {
+  "word": "paper-cut",
+  "pos": "n",
+  "cn": "剪纸",
+  "cnFull": "n.剪纸",
+  "firstTask": "day38",
+  "dayNo": 4,
+  "unit": "unit06"
+ },
+ {
+  "word": "decorate",
+  "pos": "v",
+  "cn": "装饰；装潢",
+  "cnFull": "v.装饰；装潢",
+  "firstTask": "day38",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "scissors",
+  "pos": "n",
+  "cn": "剪刀",
+  "cnFull": "n.剪刀",
+  "firstTask": "day38",
+  "dayNo": 6,
+  "unit": "unit06"
+ },
+ {
+  "word": "text",
+  "pos": "n",
+  "cn": "正文；文本 v.（用手机给某人）发短信",
+  "cnFull": "n.正文；文本 v.（用手机给某人）发短信",
+  "firstTask": "day38",
+  "dayNo": 7,
+  "unit": ""
+ },
+ {
+  "word": "writer",
+  "pos": "n",
+  "cn": "作者",
+  "cnFull": "n.作者",
+  "firstTask": "day38",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "cover",
+  "pos": "v",
+  "cn": "遮盖；包括 n.遮盖物；封皮",
+  "cnFull": "v.遮盖；包括 n.遮盖物；封皮",
+  "firstTask": "day38",
+  "dayNo": 9,
+  "unit": "unit06"
+ },
+ {
+  "word": "poster",
+  "pos": "n",
+  "cn": "海报",
+  "cnFull": "n.海报",
+  "firstTask": "day38",
+  "dayNo": 10,
+  "unit": ""
+ },
+ {
+  "word": "stove",
+  "pos": "n",
+  "cn": "炉子；火炉",
+  "cnFull": "n.炉子；火炉",
+  "firstTask": "day40",
+  "dayNo": 1,
+  "unit": ""
+ },
+ {
+  "word": "iron",
+  "pos": "n",
+  "cn": "铁器；熨斗 v.（用熨斗）熨，烫平",
+  "cnFull": "n.铁器；熨斗 v.（用熨斗）熨，烫平",
+  "firstTask": "day40",
+  "dayNo": 2,
+  "unit": "unit07"
+ },
+ {
+  "word": "gas",
+  "pos": "n",
+  "cn": "气体；煤气；天然气",
+  "cnFull": "n.气体；煤气；天然气",
+  "firstTask": "day40",
+  "dayNo": 3,
+  "unit": "unit07"
+ },
+ {
+  "word": "carelessly",
+  "pos": "adv",
+  "cn": "粗心地；不小心地",
+  "cnFull": "adv.粗心地；不小心地",
+  "firstTask": "day40",
+  "dayNo": 4,
+  "unit": "unit07"
+ },
+ {
+  "word": "alone",
+  "pos": "adj",
+  "cn": "&adv.单独；独自；寂寞",
+  "cnFull": "adj.&adv.单独；独自；寂寞",
+  "firstTask": "day40",
+  "dayNo": 5,
+  "unit": "unit07"
+ },
+ {
+  "word": "stranger",
+  "pos": "n",
+  "cn": "陌生人；新来者",
+  "cnFull": "n.陌生人；新来者",
+  "firstTask": "day40",
+  "dayNo": 6,
+  "unit": "unit07"
+ },
+ {
+  "word": "avoid",
+  "pos": "v",
+  "cn": "避免；防止",
+  "cnFull": "v.避免；防止",
+  "firstTask": "day40",
+  "dayNo": 7,
+  "unit": ""
+ },
+ {
+  "word": "accident",
+  "pos": "n",
+  "cn": "事故；意外；偶然的事",
+  "cnFull": "n.事故；意外；偶然的事",
+  "firstTask": "day40",
+  "dayNo": 8,
+  "unit": ""
+ },
+ {
+  "word": "touch",
+  "pos": "v",
+  "cn": "触摸；感动",
+  "cnFull": "v.触摸；感动",
+  "firstTask": "day40",
+  "dayNo": 9,
+  "unit": "unit07"
+ },
+ {
+  "word": "ladder",
+  "pos": "n",
+  "cn": "梯子",
+  "cnFull": "n.梯子",
+  "firstTask": "day40",
+  "dayNo": 10,
+  "unit": "unit07"
+ },
+ {
+  "word": "lighter",
+  "pos": "n",
+  "cn": "打火机",
+  "cnFull": "n.打火机",
+  "firstTask": "day40",
+  "dayNo": 11,
+  "unit": ""
+ },
+ {
+  "word": "race",
+  "pos": "n",
+  "cn": "比赛；竞赛",
+  "cnFull": "n.比赛；竞赛",
+  "firstTask": "day41",
+  "dayNo": 1,
+  "unit": ""
+ },
+ {
+  "word": "housewife",
+  "pos": "n",
+  "cn": "主妇；家庭妇女",
+  "cnFull": "n.主妇；家庭妇女",
+  "firstTask": "day41",
+  "dayNo": 2,
+  "unit": ""
+ },
+ {
+  "word": "judge",
+  "pos": "v",
+  "cn": "判断；审判 n.法官；裁判员；评判员",
+  "cnFull": "v.判断；审判 n.法官；裁判员；评判员",
+  "firstTask": "day41",
+  "dayNo": 3,
+  "unit": "unit07"
+ },
+ {
+  "word": "electrical",
+  "pos": "adj",
+  "cn": "电的；发电的",
+  "cnFull": "adj.电的；发电的",
+  "firstTask": "day41",
+  "dayNo": 4,
+  "unit": "unit07"
+ },
+ {
+  "word": "stick",
+  "pos": "v",
+  "cn": "刺；戳 n.枝条；棍",
+  "cnFull": "v.刺；戳 n.枝条；棍",
+  "firstTask": "day41",
+  "dayNo": 5,
+  "unit": "unit07"
+ },
+ {
+  "word": "thankful",
+  "pos": "adj",
+  "cn": "感谢的；感激的",
+  "cnFull": "adj.感谢的；感激的",
+  "firstTask": "day41",
+  "dayNo": 6,
+  "unit": "unit07"
+ },
+ {
+  "word": "shock",
+  "pos": "v",
+  "cn": "使震惊；使受电击",
+  "cnFull": "v.使震惊；使受电击",
+  "firstTask": "day41",
+  "dayNo": 7,
+  "unit": "unit07"
+ },
+ {
+  "word": "outlet",
+  "pos": "n",
+  "cn": "（电源）插座",
+  "cnFull": "n.（电源）插座",
+  "firstTask": "day41",
+  "dayNo": 8,
+  "unit": "unit07"
+ },
+ {
+  "word": "helmet",
+  "pos": "n",
+  "cn": "头盔；防护帽",
+  "cnFull": "n.头盔；防护帽",
+  "firstTask": "day41",
+  "dayNo": 9,
+  "unit": "unit07"
+ },
+ {
+  "word": "get shocked",
+  "pos": "",
+  "cn": "遭受电击",
+  "cnFull": "遭受电击",
+  "firstTask": "day41",
+  "dayNo": 10,
+  "unit": "unit07"
+ },
+ {
+  "word": "stone",
+  "pos": "n",
+  "cn": "石头；石块",
+  "cnFull": "n.石头；石块",
+  "firstTask": "day42",
+  "dayNo": 1,
+  "unit": "unit07"
+ },
+ {
+  "word": "speed",
+  "pos": "n",
+  "cn": "速度",
+  "cnFull": "n.速度",
+  "firstTask": "day42",
+  "dayNo": 2,
+  "unit": "unit07"
+ },
+ {
+  "word": "hit",
+  "pos": "v",
+  "cn": "打；撞击",
+  "cnFull": "v.打；撞击",
+  "firstTask": "day42",
+  "dayNo": 3,
+  "unit": "unit07"
+ },
+ {
+  "word": "roll",
+  "pos": "v",
+  "cn": "（使）翻滚，滚动",
+  "cnFull": "v.（使）翻滚，滚动",
+  "firstTask": "day42",
+  "dayNo": 4,
+  "unit": ""
+ },
+ {
+  "word": "seriously",
+  "pos": "adv",
+  "cn": "非常；严重地；严肃地",
+  "cnFull": "adv.非常；严重地；严肃地",
+  "firstTask": "day42",
+  "dayNo": 5,
+  "unit": ""
+ },
+ {
+  "word": "protect",
+  "pos": "v",
+  "cn": "保护；防护",
+  "cnFull": "v.保护；防护",
+  "firstTask": "day42",
+  "dayNo": 6,
+  "unit": "unit07"
+ },
+ {
+  "word": "luckily",
+  "pos": "adv",
+  "cn": "幸运的是；幸好",
+  "cnFull": "adv.幸运的是；幸好",
+  "firstTask": "day42",
+  "dayNo": 7,
+  "unit": ""
+ },
+ {
+  "word": "bravely",
+  "pos": "adv",
+  "cn": "勇敢地",
+  "cnFull": "adv.勇敢地",
+  "firstTask": "day42",
+  "dayNo": 8,
+  "unit": "unit07"
+ },
+ {
+  "word": "push",
+  "pos": "v",
+  "cn": "推动；促使（达到某程度或状态） n.推；鼓励",
+  "cnFull": "v.推动；促使（达到某程度或状态） n.推；鼓励",
+  "firstTask": "day42",
+  "dayNo": 9,
+  "unit": "unit07"
+ },
+ {
+  "word": "check",
+  "pos": "v",
+  "cn": "检查；查看",
+  "cnFull": "v.检查；查看",
+  "firstTask": "day42",
+  "dayNo": 10,
+  "unit": ""
+ }
+]

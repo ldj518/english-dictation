@@ -6,8 +6,10 @@ import {
   fetchStats, checkBackend, fetchPinStatus, setParentPin, fetchPapers, paperFileUrl,
   createShare, rotateShuffleSalt, pushShuffleMode, currentShuffleMode, fetchShuffleSalt,
   fetchRecordings, recordFileUrl,
-  type StatsResp, type PhotoItem, type RecItem,
+  fetchWordbooks, currentBooks, pushActiveBook, pushDailyWords, createWordbook, deleteWordbook,
+  type StatsResp, type PhotoItem, type RecItem, type BooksResp,
 } from '../lib/api'
+import { getPlanTrack } from '../lib/data'
 import { todayStr } from '../lib/storage'
 import { sharePoster } from '../lib/poster'
 import type { Progress } from '../types'
@@ -376,6 +378,9 @@ export default function Parent() {
         {rotMsg && <div className="sub small" style={{ marginTop: 8, color: 'var(--blue)', fontWeight: 600 }}>{rotMsg}</div>}
       </div>
 
+      {/* 每日计划与词库管理（v2.5） */}
+      <WordbookCard />
+
       {/* 纸质卷照片 */}
       <div className="card pad">
         <div style={{ fontWeight: 800, marginBottom: 6 }}>📷 纸质卷照片</div>
@@ -471,6 +476,171 @@ export default function Parent() {
         <button className="btn ghost sm" onClick={() => nav('/stats')}>看我的详细统计 →</button>
       </div>
     </Shell>
+  )
+}
+
+/**
+ * 每日计划与词库管理：
+ * - 每天几个新词（5/8/10/12/15），总天数自动 = 词库总量 ÷ 每日词量
+ * - 册子切换：内置七上 / 家长粘贴创建的自定义册子（如六年级上）
+ * - 粘贴格式：每行一个词，英文在前在后都认（apple 苹果 / 苹果 apple）
+ */
+function WordbookCard() {
+  const [books, setBooks] = useState<BooksResp | null>(() => currentBooks())
+  const [msg, setMsg] = useState('')
+  const [name, setName] = useState('')
+  const [text, setText] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [showCreate, setShowCreate] = useState(false)
+  // 计划预览：第几天 / 总天数（跟 books 变化重算）
+  const [plan, setPlan] = useState<{ day: number; total: number; bookName: string; count: number } | null>(null)
+
+  const refresh = () => {
+    void fetchWordbooks().then(b => setBooks(b))
+  }
+
+  useEffect(() => {
+    refresh()
+  }, [])
+
+  useEffect(() => {
+    let cancel = false
+    void getPlanTrack().then(r => {
+      if (!cancel) setPlan({ day: r.day, total: r.total, bookName: r.bookName, count: r.track.wordCount })
+    })
+    return () => { cancel = true }
+  }, [books])
+
+  const daily = books?.dailyWords ?? 10
+  const active = books?.active || 'builtin7a'
+
+  const setDaily = async (n: number) => {
+    setMsg('保存中…')
+    const okRes = await pushDailyWords(n)
+    setMsg(okRes ? `已改为每天 ${n} 个新词，总天数自动重算` : '云端没连上，稍后再试')
+    refresh()
+  }
+
+  const activate = async (id: string) => {
+    setMsg('切换中…')
+    const okRes = await pushActiveBook(id)
+    setMsg(okRes ? '已切换册子，每日计划自动换成新词表' : '云端没连上，稍后再试')
+    refresh()
+  }
+
+  const del = async (id: string, bname: string) => {
+    if (!window.confirm(`确定删除「${bname}」？词单不可恢复。`)) return
+    setMsg('删除中…')
+    const okRes = await deleteWordbook(id)
+    setMsg(okRes ? '已删除' : '删除失败：网络不通')
+    refresh()
+  }
+
+  const create = async () => {
+    if (!name.trim() || !text.trim()) { setMsg('先填册子名称，再把词单粘贴到下面的大框里'); return }
+    setCreating(true)
+    setMsg('创建中…')
+    const r = await createWordbook(name.trim(), text)
+    setCreating(false)
+    if (r === null) { setMsg('创建失败：网络不通，稍后再试'); return }
+    if ('error' in r) { setMsg(r.error); return }
+    setMsg(`已创建「${name.trim()}」（${r.count} 词${r.skipped ? `，${r.skipped} 行没认出来跳过了` : ''}）。点列表里的「启用」才会用它出题。`)
+    setName(''); setText('')
+    refresh()
+  }
+
+  return (
+    <div className="card pad">
+      <div style={{ fontWeight: 800, marginBottom: 6 }}>📚 每日计划与词库</div>
+
+      {/* 计划预览 */}
+      {plan && (
+        <div className="sub small" style={{ marginBottom: 10, lineHeight: 1.8 }}>
+          当前：{plan.bookName} · 共 {plan.count} 词 · 每天 {daily} 个 → <b>{plan.total} 天听完</b>
+          {plan.total > 0 && <> · 孩子学到第 {plan.day} 天</>}
+        </div>
+      )}
+
+      {/* 每日新词数 */}
+      <div className="sub small" style={{ marginBottom: 6 }}>每天听写几个新词：</div>
+      <div className="seg" style={{ marginBottom: 12 }}>
+        {[5, 8, 10, 12, 15].map(n => (
+          <button key={n} className={daily === n ? 'on' : ''} style={{ flex: 1 }} onClick={() => setDaily(n)}>
+            {n} 词
+          </button>
+        ))}
+      </div>
+
+      {/* 册子列表 */}
+      <div className="sub small" style={{ marginBottom: 6 }}>用哪本词库出题：</div>
+      {(books?.books || []).length === 0 && (
+        <div className="sub small" style={{ marginBottom: 8 }}>
+          云端还没连上或还没有自定义册子。内置《鲁教版七上》始终可用。
+        </div>
+      )}
+      {(books?.books || []).map(b => (
+        <div key={b.id} className="between" style={{
+          padding: '8px 10px', marginBottom: 6, borderRadius: 10,
+          border: '1px solid ' + (b.id === active ? 'var(--blue)' : '#e4e8f0'),
+          background: b.id === active ? '#f3f7ff' : '#fff',
+        }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>
+              {b.id === active && <span style={{ color: 'var(--blue)', marginRight: 6 }}>✓</span>}
+              {b.name}
+            </div>
+            <div className="sub small">{b.count} 词{b.id === 'builtin7a' ? ' · 内置' : ''}</div>
+          </div>
+          <div className="row" style={{ gap: 6 }}>
+            {b.id !== active && (
+              <button className="btn sm" style={{ fontSize: 12 }} onClick={() => activate(b.id)}>启用</button>
+            )}
+            {b.id !== 'builtin7a' && (
+              <button className="btn ghost sm" style={{ fontSize: 12, color: 'var(--bad)' }} onClick={() => del(b.id, b.name)}>删</button>
+            )}
+          </div>
+        </div>
+      ))}
+
+      {/* 粘贴创建 */}
+      {!showCreate ? (
+        <button className="btn ghost sm" style={{ marginTop: 4 }} onClick={() => setShowCreate(true)}>
+          ＋ 粘贴词单建新册子（如：六年级上）
+        </button>
+      ) : (
+        <div style={{ marginTop: 10 }}>
+          <input
+            className="pinInput wide"
+            placeholder="册子名称，如：鲁教版六年级上"
+            value={name}
+            onChange={e => setName(e.target.value.slice(0, 30))}
+            style={{ marginBottom: 8, width: '100%' }}
+          />
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder={'每行一个词，英文在前在后都认：\nhold on 别挂断电话；等一等\n别挂断电话 hold on\napple 苹果'}
+            rows={6}
+            style={{
+              width: '100%', padding: 10, borderRadius: 10, border: '1px solid #e4e8f0',
+              fontSize: 14, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box',
+            }}
+          />
+          <div className="sub small" style={{ margin: '6px 0 8px', lineHeight: 1.7 }}>
+            每行一个词，英文和中文用空格/逗号/Tab 分开都行。至少 5 个有效词。
+            以后想要别的册子（六年级下、七年级下…），把整册词单粘进来就行。
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn sm" onClick={create} disabled={creating}>
+              {creating ? '创建中…' : '创建册子'}
+            </button>
+            <button className="btn ghost sm" onClick={() => { setShowCreate(false); setName(''); setText('') }}>收起</button>
+          </div>
+        </div>
+      )}
+
+      {msg && <div className="sub small" style={{ marginTop: 8, color: 'var(--blue)', fontWeight: 600, lineHeight: 1.7 }}>{msg}</div>}
+    </div>
   )
 }
 

@@ -35,10 +35,14 @@ const CASES: Case[] = [
 // 需要路由参数的页面
 const PARAM_CASES: [string, React.ComponentType][] = [
   ['/d/day01', DictationPage],
+  ['/d/plan', DictationPage],   // 每日计划（动态任务）
+  ['/d/mix', DictationPage],    // 智能混合卷（动态任务）
   ['/exam/unit01', ExamPage],
   ['/print/day01', PrintSheetPage],
+  ['/print/plan', PrintSheetPage],
   ['/paper/day01', PaperPage],
   ['/translate/day01', TranslatePage],
+  ['/translate/plan', TranslatePage],
   ['/read/day01', ReadPage],
   ['/s/sh_test123', SharePage],
 ]
@@ -66,17 +70,36 @@ for (const [name, path, C] of CASES) {
   }
 }
 
-// 带参数页面：需要 router 的 params，用 MemoryRouter 模拟
-import { MemoryRouter } from 'react-router-dom'
+// 带参数页面：必须套一层匹配的 <Route>，否则 useParams() 拿不到 id，
+// 页面会走「没有这个任务」分支（以前空渲染碰巧超过 200 字节，是假阳性）
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
+
+function renderParam(path: string, C: React.ComponentType): string {
+  const pattern = '/' + path.split('/')[1] + '/:id'
+  return renderToString(
+    createElement(MemoryRouter, { initialEntries: [path] },
+      createElement(StoreProvider, null,
+        createElement(Routes, null,
+          createElement(Route, { path: pattern, element: createElement(C) })))))
+}
+
+// SSR 里 effect 不执行：动态任务/异步词单渲染出「加载中」是正确行为，
+// 用「预期标记」判定，其余页面仍要求 >200 字节的完整渲染
+const EXPECTED: Record<string, string> = {
+  '/d/plan': '正在准备今天的词单',
+  '/d/mix': '正在准备今天的词单',
+  '/print/plan': '正在准备今天的词单',
+  '/translate/plan': '正在准备今天的词单',
+  '/translate/day01': '加载中',
+  '/read/day01': '加载中',
+}
+
 for (const [path, C] of PARAM_CASES) {
   try {
-    const html = renderToString(
-      createElement(MemoryRouter, { initialEntries: [path] },
-        createElement(StoreProvider, null, createElement(C))
-      )
-    )
-    const ok = html.length > 200
-    results.push(`  ${ok ? '✓' : '✗'} ${path.padEnd(12)} ${String(html.length).padStart(6)} 字节`)
+    const html = renderParam(path, C)
+    const expect = EXPECTED[path]
+    const ok = expect ? html.includes(expect) : html.length > 200
+    results.push(`  ${ok ? '✓' : '✗'} ${path.padEnd(12)} ${String(html.length).padStart(6)} 字节${expect ? `（预期：${expect}）` : ''}`)
     ok ? pass++ : fail++
   } catch (e) {
     results.push(`  ✗ ${path.padEnd(12)} 渲染异常: ${(e as Error).message}`)
@@ -91,9 +114,7 @@ for (const [path, C] of PARAM_CASES) {
   let bad = 0
   const all: [string, () => string][] = [
     ...CASES.map(([p, , C]) => [p, () => render(p, C)] as [string, () => string]),
-    ...PARAM_CASES.map(([p, C]) => [p, () =>
-      renderToString(createElement(MemoryRouter, { initialEntries: [p] },
-        createElement(StoreProvider, null, createElement(C))))] as [string, () => string]),
+    ...PARAM_CASES.map(([p, C]) => [p, () => renderParam(p, C)] as [string, () => string]),
   ]
   for (const [path, fn] of all) {
     try {

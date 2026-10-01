@@ -27,6 +27,8 @@ interface Ctx {
   updateSettings: (s: Partial<Progress['settings']>) => void
   clearWrong: () => void
   doReset: () => void
+  /** 每日计划完成到第几天（/d/plan 交卷后调） */
+  markPlanDone: (day: number) => void
 }
 
 const C = createContext<Ctx | null>(null)
@@ -179,6 +181,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setProgress(p => ({ ...p, wrong: {} }))
   }, [])
 
+  /** 每日计划完成记账：planDone 只进不退（重做旧的一遍不回退天数） */
+  const markPlanDone = useCallback((day: number) => {
+    setProgress(p => ({ ...p, planDone: Math.max(p.planDone || 0, day) }))
+  }, [])
+
   const doReset = useCallback(() => {
     const np = defaultProgress()
     resetProgress(activeId)
@@ -187,9 +194,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(() => ({
     progress, profiles, profile, switchProfile, updateProfile,
-    recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset,
+    recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, markPlanDone,
   }), [progress, profiles, profile, switchProfile, updateProfile,
-       recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset])
+       recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, markPlanDone])
 
   return (
     <C.Provider value={value}>

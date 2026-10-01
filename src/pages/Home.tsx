@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore } from '../lib/store'
 import { levelOf, BADGES } from '../lib/gamify'
-import { DAILY, UNITS, FINALS } from '../lib/data'
+import { DAILY, UNITS, FINALS, getPlanTrack } from '../lib/data'
+import { fetchWordbooks } from '../lib/api'
 import { dueWrongWords, todayStr } from '../lib/storage'
 import type { Track } from '../types'
 
@@ -28,6 +29,19 @@ export default function Home() {
   const doneCount = Object.keys(progress.best).length
   const wrongCount = Object.keys(progress.wrong).length
   const acc = progress.totalAnswers ? Math.round((progress.totalRight / progress.totalAnswers) * 100) : 0
+
+  // 每日计划（家长自定义：每天 N 个新词，总天数自动算）
+  const [plan, setPlan] = useState<{ day: number; total: number; bookName: string; count: number } | null>(null)
+  useEffect(() => {
+    let cancel = false
+    // 先刷一次册子配置（激活册子/每日词量，云端为准），再合成今日计划
+    fetchWordbooks().catch(() => null).finally(() => {
+      void getPlanTrack().then(r => {
+        if (!cancel) setPlan({ day: r.day, total: r.total, bookName: r.bookName, count: r.track.wordCount })
+      })
+    })
+    return () => { cancel = true }
+  }, [profile.id, progress.planDone])
 
   const list = tab === 'daily' ? DAILY : tab === 'unit' ? UNITS : FINALS
 
@@ -62,6 +76,48 @@ export default function Home() {
           <div><b>{progress.points}</b>积分</div>
           <div><b>{progress.streakDays}</b>连续天数</div>
           <div><b>{todayMin}</b>今日分钟</div>
+        </div>
+      </div>
+
+      {/* 每日计划：家长定的每天 N 词，做完自动进入下一天 */}
+      {plan && (
+        <div className="card pad" style={{ marginBottom: 14, borderColor: '#b2c7f5', background: 'linear-gradient(180deg,#f3f7ff,#fff)' }}>
+          <div className="between" style={{ marginBottom: 12 }}>
+            <div>
+              <div className="sub">每日计划 · {plan.bookName}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>
+                第 {plan.day} / {plan.total} 天
+                <span className="sub" style={{ fontWeight: 400, marginLeft: 8, fontSize: 13 }}>
+                  每天 {plan.count} 个新词
+                </span>
+              </div>
+            </div>
+            <div style={{ fontSize: 30 }}>📅</div>
+          </div>
+          <button className="btn" style={{ background: 'var(--blue)' }} onClick={() => nav('/d/plan')}>
+            ▶ 今日听写
+          </button>
+          <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+            <Link className="btn ghost sm" to="/print/plan" style={{ flex: '1 1 40%', textAlign: 'center' }}>
+              🖨️ 打今日卷
+            </Link>
+            <Link className="btn ghost sm" to="/translate/plan" style={{ flex: '1 1 40%', textAlign: 'center' }}>
+              🔤 翻译巩固
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* 智能混合卷：只抽学过/错过的词，没学过的绝不出现 */}
+      <div className="card pad" style={{ marginBottom: 14, borderColor: '#f0d69a', background: 'linear-gradient(180deg,#fffdf5,#fff)' }}>
+        <div className="between">
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>🎲 智能混合卷</div>
+            <div className="sub small" style={{ marginTop: 3 }}>
+              从学过的词和错词本里随机抽一组混着练，检验记得牢不牢
+            </div>
+          </div>
+          <button className="btn gold sm" onClick={() => nav('/d/mix')}>开始</button>
         </div>
       </div>
 

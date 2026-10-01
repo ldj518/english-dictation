@@ -21,7 +21,12 @@ export async function loadAudioIndex(): Promise<Record<string, AudioItem[]>> {
   if (_audioLoading) return _audioLoading
   _audioLoading = (async () => {
     try {
-      const r = await fetch(audioUrl('manifest.json'))
+      // 按天换 query 破缓存：旧 manifest 曾以 immutable 缓存在浏览器/边缘一年，
+      // 不换 URL 永远拿不到指向新音频文件的清单（v2.5 去报号版踩过）
+      const d = new Date()
+      const z = (x: number) => String(x).padStart(2, '0')
+      const v = `${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}`
+      const r = await fetch(audioUrl(`manifest.json?v=${v}`))
       const m = await r.json()
       const idx: Record<string, AudioItem[]> = {}
       for (const t of m.tracks as { id: string; items: AudioItem[] }[]) {
@@ -118,4 +123,147 @@ export const WORDS_BY_UNIT = (() => {
 export function unitOfDay(dayOrder: number): number {
   // 7 单元 / 36 天，约每 5 天一个单元
   return Math.min(7, Math.max(1, Math.ceil(dayOrder / 5)))
+}
+
+/* ═══════════ 词库册子 + 动态任务（v2.5）═══════════ */
+
+import { load, activeProfileId } from './storage'
+import { seededShuffle, makeSeed, orderSalt, orderEpoch } from './shuffle'
+import { currentShuffleMode, currentSalt, currentBooks } from './api'
+
+export interface BookWord { word: string; cn: string; file: string | null }
+export interface LoadedBook { id: string; name: string; words: BookWord[]; byKey: Map<string, BookWord> }
+
+/** 内置七上：按任务顺序收集全部词条（去重） */
+function builtinWords(): { word: string; cn: string }[] {
+  const seen = new Set<string>()
+  const out: { word: string; cn: string }[] = []
+  for (const t of RAW_TASKS) {
+    for (const it of t.items) {
+      const key = it[1].toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push({ word: it[1], cn: it[2] })
+    }
+  }
+  return out
+}
+
+/**
+ * 加载当前激活册子的全量词表（带逐词音频 file，没有音频的词为 null → 前端
+ * 自动回退 Web Speech）。内置册子来自 tasks.json，自定义册子来自 D1 词单
+ * （同名词自动继承内置词的音频）。
+ */
+export async function loadBookWords(): Promise<LoadedBook> {
+  const b = currentBooks()
+  const activeId = b?.active || 'builtin7a'
+  const activeMeta = b?.books.find(x => x.id === activeId)
+
+  let raw: { word: string; cn: string }[]
+  if (activeId !== 'builtin7a' && activeMeta) {
+    raw = await fetchBookWords(activeId)
+  } else {
+    raw = builtinWords()
+  }
+
+  const fmap = await wordFileMap()
+  const words: BookWord[] = raw.map(w => ({ ...w, file: fmap.get(w.word) || null }))
+  const byKey = new Map<string, BookWord>()
+  for (const w of words) byKey.set(w.word.toLowerCase(), w)
+  return { id: activeId, name: activeMeta?.name || '鲁教版七上（内置）', words, byKey }
+}
+
+/** 拉自定义册子的词单明细（/api/wordbook-words?id=xx），失败回退内置 */
+async function fetchBookWords(id: string): Promise<{ word: string; cn: string }[]> {
+  try {
+    const r = await fetch('/api/wordbook-words?id=' + encodeURIComponent(id))
+    if (!r.ok) throw new Error(String(r.status))
+    const j = await r.json() as { ok: boolean; words?: { word: string; cn: string }[] }
+    if (j.ok && Array.isArray(j.words) && j.words.length >= 5) return j.words
+  } catch { /* 离线/后端挂 → 回退内置词表，不能耽误学习 */ }
+  return builtinWords()
+}
+
+/** 今日动态任务：每日计划（第 planDone+1 天，每天 N 个新词） */
+export async function getPlanTrack(): Promise<{ track: Track; day: number; total: number; bookName: string }> {
+  const book = await loadBookWords()
+  const n = Math.max(3, currentBooks()?.dailyWords || 10)
+  const p = load(activeProfileId())
+  const total = Math.max(1, Math.ceil(book.words.length / n))
+  const day = Math.max(1, Math.min(total, (p.planDone || 0) + 1))
+  const slice = book.words.slice((day - 1) * n, day * n)
+  const track: Track = {
+    id: 'plan',
+    kind: 'daily',
+    group: 'daily',
+    order: day,
+    label: '每日计划 · 第 ' + day + '/' + total + ' 天',
+    file: '',
+    seconds: 0,
+    wordCount: slice.length,
+    sections: [],
+    items: slice.map((w, i) => [i + 1, w.word, w.cn, 0, 0] as ItemTuple),
+  }
+  return { track, day, total, bookName: book.name }
+}
+
+/** 智能混合卷：已学过的词 ∪ 错词本词，随机抽一组（没学过的绝不出现） */
+export async function getMixTrack(): Promise<{ track: Track; poolSize: number }> {
+  const book = await loadBookWords()
+  const n = Math.max(3, currentBooks()?.dailyWords || 10)
+  const p = load(activeProfileId())
+  const learned = book.words.slice(0, Math.min(book.words.length, (p.planDone || 0) * n))
+  const pool = new Map<string, BookWord>()
+  for (const w of learned) pool.set(w.word.toLowerCase(), w)
+  // 错词本里的词（都做过题，天然属于「学过」范畴；防御性再并一次）
+  for (const [w] of Object.entries(p.wrong)) {
+    const hit = book.byKey.get(w.toLowerCase())
+    if (hit) pool.set(w.toLowerCase(), hit)
+  }
+  const arr = [...pool.values()]
+  const mode = currentShuffleMode()
+  const epoch = orderEpoch(mode, todayStrOf(), weekStartOf())
+  const salt = orderSalt(mode, weekStartOf(), currentSalt())
+  const shuffled = seededShuffle(arr, makeSeed(epoch, activeProfileId(), 'mix', salt))
+  const picked = shuffled.slice(0, Math.min(12, shuffled.length))
+  const track: Track = {
+    id: 'mix',
+    kind: 'daily',
+    group: 'daily',
+    order: 0,
+    label: '智能混合卷 · ' + picked.length + ' 词',
+    file: '',
+    seconds: 0,
+    wordCount: picked.length,
+    sections: [],
+    items: picked.map((w, i) => [i + 1, w.word, w.cn, 0, 0] as ItemTuple),
+  }
+  return { track, poolSize: arr.length }
+}
+
+function todayStrOf(): string {
+  const d = new Date()
+  const z = (x: number) => String(x).padStart(2, '0')
+  return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate())
+}
+
+function weekStartOf(): string {
+  const d = new Date()
+  const day = (d.getDay() + 6) % 7
+  d.setDate(d.getDate() - day)
+  const z = (x: number) => String(x).padStart(2, '0')
+  return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate())
+}
+
+/**
+ * 扩展版 getTrack：内置静态任务之外，还支持动态任务
+ *   /d/plan  今日计划   /d/mix  智能混合卷
+ * 打印卷/翻译关/听写页统一走这个入口。
+ */
+export async function getTrackAny(id: string): Promise<Track | undefined> {
+  const t = getTrack(id)
+  if (t) return t
+  if (id === 'plan') return (await getPlanTrack()).track
+  if (id === 'mix') return (await getMixTrack()).track
+  return undefined
 }

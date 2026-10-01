@@ -34,7 +34,9 @@ os.makedirs(os.path.join(PUB, "words"), exist_ok=True)
 
 
 def key_of(word: str) -> str:
-    return hashlib.md5(word.encode("utf-8")).hexdigest()[:12]
+    # v2：内容处理升级（去「第X题」报号）后文件名必须跟着变——
+    # R2/边缘缓存对 /audio/* 设了 immutable 一年，同名的旧文件会永远命中旧缓存
+    return hashlib.md5(("w2:" + word).encode("utf-8")).hexdigest()[:12]
 
 
 def decode_mono(path):
@@ -100,6 +102,60 @@ def trim_fade(seg, pad_ms=60, fade_ms=10):
     return out
 
 
+def strip_announce(x, min_sil=0.30, keep_pad=0.06):
+    """只保留最后一遍朗读（去掉「第X题」报号和重复朗读）。
+
+    原始整轨是听写节奏：「第X题」→ 停 → 单词第1遍 → 长停 → 单词第2遍。
+    实现：按语音簇分组（组间隔 >=0.3s；词组内部连读停顿 <0.25s 不会拆组），
+    从最后一组往前合并到有声跨度 >=0.35s（防止词内偶发停顿把词尾单独成组、
+    只留半个音节），保留合并后的连续区间。只有一组（无报号/无重复）原样返回。
+    """
+    xx = np.asarray(x, dtype=np.float32)
+    win = int(RATE * 0.02)                    # 20ms 能量窗
+    n = xx.size // win
+    if n < 6:
+        return xx
+    e = np.abs(xx[: n * win].reshape(n, win)).mean(axis=1)
+    voiced = e >= 0.012                       # ~-38 dBFS 以上算有声
+    gap_win = int(RATE * min_sil) // win      # 组间隔阈值（窗数）
+    groups = []                               # 每组 [start_win, end_win)
+    i = 0
+    while i < n:
+        if voiced[i]:
+            j = i
+            while j < n:
+                if voiced[j]:
+                    j += 1
+                    continue
+                # 遇到静音：向后看 gap_win 个窗，若其间再无有声窗则成组
+                nxt = j
+                while nxt < n and not voiced[nxt]:
+                    nxt += 1
+                if nxt - j >= gap_win or nxt >= n:
+                    break
+                j = nxt
+            groups.append([i, min(j, n)])
+            i = j + 1
+        else:
+            i += 1
+    if len(groups) <= 1:
+        return xx
+    min_spans = int(0.35 / 0.02)              # 0.35s 有声跨度下限
+    keep_from = groups[-1][0]
+    span = groups[-1][1] - groups[-1][0]
+    for g in reversed(groups[:-1]):
+        if span >= min_spans:
+            break
+        keep_from = g[0]
+        span += g[1] - g[0]
+    if span < min_spans:
+        return xx                              # 实在太短，回退不切
+    cut = keep_from * win - int(RATE * keep_pad)
+    return xx[max(0, cut):]
+
+
+
+
 # ── 主流程 ──────────────────────────────────────────────────────
 tasks = json.load(open(os.path.join(DATA, "tasks.json"), encoding="utf-8"))
 
@@ -133,6 +189,11 @@ for t in tasks:
             items.append({"no": no, "word": word, "cn": cn, "file": None})
             continue
         clean = trim_fade(seg)
+        if clean.size == 0:
+            items.append({"no": no, "word": word, "cn": cn, "file": None})
+            continue
+        # 切掉「第X题」报号（只留纯单词），再裁一次头尾静音
+        clean = trim_fade(strip_announce(clean))
         if clean.size == 0:
             items.append({"no": no, "word": word, "cn": cn, "file": None})
             continue

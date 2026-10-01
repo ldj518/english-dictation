@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
+import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems, wordFileMap } from '../lib/data'
 import { useStore } from '../lib/store'
 import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
 import { todayStr, weekStartStr } from '../lib/storage'
@@ -8,7 +8,7 @@ import { currentSalt, currentShuffleMode, fetchShuffleSalt } from '../lib/api'
 import { buildA4Pdf, downloadPdf, type PdfBlock } from '../lib/pdf'
 import PinGate from '../components/PinGate'
 import { isUnlocked } from '../lib/parentLock'
-import type { AudioItem } from '../types'
+import type { AudioItem, Track } from '../types'
 
 /**
  * 纸质听写卷（防泄题设计）。
@@ -27,7 +27,13 @@ export default function PrintSheet() {
   const { id = '' } = useParams()
   const nav = useNavigate()
   const { progress, profile } = useStore()
-  const track = getTrack(id)
+  // 静态任务同步可得；plan/mix 异步合成
+  const [track, setTrack] = useState<Track | undefined>(() => getTrack(id))
+  useEffect(() => {
+    let cancel = false
+    void getTrackAny(id).then(t => { if (!cancel && t) setTrack(t) })
+    return () => { cancel = true }
+  }, [id])
 
   const [mode, setMode] = useState<'writing' | 'blank' | 'answer'>('writing')
   const [items, setItems] = useState<AudioItem[]>([])
@@ -40,16 +46,21 @@ export default function PrintSheet() {
     // 先拉一次云端盐+顺序模式：家长刚点过「立即重排」，打印卷必须跟着变
     fetchShuffleSalt().finally(() => {
       if (cancel) return
-      loadAudioIndex().then(idxMap => {
+      Promise.all([loadAudioIndex(), wordFileMap()]).then(([idxMap, fmap]) => {
         if (cancel) return
         const fromAudio = idxMap[track.id]
-        let list: AudioItem[] = tuplesToItems(track.items)
+        let list: AudioItem[]
         if (fromAudio && fromAudio.length) {
           list = fromAudio.map((a, i) => ({
             no: a.no ?? i + 1,
             word: a.word,
             cn: a.cn || track.items[i]?.[2] || '',
             file: a.file,
+          }))
+        } else {
+          // 动态任务（每日计划/智能混合卷）：任务自带词单 + 全词库音频映射
+          list = tuplesToItems(track.items).map(it => ({
+            ...it, file: fmap.get(it.word) || null,
           }))
         }
         // 打印卷与线上卷同种子：同模式（云端同步）+ 同时间成分 + 同盐
@@ -68,6 +79,21 @@ export default function PrintSheet() {
 
   const title = track ? (track.label || `第 ${track.order} 天`) : ''
   const dateStr = todayStr()
+
+  // plan/mix 异步合成中；其他 id 找不到才是真没有
+  if (!track) {
+    const loadingDyn = id === 'plan' || id === 'mix'
+    return (
+      <div className="printWrap">
+        <div className="ctrl no-print">
+          <button className="btn ghost sm" onClick={() => nav(-1)}>‹ 返回</button>
+        </div>
+        <div className="tip no-print">
+          {loadingDyn ? '⏳ 正在准备今天的词单…' : '没有这个任务'}
+        </div>
+      </div>
+    )
+  }
 
   /** 生成并下载真正的 A4 PDF 文件 */
   const exportPdf = () => {

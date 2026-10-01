@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
-import { getTrack, loadAudioIndex, tuplesToItems, wordFileMap, playWordText } from '../lib/data'
+import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems, wordFileMap, playWordText } from '../lib/data'
 import { playWord, stopAll, prefetchAhead, pauseAll, resolveRate } from '../lib/player'
 import { seededShuffle, makeSeed, newSalt, orderSalt, orderEpoch } from '../lib/shuffle'
 import { weekStartStr } from '../lib/storage'
@@ -30,12 +30,25 @@ function fmtSec(s: number): string {
 export default function Dictation() {
   const { id = '' } = useParams()
   const nav = useNavigate()
-  const { progress, recordAnswer, submitSession, updateSettings, profile } = useStore()
+  const { progress, recordAnswer, submitSession, updateSettings, profile, markPlanDone } = useStore()
   /** 内置 26 键键盘（默认开）：杜绝输入法联想把整词弹出来 */
   const kb = progress.settings.kbBuiltIn !== false
   // /d/custom：错词本勾选的自定义词单（sessionStorage 传入）
   const isCustom = id === 'custom'
-  const track = isCustom ? CUSTOM_TRACK : getTrack(id)
+  // 静态任务同步可得；plan（每日计划）/ mix（智能混合卷）由 effect 异步合成
+  const [track, setTrack] = useState<Track | undefined>(() =>
+    isCustom ? CUSTOM_TRACK : getTrack(id)
+  )
+
+  // 动态任务加载（/d/plan、/d/mix）
+  useEffect(() => {
+    if (isCustom) return
+    let cancel = false
+    void getTrackAny(id).then(t => {
+      if (!cancel && t) setTrack(t)
+    })
+    return () => { cancel = true }
+  }, [id, isCustom])
 
   const [idx, setIdx] = useState(0)
   const [input, setInput] = useState('')
@@ -44,7 +57,7 @@ export default function Dictation() {
   const [result, setResult] = useState<{ score: number; right: number; total: number; newly: unknown[]; seconds: number; attemptNo: number } | null>(null)
   const [answers, setAnswers] = useState<AnswerRecord[]>([])
   const [playing, setPlaying] = useState(false)
-  const [items, setItems] = useState<AudioItem[]>(() => track ? tuplesToItems(track.items) : [])
+  const [items, setItems] = useState<AudioItem[]>([])
   const [salt, setSalt] = useState('')            // 手动重新洗牌的扰动
   const [slowMode, setSlowMode] = useState(false) // 慢速播放高亮
   const startedAt = useRef(Date.now())
@@ -92,10 +105,10 @@ export default function Dictation() {
     // 先拉一次云端盐+顺序模式（家长重排/切档后，下次进页立刻生效；离线时用本地缓存）
     fetchShuffleSalt().finally(() => {
       if (cancel) return
-      loadAudioIndex().then(idxMap => {
+      Promise.all([loadAudioIndex(), wordFileMap()]).then(([idxMap, fmap]) => {
         if (cancel) return
         const fromAudio = idxMap[track.id]
-        let list: AudioItem[] = items
+        let list: AudioItem[]
         if (fromAudio && fromAudio.length) {
           // 用音频清单里的条目（含 file），保留原始中文
           list = fromAudio.map((a, i) => ({
@@ -103,6 +116,12 @@ export default function Dictation() {
             word: a.word,
             cn: a.cn || track.items[i]?.[2] || '',
             file: a.file,
+          }))
+        } else {
+          // 动态任务（每日计划/智能混合卷）不在音频清单里：
+          // 用任务自带词单 + 全词库逐词音频映射（没有文件的词走 Web Speech）
+          list = tuplesToItems(track.items).map(it => ({
+            ...it, file: fmap.get(it.word) || null,
           }))
         }
         // 随机出题：同一天同一人顺序稳定；不同天/不同人/重排后顺序不同
@@ -245,11 +264,26 @@ export default function Dictation() {
       h => h.trackId === track.id && todayStr(new Date(h.at)) === today
     ).length + 1
     const { newly } = submitSession(track, recs, sec)
+    // 每日计划：整卷做完才推进到这一天（中途交卷/跳题不算完成，不跳词）
+    if (track.id === 'plan' && recs.length >= track.items.length) {
+      markPlanDone(track.order)
+    }
     setResult({ score, right, total, newly, seconds: sec, attemptNo })
     setPhase('done')
   }
 
-  if (!track) return <Shell title="未找到" back><div className="empty"><div className="i">🤔</div><div>没有这个任务</div></div></Shell>
+  if (!track) {
+    // plan/mix 是异步合成的，短暂等待属正常；其他 id 找不到才是真没有
+    const loadingDyn = id === 'plan' || id === 'mix'
+    return (
+      <Shell title={loadingDyn ? '准备词单' : '未找到'} back>
+        <div className="empty">
+          <div className="i">{loadingDyn ? '⏳' : '🤔'}</div>
+          <div>{loadingDyn ? '正在准备今天的词单…' : '没有这个任务'}</div>
+        </div>
+      </Shell>
+    )
+  }
 
   // ── 错词加练：只重练本次答错的词（换盐触发重载 → 读取 retrain-words 过滤）──
   const onRetrain = () => {
@@ -462,7 +496,7 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
 
       {/* 巩固闭环：翻译关 + 跟读 + 错词加练（自定义错词卷没有对应任务，隐藏这两个入口） */}
       <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
-        {track && getTrack(track.id) && (
+        {track && (getTrack(track.id) || track.id === 'plan' || track.id === 'mix') && (
           <button className="btn" style={{ background: 'var(--blue)' }} onClick={() => nav(`/translate/${track.id}`)}>
             🔤 进入翻译关
           </button>
@@ -478,9 +512,9 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
           </button>
         )}
       </div>
-      {track && getTrack(track.id) && (
+      {track && (getTrack(track.id) || track.id === 'plan' || track.id === 'mix') && (
         <div className="sub small center" style={{ marginTop: 6 }}>
-          翻译关换个方向再过一遍 · 跟读录下来发给家长听
+          翻译关换个方向再过一遍{getTrack(track.id) ? ' · 跟读录下来发给家长听' : ''}
         </div>
       )}
 

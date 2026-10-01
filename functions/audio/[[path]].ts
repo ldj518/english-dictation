@@ -72,22 +72,29 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, waitUntil
     }
 
     // ── 全量请求：边缘缓存优先 ──
+    // manifest.json 是「名字 → 文件」的索引，内容会随重制音频而变，
+    // 绝不能进 immutable 缓存（否则换版后端上一直发旧清单 → 继续听到报号版）
+    const isManifest = key === 'manifest.json'
     const cache = caches.default
-    const cached = await cache.match(request)
-    if (cached) return cached
+    if (!isManifest) {
+      const cached = await cache.match(request)
+      if (cached) return cached
+    }
 
     const obj = await env.BUCKET.get(key)
     if (!obj) return fail('音频不存在', 404)
 
     const h = new Headers()
     obj.writeHttpMetadata(h)
-    h.set('Content-Type', obj.httpMetadata?.contentType || 'audio/mpeg')
-    h.set('Cache-Control', 'public, max-age=31536000, immutable')
-    h.set('Accept-Ranges', 'bytes')
-    h.set('ETag', `"${obj.httpEtag}"`)
+    h.set('Content-Type', isManifest ? 'application/json; charset=utf-8' : (obj.httpMetadata?.contentType || 'audio/mpeg'))
+    h.set('Cache-Control', isManifest ? 'no-store' : 'public, max-age=31536000, immutable')
+    if (!isManifest) {
+      h.set('Accept-Ranges', 'bytes')
+      h.set('ETag', `"${obj.httpEtag}"`)
+    }
     const resp = new Response(obj.body, { status: 200, headers: h })
-    // 内容 hash 文件名，永不变化，放心写边缘缓存
-    waitUntil(cache.put(request, resp.clone()))
+    // 内容 hash 文件名，永不变化，放心写边缘缓存；manifest 除外
+    if (!isManifest) waitUntil(cache.put(request, resp.clone()))
     return resp
   } catch (e) {
     return fail('读取音频失败: ' + (e as Error).message, 500)

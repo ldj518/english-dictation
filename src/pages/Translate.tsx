@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
-import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
+import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems, wordFileMap } from '../lib/data'
 import { playWord, pauseAll, resolveRate } from '../lib/player'
 import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
 import { todayStr, weekStartStr } from '../lib/storage'
@@ -29,7 +29,13 @@ export default function Translate() {
   const { recordAnswer, submitSession, profile, progress } = useStore()
   /** 内置 26 键键盘（默认开）：杜绝输入法联想把整词弹出来 */
   const kb = progress.settings.kbBuiltIn !== false
-  const track = getTrack(id)
+  // 静态任务同步可得；plan/mix 异步合成
+  const [track, setTrack] = useState<Track | undefined>(() => getTrack(id))
+  useEffect(() => {
+    let cancel = false
+    void getTrackAny(id).then(t => { if (!cancel && t) setTrack(t) })
+    return () => { cancel = true }
+  }, [id])
 
   const [dir, setDir] = useState<'e2c' | 'c2e'>('e2c')
   const [items, setItems] = useState<AudioItem[]>([])
@@ -57,16 +63,21 @@ export default function Translate() {
     let cancel = false
     fetchShuffleSalt().finally(() => {
       if (cancel) return
-      loadAudioIndex().then(idxMap => {
+      Promise.all([loadAudioIndex(), wordFileMap()]).then(([idxMap, fmap]) => {
         if (cancel) return
         const fromAudio = idxMap[track.id]
-        let list: AudioItem[] = tuplesToItems(track.items)
+        let list: AudioItem[]
         if (fromAudio && fromAudio.length) {
           list = fromAudio.map((a, i) => ({
             no: a.no ?? i + 1,
             word: a.word,
             cn: a.cn || track.items[i]?.[2] || '',
             file: a.file,
+          }))
+        } else {
+          // 动态任务（每日计划/智能混合卷）：任务自带词单 + 全词库音频映射
+          list = tuplesToItems(track.items).map(it => ({
+            ...it, file: fmap.get(it.word) || null,
           }))
         }
         if (list.length > 1) {
@@ -111,7 +122,17 @@ export default function Translate() {
     [dir, cur, items, profile.id, track]
   )
 
-  if (!track) return <Shell title="未找到" back><div className="empty"><div className="i">🤔</div><div>没有这个任务</div></div></Shell>
+  if (!track) {
+    const loadingDyn = id === 'plan' || id === 'mix'
+    return (
+      <Shell title={loadingDyn ? '准备词单' : '未找到'} back>
+        <div className="empty">
+          <div className="i">{loadingDyn ? '⏳' : '🤔'}</div>
+          <div>{loadingDyn ? '正在准备今天的词单…' : '没有这个任务'}</div>
+        </div>
+      </Shell>
+    )
+  }
 
   const replay = () => { if (cur) { playToken.current++; pauseAll(); playWord(cur, resolveRate(false, progress.settings.rate)) } }
 
@@ -321,9 +342,24 @@ export default function Translate() {
         </div>
       )}
 
+      {/* 答完必须能走：done 状态下给显眼的下一题按钮（两个方向统一），最后一题变交卷 */}
+      {phase === 'done' && (
+        <div className="center mt">
+          <button
+            className="btn"
+            style={{ background: 'var(--blue)', color: '#fff', minWidth: 220, fontSize: 17 }}
+            onClick={next}
+          >
+            {idx + 1 >= items.length ? '交卷看成绩 ▶' : '下一题 ▶'}
+          </button>
+        </div>
+      )}
+
       <div className="controls">
         <button className="btn ghost" onClick={() => { setIdx(i => Math.max(0, i - 1)); setPicked(''); setInput(''); setPhase('ask') }} disabled={idx === 0}>‹ 上一题</button>
-        <button className="btn ghost" onClick={() => { setPhase('done'); if (!answers.some(a => a.no === cur.no)) { const rec = { no: cur.no, word: cur.word, cn: cur.cn, input: '', correct: false }; recordAnswer(cur.word, cur.cn, '', false); setLast(rec); setAnswers(a => [...a, rec]) } }}>跳过</button>
+        {phase === 'ask' && (
+          <button className="btn ghost" onClick={() => { setPhase('done'); if (!answers.some(a => a.no === cur.no)) { const rec = { no: cur.no, word: cur.word, cn: cur.cn, input: '', correct: false }; recordAnswer(cur.word, cur.cn, '', false); setLast(rec); setAnswers(a => [...a, rec]) } }}>跳过</button>
+        )}
         <button className="btn ghost" onClick={finish}>结束并交卷</button>
       </div>
     </Shell>

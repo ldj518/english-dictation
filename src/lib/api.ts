@@ -319,3 +319,103 @@ export async function fetchRecordings(studentId: string): Promise<RecItem[] | nu
 export function recordFileUrl(key: string): string {
   return `${BASE}/record-file?key=${encodeURIComponent(key)}`
 }
+
+/* ═══════════ 词库册子（v2.5）═══════════ */
+
+export interface BookMeta { id: string; name: string; count: number }
+export interface BooksResp {
+  books: BookMeta[]
+  active: string
+  dailyWords: number
+}
+
+const BOOKS_KEY = 'eng-dict-books'
+let _books: BooksResp | null = null
+
+function cacheBooks(b: BooksResp) {
+  _books = b
+  try { localStorage.setItem(BOOKS_KEY, JSON.stringify(b)) } catch { /* ignore */ }
+}
+
+function readBooksCache(): BooksResp | null {
+  if (_books) return _books
+  try {
+    const raw = localStorage.getItem(BOOKS_KEY)
+    if (raw) _books = JSON.parse(raw) as BooksResp
+  } catch { /* ignore */ }
+  return _books
+}
+
+/** 拉取册子列表 + 激活册子 + 每日词量（云端为准，离线用缓存） */
+export async function fetchWordbooks(): Promise<BooksResp | null> {
+  const r = await req<BooksResp>('/wordbooks')
+  if (r && Array.isArray(r.books)) {
+    const b: BooksResp = {
+      books: r.books,
+      active: r.active || 'builtin7a',
+      dailyWords: r.dailyWords || 10,
+    }
+    cacheBooks(b)
+    return b
+  }
+  return readBooksCache()
+}
+
+/** 当前缓存的册子状态（同步，进页面立即可用） */
+export function currentBooks(): BooksResp | null {
+  return readBooksCache()
+}
+
+/** 切换激活册子。成功返回 true */
+export async function pushActiveBook(id: string): Promise<boolean> {
+  const r = await req<{ active: string }>('/wordbooks', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'setActive', id }),
+  })
+  if (r && _books) { _books.active = id; cacheBooks(_books) }
+  return !!r
+}
+
+/** 设置每日新词数。成功返回 true */
+export async function pushDailyWords(n: number): Promise<boolean> {
+  const r = await req<{ dailyWords: number }>('/wordbooks', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'setDailyWords', n }),
+  })
+  if (r && _books) { _books.dailyWords = n; cacheBooks(_books) }
+  return !!r
+}
+
+/** 创建自定义册子（粘贴词单）。成功返回 {id,count,skipped}，业务错误返回 {error}（后端文案直透），网络不通返回 null */
+export async function createWordbook(name: string, text: string): Promise<{ id: string; count: number; skipped: number } | { error: string } | null> {
+  try {
+    // 不走 req：400 也带 {ok:false,error}，要把「有效词条太少」这类原因给家长看
+    const r = await fetch(BASE + '/wordbooks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create', name, text }),
+    })
+    const j = await r.json().catch(() => null) as
+      | { ok?: boolean; id?: string; count?: number; skipped?: number; error?: string }
+      | null
+    if (!j) return null
+    if (j.ok && j.id) {
+      // 刷新缓存里的册子列表（简单做法：重拉）
+      void fetchWordbooks()
+      return { id: j.id, count: j.count || 0, skipped: j.skipped || 0 }
+    }
+    return { error: j.error || '创建失败，稍后再试' }
+  } catch {
+    return null
+  }
+}
+
+/** 删除自定义册子。成功返回 true */
+export async function deleteWordbook(id: string): Promise<boolean> {
+  const r = await req('/wordbooks', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'delete', id }),
+  })
+  if (r) void fetchWordbooks()
+  return !!r
+}

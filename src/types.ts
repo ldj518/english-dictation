@@ -116,6 +116,8 @@ export interface Progress {
   history: SessionResult[]
   /** 每日学习分钟数 yyyy-mm-dd -> 分钟 */
   minutes: Record<string, number>
+  /** 每日计划已完成到第几天（动态任务 /d/plan 用） */
+  planDone: number
   /** 设置 */
   settings: {
     rate: number

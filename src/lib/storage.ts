@@ -79,6 +79,7 @@ export const defaultProgress = (): Progress => ({
   totalRight: 0,
   history: [],
   minutes: {},
+  planDone: 0,
   settings: { rate: 1, repeat: 2, gap: 4, voiceMode: 'normal', shuffle: true, shuffleMode: 'daily', kbBuiltIn: true },
 })
 

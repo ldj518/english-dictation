@@ -4,46 +4,78 @@ import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
 import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
 import { playWord, stopAll, speakWord, prefetchAhead } from '../lib/player'
+import { seededShuffle, makeSeed, newSalt } from '../lib/shuffle'
+import { sharePoster } from '../lib/poster'
+import { todayStr } from '../lib/storage'
 import type { AnswerRecord, AudioItem } from '../types'
+
+/** 秒 → 中文时长 */
+function fmtSec(s: number): string {
+  const m = Math.floor(s / 60)
+  const ss = s % 60
+  return m ? `${m}分${ss}秒` : `${ss}秒`
+}
 
 export default function Dictation() {
   const { id = '' } = useParams()
   const nav = useNavigate()
-  const { progress, recordAnswer, submitSession, updateSettings } = useStore()
+  const { progress, recordAnswer, submitSession, updateSettings, profile } = useStore()
   const track = getTrack(id)
 
   const [idx, setIdx] = useState(0)
   const [input, setInput] = useState('')
   const [phase, setPhase] = useState<'ask' | 'done'>('ask')
   const [visible, setVisible] = useState(false)   // 是否已显示释义（防泄题：先听后看）
-  const [result, setResult] = useState<{ score: number; right: number; total: number; newly: unknown[] } | null>(null)
+  const [result, setResult] = useState<{ score: number; right: number; total: number; newly: unknown[]; seconds: number } | null>(null)
   const [answers, setAnswers] = useState<AnswerRecord[]>([])
   const [playing, setPlaying] = useState(false)
   const [items, setItems] = useState<AudioItem[]>(() => track ? tuplesToItems(track.items) : [])
+  const [salt, setSalt] = useState('')            // 手动重新洗牌的扰动
   const startedAt = useRef(Date.now())
   const inputRef = useRef<HTMLInputElement>(null)
   const [ready, setReady] = useState(false)
 
-  // 加载音频索引（带逐词 mp3 文件名）
+  // 加载音频索引（带逐词 mp3 文件名），并按种子洗牌（防规律）
   useEffect(() => {
     if (!track) return
     let cancel = false
     loadAudioIndex().then(idxMap => {
       if (cancel) return
       const fromAudio = idxMap[track.id]
+      let list: AudioItem[] = items
       if (fromAudio && fromAudio.length) {
         // 用音频清单里的条目（含 file），保留原始中文
-        setItems(fromAudio.map((a, i) => ({
+        list = fromAudio.map((a, i) => ({
           no: a.no ?? i + 1,
           word: a.word,
           cn: a.cn || track.items[i]?.[2] || '',
           file: a.file,
-        })))
+        }))
       }
+      // 随机出题：同一天同一人顺序稳定；不同天/不同人顺序不同
+      if (progress.settings.shuffle && list.length > 1) {
+        const seed = makeSeed(todayStr(), profile.id, track.id, salt)
+        list = seededShuffle(list, seed)
+      }
+      setItems(list)
       setReady(true)
     })
     return () => { cancel = true }
-  }, [track])
+    // 故意不依赖 items，避免循环
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [track, profile.id, salt])
+
+  /** 重新洗牌：换顺序，重新开始 */
+  const reshuffle = () => {
+    if (!track) return
+    setSalt(newSalt())
+    setIdx(0)
+    setInput('')
+    setPhase('ask')
+    setAnswers([])
+    startedAt.current = Date.now()
+    window.scrollTo({ top: 0 })
+  }
 
   const cur = items[idx]
 
@@ -115,7 +147,7 @@ export default function Dictation() {
     const score = total ? Math.round((right / total) * 100) : 0
     const sec = Math.round((Date.now() - startedAt.current) / 1000)
     const { newly } = submitSession(track, recs, sec)
-    setResult({ score, right, total, newly })
+    setResult({ score, right, total, newly, seconds: sec })
     setPhase('done')
   }
 
@@ -123,7 +155,7 @@ export default function Dictation() {
 
   // ── 结果页 ──
   if (result) {
-    return <ResultView track={track} result={result} answers={answers} onHome={() => nav('/')} />
+    return <ResultView track={track} result={result} answers={answers} profile={profile} onHome={() => nav('/')} />
   }
 
   const lastRec = answers[answers.length - 1]
@@ -142,6 +174,14 @@ export default function Dictation() {
           <span>🎯 得分 {answers.filter(a => a.correct).length * 10}</span>
         </div>
         <div className="progressbar"><i style={{ width: pct + '%' }} /></div>
+        <div className="row" style={{ gap: 8, marginTop: 8 }}>
+          {progress.settings.shuffle && (
+            <button className="btn ghost sm" onClick={reshuffle} style={{ fontSize: 12 }}>
+              🔀 换个顺序
+            </button>
+          )}
+          <a className="btn ghost sm" style={{ fontSize: 12 }} href={`#/print/${track.id}`}>🖨️ 打纸质卷</a>
+        </div>
       </div>
 
       <div className="playbox">
@@ -218,10 +258,11 @@ export default function Dictation() {
   )
 }
 
-function ResultView({ track, result, answers, onHome }: {
+function ResultView({ track, result, answers, profile, onHome }: {
   track: ReturnType<typeof getTrack>
-  result: { score: number; right: number; total: number; newly: unknown[] }
+  result: { score: number; right: number; total: number; newly: unknown[]; seconds: number }
   answers: AnswerRecord[]
+  profile: { id: string; name: string; emoji: string; color: string }
   onHome: () => void
 }) {
   const nav = useNavigate()
@@ -239,8 +280,24 @@ function ResultView({ track, result, answers, onHome }: {
           <div className="lab" style={{ marginTop: 8 }}>
             答对 <b style={{ color: 'var(--ok)' }}>{result.right}</b> / {result.total} 题
             {' · '}答错 <b style={{ color: 'var(--bad)' }}>{result.total - result.right}</b> 题
+            {' · '}用时 {fmtSec(result.seconds)}
           </div>
         </div>
+      </div>
+
+      {/* 家长微信分享 */}
+      <div className="row" style={{ gap: 10 }}>
+        <button
+          className="btn"
+          style={{ background: '#07c160' }}
+          onClick={() => sharePoster({
+            profile, trackLabel: track?.label || track?.id || '', date: todayStr(),
+            score: result.score, right: result.right, total: result.total, seconds: result.seconds,
+            answers: answers.map(a => ({ word: a.word, cn: a.cn, correct: a.correct, input: a.input })),
+          })}
+        >
+          📤 生成成绩海报（发微信）
+        </button>
       </div>
 
       {(result.newly as { icon: string; name: string }[]).length > 0 && (

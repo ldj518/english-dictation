@@ -11,7 +11,7 @@ type Tab = 'daily' | 'unit' | 'final'
 
 export default function Home() {
   const nav = useNavigate()
-  const { progress } = useStore()
+  const { progress, profiles, profile, switchProfile } = useStore()
   const [tab, setTab] = useState<Tab>('daily')
 
   const lv = levelOf(progress.points)
@@ -35,6 +35,24 @@ export default function Home() {
     <Shell title="英语听写" right={
       <button className="iconbtn" onClick={() => nav('/settings')} aria-label="设置">⚙️</button>
     }>
+      {/* 身份切换 */}
+      <div className="profileBar">
+        <div className="pList">
+          {profiles.map(p => (
+            <button
+              key={p.id}
+              className={'pChip' + (p.id === profile.id ? ' on' : '')}
+              style={p.id === profile.id ? { borderColor: p.color, background: p.color + '14' } : {}}
+              onClick={() => switchProfile(p.id)}
+            >
+              <span className="pe">{p.emoji}</span>
+              <span className="pn">{p.name}</span>
+            </button>
+          ))}
+        </div>
+        <button className="iconbtn" onClick={() => nav('/settings')} aria-label="设置">⚙️</button>
+      </div>
+
       {/* 等级总览 */}
       <div className="hero">
         <div className="lv">LEVEL {lv.lv}</div>
@@ -65,6 +83,14 @@ export default function Home() {
           <button className="btn" onClick={() => nav(`/d/${nextTask.id}`)}>
             ▶ 开始听写
           </button>
+          <div className="row" style={{ gap: 8, marginTop: 10 }}>
+            <a className="btn ghost sm" href={`#/print/${nextTask.id}`} style={{ flex: 1, textAlign: 'center' }}>
+              🖨️ 打纸质卷
+            </a>
+            <a className="btn ghost sm" href={`#/paper/${nextTask.id}`} style={{ flex: 1, textAlign: 'center' }}>
+              📷 纸质批改
+            </a>
+          </div>
         </div>
       )}
 
@@ -139,10 +165,13 @@ function Cell({ t }: { t: Track }) {
   const go = () => t.kind === 'daily' ? nav(`/d/${t.id}`) : nav(`/exam/${t.id}`)
 
   return (
-    <button className={'cell' + (best ? ' done' : '')} onClick={go}>
-      <div className="n">{title}</div>
-      <div className="t">{t.wordCount} 词</div>
-      {best ? <div className={'s ' + cls}>{best.score}%</div> : <div className="t">未做</div>}
-    </button>
+    <div className={'cellWrap'}>
+      <button className={'cell' + (best ? ' done' : '')} onClick={go}>
+        <div className="n">{title}</div>
+        <div className="t">{t.wordCount} 词</div>
+        {best ? <div className={'s ' + cls}>{best.score}%</div> : <div className="t">未做</div>}
+      </button>
+      <a className="cellPrint" href={`#/print/${t.id}`} title="打印纸质卷">🖨️</a>
+    </div>
   )
 }

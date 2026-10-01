@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
-import { dueWrongWords } from '../lib/storage'
+import { dueWrongWords, todayStr } from '../lib/storage'
 import { playWord, speakWord } from '../lib/player'
+import { seededShuffle, makeSeed } from '../lib/shuffle'
 import type { WrongWord } from '../types'
 
 type Mode = 'list' | 'quiz'
@@ -100,14 +101,20 @@ function WrongRow({ w, onSpeak }: { w: WrongWord; onSpeak: () => void }) {
   )
 }
 
-/** 复习测验 */
+/** 复习测验（顺序每次进入都打乱，防止记顺序） */
 function Quiz({ words, onExit }: { words: WrongWord[]; onExit: () => void }) {
-  const { recordReview } = useStore()
+  const { recordReview, progress, profile } = useStore()
+  const shuffled = useMemo(() => {
+    if (!progress.settings.shuffle || words.length < 2) return words
+    // 复习用「进入时刻」当种子，每次进来顺序都不同
+    return seededShuffle(words, makeSeed(todayStr(), profile.id, 'review', String(Date.now())))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [i, setI] = useState(0)
   const [input, setInput] = useState('')
   const [st, setSt] = useState<'ask' | 'ok' | 'bad'>('ask')
   const [stat, setStat] = useState({ ok: 0, bad: 0 })
-  const cur = words[i]
+  const cur = shuffled[i]
 
   const play = () => speakWord(cur.word, 0.85)
 
@@ -119,9 +126,9 @@ function Quiz({ words, onExit }: { words: WrongWord[]; onExit: () => void }) {
   }
 
   const next = () => {
-    if (i + 1 >= words.length) { onExit(); return }
+    if (i + 1 >= shuffled.length) { onExit(); return }
     setI(i + 1); setInput(''); setSt('ask')
-    setTimeout(() => speakWord(words[i + 1].word, 0.85), 200)
+    setTimeout(() => speakWord(shuffled[i + 1].word, 0.85), 200)
   }
 
   if (!cur) { onExit(); return null }

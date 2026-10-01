@@ -12,6 +12,8 @@ import ExamPage from '../src/pages/Exam'
 import StatsPage from '../src/pages/Stats'
 import WordsPage from '../src/pages/Words'
 import SettingsPage from '../src/pages/Settings'
+import PrintSheetPage from '../src/pages/PrintSheet'
+import PaperPage from '../src/pages/Paper'
 
 type Case = [string, string, React.ComponentType]
 
@@ -27,6 +29,8 @@ const CASES: Case[] = [
 const PARAM_CASES: [string, React.ComponentType][] = [
   ['/d/day01', DictationPage],
   ['/exam/unit01', ExamPage],
+  ['/print/day01', PrintSheetPage],
+  ['/paper/day01', PaperPage],
 ]
 
 function render(path: string, C: React.ComponentType): string {

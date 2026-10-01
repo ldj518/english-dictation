@@ -4,6 +4,7 @@
 import { judge, addWrong, advanceWrong, dueWrongWords, defaultProgress, REVIEW_STAGES } from '../src/lib/storage'
 import { settle, levelOf } from '../src/lib/gamify'
 import { ALL_TASKS as TASKS, WORDS, DAILY, UNITS, FINALS, UNIT_WORDS } from '../src/lib/data'
+import { seededShuffle, makeSeed } from '../src/lib/shuffle'
 
 let pass = 0, fail = 0
 const log: string[] = []
@@ -105,6 +106,48 @@ t('单元词表齐全', UNITS.every(u => (UNIT_WORDS[u.id] || []).length > 0))
   }))
   const maxSec = Math.max(...TASKS.map(x => x.seconds))
   t('最长音轨时长合理', maxSec > 600 && maxSec < 3000, `${maxSec} 秒`)
+}
+
+// ── 5. 随机洗牌（防规律的核心）──
+log.push('【随机洗牌】')
+{
+  const src = Array.from({ length: 50 }, (_, i) => i)
+
+  // 同种子必须完全可复现
+  const a1 = seededShuffle(src, 'seed-A')
+  const a2 = seededShuffle(src, 'seed-A')
+  t('同种子结果一致', JSON.stringify(a1) === JSON.stringify(a2))
+
+  // 不同种子结果不同
+  const b = seededShuffle(src, 'seed-B')
+  t('不同种子结果不同', JSON.stringify(a1) !== JSON.stringify(b))
+
+  // 洗牌不丢元素、不改原数组
+  t('不丢元素', a1.length === src.length && new Set(a1).size === src.length)
+  t('不改原数组', JSON.stringify(src) === JSON.stringify(Array.from({ length: 50 }, (_, i) => i)))
+
+  // 确实打乱了（不是原序）
+  t('确实打乱了', JSON.stringify(a1) !== JSON.stringify(src))
+
+  // 模拟真实场景：同一人同一天 → 顺序固定；换天 → 顺序变
+  const day1 = seededShuffle(src, makeSeed('2026-10-01', 'p1', 'day01'))
+  const day1again = seededShuffle(src, makeSeed('2026-10-01', 'p1', 'day01'))
+  const day2 = seededShuffle(src, makeSeed('2026-10-02', 'p1', 'day01'))
+  const p2 = seededShuffle(src, makeSeed('2026-10-01', 'p2', 'day01'))
+  t('同人同天顺序稳定', JSON.stringify(day1) === JSON.stringify(day1again))
+  t('换一天顺序变', JSON.stringify(day1) !== JSON.stringify(day2))
+  t('换一人顺序变', JSON.stringify(day1) !== JSON.stringify(p2))
+
+  // 分布均匀性：每个位置都应出现过不同元素
+  const firsts = new Set<number>()
+  for (let i = 0; i < 200; i++) firsts.add(seededShuffle(src, 'x' + i)[0])
+  t('首元素分布够散', firsts.size > 30, `${firsts.size} 种`)
+
+  // 真实词表洗牌
+  const words = UNIT_WORDS['unit01'] || []
+  const s1 = seededShuffle(words, makeSeed('2026-10-01', 'p1', 'unit01'))
+  t('真实词表可洗牌', s1.length === words.length)
+  t('真实词表确实乱序', JSON.stringify(s1) !== JSON.stringify(words))
 }
 
 console.log('══ 核心逻辑单测 ══')

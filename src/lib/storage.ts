@@ -1,9 +1,71 @@
-import type { Progress, WrongWord } from '../types'
+import type { Progress, WrongWord, Profile } from '../types'
 
 /** 遗忘曲线间隔（天）：1 / 2 / 4 / 7 / 15 / 30 */
 export const REVIEW_STAGES = [1, 2, 4, 7, 15, 30]
 
-const KEY = 'eng-dict-v1'
+/** 旧版单用户存储键（用于迁移） */
+const LEGACY_KEY = 'eng-dict-v1'
+/** 当前活跃的孩子身份 */
+const PROFILE_KEY = 'eng-dict-active-profile'
+/** 身份列表 */
+const PROFILES_KEY = 'eng-dict-profiles'
+
+/** 每个身份的进度存储键 */
+export function progressKey(profileId: string): string {
+  return `eng-dict-v1:${profileId}`
+}
+
+/** 默认身份（首次使用） */
+export const DEFAULT_PROFILES: Profile[] = [
+  { id: 'p1', name: '哥哥', emoji: '🦁', color: '#e8590c' },
+  { id: 'p2', name: '弟弟', emoji: '🐯', color: '#1c7ed6' },
+]
+
+/* ── 身份管理 ───────────────────────────────────────── */
+
+export function loadProfiles(): Profile[] {
+  try {
+    const raw = localStorage.getItem(PROFILES_KEY)
+    if (raw) {
+      const list = JSON.parse(raw) as Profile[]
+      if (Array.isArray(list) && list.length) return list
+    }
+  } catch { /* ignore */ }
+  // 首次：写入默认身份，并把旧的单用户数据迁移给第一个身份
+  saveProfiles(DEFAULT_PROFILES)
+  migrateLegacy(DEFAULT_PROFILES[0].id)
+  return DEFAULT_PROFILES
+}
+
+export function saveProfiles(list: Profile[]) {
+  try { localStorage.setItem(PROFILES_KEY, JSON.stringify(list)) } catch { /* ignore */ }
+}
+
+export function activeProfileId(): string {
+  try {
+    const id = localStorage.getItem(PROFILE_KEY)
+    if (id) return id
+  } catch { /* ignore */ }
+  return DEFAULT_PROFILES[0].id
+}
+
+export function setActiveProfileId(id: string) {
+  try { localStorage.setItem(PROFILE_KEY, id) } catch { /* ignore */ }
+}
+
+/** 把旧版单用户数据迁移到指定身份（仅在目标尚无数据时） */
+function migrateLegacy(toProfileId: string) {
+  try {
+    const legacy = localStorage.getItem(LEGACY_KEY)
+    if (!legacy) return
+    const target = progressKey(toProfileId)
+    if (localStorage.getItem(target)) return
+    localStorage.setItem(target, legacy)
+    localStorage.removeItem(LEGACY_KEY)
+  } catch { /* ignore */ }
+}
+
+/* ── 进度读写（按身份隔离）─────────────────────────── */
 
 export const defaultProgress = (): Progress => ({
   best: {},
@@ -17,12 +79,12 @@ export const defaultProgress = (): Progress => ({
   totalRight: 0,
   history: [],
   minutes: {},
-  settings: { rate: 1, repeat: 2, gap: 4, voiceMode: 'normal' },
+  settings: { rate: 1, repeat: 2, gap: 4, voiceMode: 'normal', shuffle: true },
 })
 
-export function load(): Progress {
+export function load(profileId = activeProfileId()): Progress {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(progressKey(profileId))
     if (!raw) return defaultProgress()
     const p = JSON.parse(raw) as Progress
     return { ...defaultProgress(), ...p, settings: { ...defaultProgress().settings, ...(p.settings || {}) } }
@@ -31,14 +93,14 @@ export function load(): Progress {
   }
 }
 
-export function save(p: Progress) {
+export function save(p: Progress, profileId = activeProfileId()) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(p))
+    localStorage.setItem(progressKey(profileId), JSON.stringify(p))
   } catch { /* 存储满/隐私模式，忽略 */ }
 }
 
-export function reset() {
-  localStorage.removeItem(KEY)
+export function reset(profileId = activeProfileId()) {
+  localStorage.removeItem(progressKey(profileId))
 }
 
 export function todayStr(d = new Date()): string {

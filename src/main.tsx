@@ -11,6 +11,8 @@ import Exam from './pages/Exam'
 import Stats from './pages/Stats'
 import Words from './pages/Words'
 import Settings from './pages/Settings'
+import PrintSheet from './pages/PrintSheet'
+import Paper from './pages/Paper'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -24,6 +26,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/stats" element={<Stats />} />
           <Route path="/words" element={<Words />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/print/:id" element={<PrintSheet />} />
+          <Route path="/paper/:id" element={<Paper />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

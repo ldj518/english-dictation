@@ -1,13 +1,22 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
-import type { Progress, SessionResult, AnswerRecord, Track } from '../types'
+import type { Progress, SessionResult, AnswerRecord, Track, Profile } from '../types'
 import {
   load, save, defaultProgress, addWrong, advanceWrong, checkIn, judge, todayStr,
+  loadProfiles, saveProfiles, activeProfileId, setActiveProfileId, reset as resetProgress,
 } from './storage'
 import { settle, addMinutes, type AwardCtx } from './gamify'
 import type { Badge } from '../types'
 
 interface Ctx {
   progress: Progress
+  /** 全部孩子身份 */
+  profiles: Profile[]
+  /** 当前活跃身份 */
+  profile: Profile
+  /** 切换身份（会重新加载该身份的进度） */
+  switchProfile: (id: string) => void
+  /** 修改身份信息（改名/换表情） */
+  updateProfile: (id: string, patch: Partial<Profile>) => void
   /** 记录一道题（错词会自动入本） */
   recordAnswer: (word: string, cn: string, input: string, correct: boolean) => void
   /** 提交一次会话 */
@@ -22,10 +31,36 @@ interface Ctx {
 const C = createContext<Ctx | null>(null)
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [progress, setProgress] = useState<Progress>(() => load())
+  const [profiles, setProfiles] = useState<Profile[]>(() => loadProfiles())
+  const [activeId, setActiveId] = useState<string>(() => activeProfileId())
+  const [progress, setProgress] = useState<Progress>(() => load(activeProfileId()))
   const [toast, setToast] = useState<Badge[]>([])
 
-  useEffect(() => { save(progress) }, [progress])
+  // 活跃身份变化时重载进度
+  useEffect(() => {
+    setProgress(load(activeId))
+  }, [activeId])
+
+  // 每次进度变化按当前身份保存
+  useEffect(() => { save(progress, activeId) }, [progress, activeId])
+
+  const profile = useMemo(
+    () => profiles.find(p => p.id === activeId) || profiles[0],
+    [profiles, activeId]
+  )
+
+  const switchProfile = useCallback((id: string) => {
+    setActiveProfileId(id)
+    setActiveId(id)
+  }, [])
+
+  const updateProfile = useCallback((id: string, patch: Partial<Profile>) => {
+    setProfiles(prev => {
+      const next = prev.map(p => (p.id === id ? { ...p, ...patch } : p))
+      saveProfiles(next)
+      return next
+    })
+  }, [])
 
   // 会话内累计（答题过程中不断累积，提交时结算）
   const buffer = React.useRef<{
@@ -121,12 +156,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const doReset = useCallback(() => {
     const np = defaultProgress()
+    resetProgress(activeId)
     setProgress(np)
-  }, [])
+  }, [activeId])
 
   const value = useMemo(() => ({
-    progress, recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset,
-  }), [progress, recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset])
+    progress, profiles, profile, switchProfile, updateProfile,
+    recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset,
+  }), [progress, profiles, profile, switchProfile, updateProfile,
+       recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset])
 
   return (
     <C.Provider value={value}>

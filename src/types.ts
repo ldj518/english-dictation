@@ -85,6 +85,14 @@ export interface Badge {
   gotAt?: number
 }
 
+/** 一个孩子的身份档案 */
+export interface Profile {
+  id: string
+  name: string
+  emoji: string
+  color: string
+}
+
 /** 用户整体进度 */
 export interface Progress {
   /** trackId -> 最好成绩 */
@@ -114,5 +122,7 @@ export interface Progress {
     repeat: number
     gap: number
     voiceMode: 'normal' | 'slow'
+    /** 出题是否随机打乱（防规律） */
+    shuffle: boolean
   }
 }

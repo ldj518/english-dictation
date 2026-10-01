@@ -4,14 +4,14 @@ import { load } from '../lib/storage'
 import { speechSupported } from '../lib/player'
 
 export default function Settings() {
-  const { progress, updateSettings, doReset } = useStore()
+  const { progress, updateSettings, doReset, profiles, profile, switchProfile, updateProfile } = useStore()
   const s = progress.settings
 
   const exportData = () => {
-    const blob = new Blob([JSON.stringify(load(), null, 2)], { type: 'application/json' })
+    const blob = new Blob([JSON.stringify(load(profile.id), null, 2)], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `听写进度_${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `听写进度_${profile.name}_${new Date().toISOString().slice(0, 10)}.json`
     a.click()
   }
 
@@ -19,15 +19,55 @@ export default function Settings() {
     const r = new FileReader()
     r.onload = () => {
       try {
-        localStorage.setItem('eng-dict-v1', String(r.result))
+        localStorage.setItem(`eng-dict-v1:${profile.id}`, String(r.result))
         location.reload()
       } catch { alert('导入失败') }
     }
     r.readAsText(file)
   }
 
+  const renameProfile = (id: string, cur: string) => {
+    const n = prompt('改成什么名字？', cur)
+    if (n && n.trim()) updateProfile(id, { name: n.trim().slice(0, 8) })
+  }
+
+  const EMOJIS = ['🦁', '🐯', '🐼', '🦊', '🐨', '🐵', '🐧', '🦄', '🐳', '🌟']
+
   return (
     <Shell title="设置" back>
+      {/* 孩子身份 */}
+      <div className="card pad">
+        <div style={{ fontWeight: 800, marginBottom: 4 }}>👦👧 孩子身份</div>
+        <div className="sub small" style={{ marginBottom: 12 }}>
+          每个孩子的进度、错词本、成绩都是独立的。点一下切换。
+        </div>
+        {profiles.map(p => (
+          <div key={p.id} className="field">
+            <div className="row" style={{ gap: 10 }}>
+              <button
+                className="pChip"
+                style={{ borderColor: p.id === profile.id ? p.color : undefined }}
+                onClick={() => switchProfile(p.id)}
+              >
+                <span className="pe">{p.emoji}</span>
+                <span className="pn">{p.name}</span>
+                {p.id === profile.id && <span className="small" style={{ color: p.color }}>· 当前</span>}
+              </button>
+            </div>
+            <div className="row" style={{ gap: 6 }}>
+              <select
+                value={p.emoji}
+                onChange={e => updateProfile(p.id, { emoji: e.target.value })}
+                style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '4px 6px', background: '#fff' }}
+              >
+                {EMOJIS.map(em => <option key={em} value={em}>{em}</option>)}
+              </select>
+              <button className="btn ghost sm" onClick={() => renameProfile(p.id, p.name)}>改名</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="card pad">
         <div style={{ fontWeight: 800, marginBottom: 8 }}>🔊 听写音频</div>
 
@@ -61,6 +101,18 @@ export default function Settings() {
 
         <div className="field">
           <div>
+            <div className="k">随机出题顺序</div>
+            <div className="d">每天、每人的题目顺序都不一样，防止背顺序</div>
+          </div>
+          <button
+            className={'switch' + (s.shuffle ? ' on' : '')}
+            onClick={() => updateSettings({ shuffle: !s.shuffle })}
+            aria-label="随机出题开关"
+          ><i /></button>
+        </div>
+
+        <div className="field">
+          <div>
             <div className="k">音质</div>
             <div className="d">当前 96kbps 高保真（无杂音）</div>
           </div>
@@ -81,7 +133,7 @@ export default function Settings() {
       <div className="card pad">
         <div style={{ fontWeight: 800, marginBottom: 8 }}>💾 数据</div>
         <div className="sub small" style={{ marginBottom: 12 }}>
-          学习记录存在这台设备上。换设备前建议导出备份。
+          当前是「{profile.name}」的学习记录，存在这台设备上。换设备前建议导出备份。
         </div>
         <div className="row" style={{ gap: 8 }}>
           <button className="btn ghost sm" onClick={exportData}>导出备份</button>
@@ -100,22 +152,23 @@ export default function Settings() {
         <div className="sub small">
           鲁教版（五四学制）七年级上册 · 368 词 · 48 个听写任务。
           <br />音频为本地高保真合成（24kHz / 96kbps 单声道），已消除旧版 32kbps 的底噪。
+          <br />支持在线听写 + 纸质卷打印 + 拍照批改 + 成绩海报分享。
         </div>
       </div>
 
       <div className="card pad">
         <div style={{ fontWeight: 800, marginBottom: 8, color: 'var(--bad)' }}>⚠️ 危险操作</div>
         <button className="btn bad" onClick={() => {
-          if (confirm('这会清空全部学习记录、错词本和成就，无法恢复。确定吗？')) {
+          if (confirm(`这会清空「${profile.name}」的全部学习记录、错词本和成就，无法恢复。确定吗？`)) {
             if (confirm('真的要清空吗？建议先导出备份。')) doReset()
           }
         }}>
-          重置全部进度
+          清空「{profile.name}」的进度
         </button>
       </div>
 
       <div className="center sub small" style={{ padding: '20px 0 60px' }}>
-        Made for 好孩子 · v1.0
+        Made for 好孩子 · v1.1
       </div>
     </Shell>
   )

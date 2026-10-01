@@ -4,6 +4,8 @@ import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
 import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
 import { playWord, stopAll } from '../lib/player'
+import { seededShuffle, makeSeed } from '../lib/shuffle'
+import { todayStr } from '../lib/storage'
 import type { AnswerRecord, AudioItem } from '../types'
 
 /**
@@ -16,7 +18,7 @@ import type { AnswerRecord, AudioItem } from '../types'
 export default function Exam() {
   const { id = '' } = useParams()
   const nav = useNavigate()
-  const { progress, submitSession } = useStore()
+  const { progress, submitSession, profile } = useStore()
   const track = getTrack(id)
 
   const [items, setItems] = useState<AudioItem[]>(() => track ? tuplesToItems(track.items) : [])
@@ -35,17 +37,23 @@ export default function Exam() {
     loadAudioIndex().then(idxMap => {
       if (cancel) return
       const fromAudio = idxMap[track.id]
+      let list: AudioItem[] = tuplesToItems(track.items)
       if (fromAudio && fromAudio.length) {
-        setItems(fromAudio.map((a, i) => ({
+        list = fromAudio.map((a, i) => ({
           no: a.no ?? i + 1,
           word: a.word,
           cn: a.cn || track.items[i]?.[2] || '',
           file: a.file,
-        })))
+        }))
       }
+      // 随机出题（防规律）
+      if (progress.settings.shuffle && list.length > 1) {
+        list = seededShuffle(list, makeSeed(todayStr(), profile.id, track.id))
+      }
+      setItems(list)
     })
     return () => { cancel = true }
-  }, [track])
+  }, [track, profile.id, progress.settings.shuffle])
 
   const cur = items[idx]
 

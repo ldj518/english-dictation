@@ -4,10 +4,11 @@ import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
 import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
 import { playWord, stopAll, speakWord, prefetchAhead, pauseAll, resolveRate } from '../lib/player'
-import { seededShuffle, makeSeed, newSalt, orderSalt } from '../lib/shuffle'
+import { seededShuffle, makeSeed, newSalt, orderSalt, orderEpoch } from '../lib/shuffle'
 import { weekStartStr } from '../lib/storage'
-import { currentSalt, createShare } from '../lib/api'
+import { currentSalt, currentShuffleMode, fetchShuffleSalt, createShare } from '../lib/api'
 import { sharePoster } from '../lib/poster'
+import PinGate from '../components/PinGate'
 import { todayStr } from '../lib/storage'
 import type { AnswerRecord, AudioItem } from '../types'
 
@@ -28,7 +29,7 @@ export default function Dictation() {
   const [input, setInput] = useState('')
   const [phase, setPhase] = useState<'ask' | 'done'>('ask')
   const [visible, setVisible] = useState(false)   // 是否已显示释义（防泄题：先听后看）
-  const [result, setResult] = useState<{ score: number; right: number; total: number; newly: unknown[]; seconds: number } | null>(null)
+  const [result, setResult] = useState<{ score: number; right: number; total: number; newly: unknown[]; seconds: number; attemptNo: number } | null>(null)
   const [answers, setAnswers] = useState<AnswerRecord[]>([])
   const [playing, setPlaying] = useState(false)
   const [items, setItems] = useState<AudioItem[]>(() => track ? tuplesToItems(track.items) : [])
@@ -42,40 +43,46 @@ export default function Dictation() {
   useEffect(() => {
     if (!track) return
     let cancel = false
-    loadAudioIndex().then(idxMap => {
+    // 先拉一次云端盐+顺序模式（家长重排/切档后，下次进页立刻生效；离线时用本地缓存）
+    fetchShuffleSalt().finally(() => {
       if (cancel) return
-      const fromAudio = idxMap[track.id]
-      let list: AudioItem[] = items
-      if (fromAudio && fromAudio.length) {
-        // 用音频清单里的条目（含 file），保留原始中文
-        list = fromAudio.map((a, i) => ({
-          no: a.no ?? i + 1,
-          word: a.word,
-          cn: a.cn || track.items[i]?.[2] || '',
-          file: a.file,
-        }))
-      }
-      // 随机出题：同一天同一人顺序稳定；不同天/不同人/重排后顺序不同
-      if (progress.settings.shuffle && list.length > 1) {
-        const baseSalt = orderSalt(progress.settings.shuffleMode, weekStartStr(), currentSalt())
-        // 与打印卷/批改页同种子（同盐）——本地「换个顺序」的扰动必须为空串时才不拼接，
-        // 否则 weekly 模式会出现 '2026-09-28|' ≠ '2026-09-28' 的尾随差异，纸质和线上顺序对不上
-        const combined = salt ? (baseSalt ? `${baseSalt}|${salt}` : salt) : baseSalt
-        const seed = makeSeed(todayStr(), profile.id, track.id, combined)
-        list = seededShuffle(list, seed)
-      }
-      // 错词加练：sessionStorage 单次传递的词单，命中则只练这些词
-      try {
-        const rw = sessionStorage.getItem('retrain-words')
-        if (rw) {
-          sessionStorage.removeItem('retrain-words')
-          const set = new Set(JSON.parse(rw) as string[])
-          const filtered = list.filter(i => set.has(i.word))
-          if (filtered.length) list = filtered
+      loadAudioIndex().then(idxMap => {
+        if (cancel) return
+        const fromAudio = idxMap[track.id]
+        let list: AudioItem[] = items
+        if (fromAudio && fromAudio.length) {
+          // 用音频清单里的条目（含 file），保留原始中文
+          list = fromAudio.map((a, i) => ({
+            no: a.no ?? i + 1,
+            word: a.word,
+            cn: a.cn || track.items[i]?.[2] || '',
+            file: a.file,
+          }))
         }
-      } catch { /* ignore */ }
-      setItems(list)
-      setReady(true)
+        // 随机出题：同一天同一人顺序稳定；不同天/不同人/重排后顺序不同
+        if (progress.settings.shuffle && list.length > 1) {
+          const mode = currentShuffleMode()
+          const epoch = orderEpoch(mode, todayStr(), weekStartStr())
+          const baseSalt = orderSalt(mode, weekStartStr(), currentSalt())
+          // 与打印卷/批改页同种子（同盐+同模式+同时间成分）——本地「换个顺序」的扰动
+          // 为空串时不拼接，避免 weekly 出现 'x|' ≠ 'x' 的尾随差异
+          const combined = salt ? (baseSalt ? `${baseSalt}|${salt}` : salt) : baseSalt
+          const seed = makeSeed(epoch, profile.id, track.id, combined)
+          list = seededShuffle(list, seed)
+        }
+        // 错词加练：sessionStorage 单次传递的词单，命中则只练这些词
+        try {
+          const rw = sessionStorage.getItem('retrain-words')
+          if (rw) {
+            sessionStorage.removeItem('retrain-words')
+            const set = new Set(JSON.parse(rw) as string[])
+            const filtered = list.filter(i => set.has(i.word))
+            if (filtered.length) list = filtered
+          }
+        } catch { /* ignore */ }
+        setItems(list)
+        setReady(true)
+      })
     })
     return () => { cancel = true }
     // 故意不依赖 items，避免循环
@@ -185,8 +192,14 @@ export default function Dictation() {
     const right = recs.filter(r => r.correct).length
     const score = total ? Math.round((right / total) * 100) : 0
     const sec = Math.round((Date.now() - startedAt.current) / 1000)
+    // 当天第几次做这个任务：防「乱填一遍看答案 → 截图 → 重做刷分」，
+    // 家长在结果页/分享页能看到「当天第 N 次」，重做出来的分数藏不住
+    const today = todayStr()
+    const attemptNo = progress.history.filter(
+      h => h.trackId === track.id && todayStr(new Date(h.at)) === today
+    ).length + 1
     const { newly } = submitSession(track, recs, sec)
-    setResult({ score, right, total, newly, seconds: sec })
+    setResult({ score, right, total, newly, seconds: sec, attemptNo })
     setPhase('done')
   }
 
@@ -316,7 +329,7 @@ export default function Dictation() {
 
 function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
   track: ReturnType<typeof getTrack>
-  result: { score: number; right: number; total: number; newly: unknown[]; seconds: number }
+  result: { score: number; right: number; total: number; newly: unknown[]; seconds: number; attemptNo: number }
   answers: AnswerRecord[]
   profile: { id: string; name: string; emoji: string; color: string }
   onHome: () => void
@@ -343,6 +356,7 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
       right: result.right,
       wrongs: wrongs.map(w => ({ word: w.word, cn: w.cn })),
       photoKeys: [],
+      attemptNo: result.attemptNo,
     })
     if (!url) { setShareHint('生成失败：网络不通，可改用「生成成绩海报」'); return }
     try {
@@ -365,13 +379,24 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
             {' · '}答错 <b style={{ color: 'var(--bad)' }}>{result.total - result.right}</b> 题
             {' · '}用时 {fmtSec(result.seconds)}
           </div>
+          <div className="lab" style={{
+            marginTop: 8, fontSize: 13, fontWeight: 600,
+            color: result.attemptNo > 1 ? '#b45309' : 'var(--sub)',
+          }}>
+            {result.attemptNo > 1
+              ? `⚠️ 这是今天第 ${result.attemptNo} 次做这个任务（家长看板 / 分享页可见）`
+              : '今天第 1 次做这个任务'}
+          </div>
         </div>
       </div>
 
-      {/* 巩固闭环：翻译关 + 错词加练 */}
-      <div className="row" style={{ gap: 10 }}>
+      {/* 巩固闭环：翻译关 + 跟读 + 错词加练 */}
+      <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
         <button className="btn" style={{ background: 'var(--blue)' }} onClick={() => nav(`/translate/${track?.id}`)}>
           🔤 进入翻译关
+        </button>
+        <button className="btn" style={{ background: '#7048e8' }} onClick={() => nav(`/read/${track?.id}`)}>
+          🎙️ 跟读录音
         </button>
         {wrongs.length > 0 && (
           <button className="btn gold" onClick={onRetrain}>
@@ -380,7 +405,7 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
         )}
       </div>
       <div className="sub small center" style={{ marginTop: 6 }}>
-        翻译关：英译汉四选一 + 汉译英拼写，同一批词换个方向再过一遍
+        翻译关换个方向再过一遍 · 跟读录下来发给家长听
       </div>
 
       {/* 分享：链接为主（点开看对错），海报兜底 */}
@@ -412,42 +437,46 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
         </div>
       )}
 
-      {wrongs.length > 0 ? (
-        <div className="card pad">
-          <div style={{ fontWeight: 800, marginBottom: 4 }}>
-            ❌ 错词 {wrongs.length} 个
-            <span className="sub small" style={{ fontWeight: 400, marginLeft: 8 }}>已自动进错词本</span>
+      {/* 防刷分：错词与对错明细里含正确拼写，锁在家长解锁码后面。
+          否则孩子乱填一遍 → 结果页截图全部答案 → 重做刷 100 分 */}
+      <PinGate title="错词明细需家长解锁">
+        {wrongs.length > 0 ? (
+          <div className="card pad">
+            <div style={{ fontWeight: 800, marginBottom: 4 }}>
+              ❌ 错词 {wrongs.length} 个
+              <span className="sub small" style={{ fontWeight: 400, marginLeft: 8 }}>已自动进错词本</span>
+            </div>
+            <div className="reviewlist">
+              {wrongs.map(a => (
+                <div key={a.no} className="rv">
+                  <span className="mk">✗</span>
+                  <span className="w">{a.word}</span>
+                  <span className="sub small">{a.cn}</span>
+                </div>
+              ))}
+            </div>
           </div>
+        ) : (
+          <div className="card pad center" style={{ background: 'var(--ok-soft)' }}>
+            <div style={{ fontSize: 30 }}>✨</div>
+            <div style={{ fontWeight: 800, color: 'var(--ok)' }}>全部答对，零错词！</div>
+          </div>
+        )}
+
+        <div className="card pad">
+          <div style={{ fontWeight: 800, marginBottom: 8 }}>全部题目</div>
           <div className="reviewlist">
-            {wrongs.map(a => (
+            {answers.map(a => (
               <div key={a.no} className="rv">
-                <span className="mk">✗</span>
+                <span className="mk">{a.correct ? '✓' : '✗'}</span>
                 <span className="w">{a.word}</span>
-                <span className="sub small">{a.cn}</span>
+                {!a.correct && a.input && <span className="mine">{a.input}</span>}
+                <span className="sub small" style={{ marginLeft: 'auto' }}>{a.cn}</span>
               </div>
             ))}
           </div>
         </div>
-      ) : (
-        <div className="card pad center" style={{ background: 'var(--ok-soft)' }}>
-          <div style={{ fontSize: 30 }}>✨</div>
-          <div style={{ fontWeight: 800, color: 'var(--ok)' }}>全部答对，零错词！</div>
-        </div>
-      )}
-
-      <div className="card pad">
-        <div style={{ fontWeight: 800, marginBottom: 8 }}>全部题目</div>
-        <div className="reviewlist">
-          {answers.map(a => (
-            <div key={a.no} className="rv">
-              <span className="mk">{a.correct ? '✓' : '✗'}</span>
-              <span className="w">{a.word}</span>
-              {!a.correct && a.input && <span className="mine">{a.input}</span>}
-              <span className="sub small" style={{ marginLeft: 'auto' }}>{a.cn}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      </PinGate>
 
       <div className="row" style={{ gap: 10 }}>
         <button className="btn ghost" onClick={() => location.reload()}>🔁 再练一遍</button>

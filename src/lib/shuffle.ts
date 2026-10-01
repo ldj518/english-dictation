@@ -68,13 +68,27 @@ export function newSalt(): string {
 export type ShuffleMode = 'daily' | 'weekly' | 'manual'
 
 /**
- * 按家长选的周期算出「顺序盐」：
- * - daily：空盐（种子里的日期本身就是盐，天然每天一换）
- * - weekly：本周一日期（一周内稳定，周一自动全换）
- * - manual：云端盐（家长不点「立即重排」就永远不变）
+ * 出题的「时间成分」——决定顺序多久自动变一次，进 makeSeed 的 date 位。
+ * - daily（默认）：今天 → 天然每天一换
+ * - weekly：本周一 → 一周内稳定，周一自动全换
+ * - manual：固定串 → 顺序完全由盐决定，家长不重排就永远不变
+ *
+ * 注意：以前所有页面都把「今天」写死进种子，导致 manual 档形同虚设；
+ * 现在时间成分由模式决定，三档才是真的三档。
+ */
+export function orderEpoch(mode: ShuffleMode | undefined, today: string, weekStart: string): string {
+  if (mode === 'weekly') return weekStart
+  if (mode === 'manual') return 'fixed'
+  return today
+}
+
+/**
+ * 家长「立即重排」的云端盐：三种模式都参与种子。
+ *
+ * v2.1 的坑：daily 档曾返回空串（以为日期本身就是盐），结果家长在默认
+ * 「每天换」档点「立即重排」后种子纹丝不动 —— 用户实测报「手动功能没实现」。
+ * 现在盐永远叠加在种子上，任何档位点重排都立刻生效。
  */
 export function orderSalt(mode: ShuffleMode | undefined, weekStart: string, remoteSalt: string): string {
-  if (mode === 'weekly') return weekStart
-  if (mode === 'manual') return remoteSalt || ''
-  return ''
+  return remoteSalt || ''
 }

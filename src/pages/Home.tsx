@@ -83,17 +83,20 @@ export default function Home() {
           <button className="btn" onClick={() => nav(`/d/${nextTask.id}`)}>
             ▶ 开始听写
           </button>
-          <div className="row" style={{ gap: 8, marginTop: 10 }}>
+          <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
             {/* 注意：必须用 <Link> 而不是 href="#/..."。
                 应用是 BrowserRouter（History 模式），hash 链接不会触发路由导航，
                 点击只会往地址栏加个 #，页面纹丝不动（用户报的「点了没反应」就是这个） */}
-            <Link className="btn ghost sm" to={`/translate/${nextTask.id}`} style={{ flex: 1, textAlign: 'center' }}>
+            <Link className="btn ghost sm" to={`/translate/${nextTask.id}`} style={{ flex: '1 1 40%', textAlign: 'center' }}>
               🔤 翻译关
             </Link>
-            <Link className="btn ghost sm" to={`/print/${nextTask.id}`} style={{ flex: 1, textAlign: 'center' }}>
+            <Link className="btn ghost sm" to={`/read/${nextTask.id}`} style={{ flex: '1 1 40%', textAlign: 'center' }}>
+              🎙️ 跟读录音
+            </Link>
+            <Link className="btn ghost sm" to={`/print/${nextTask.id}`} style={{ flex: '1 1 40%', textAlign: 'center' }}>
               🖨️ 打纸质卷
             </Link>
-            <Link className="btn ghost sm" to={`/paper/${nextTask.id}`} style={{ flex: 1, textAlign: 'center' }}>
+            <Link className="btn ghost sm" to={`/paper/${nextTask.id}`} style={{ flex: '1 1 40%', textAlign: 'center' }}>
               📷 纸质批改
             </Link>
           </div>

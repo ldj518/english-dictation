@@ -4,9 +4,9 @@ import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
 import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
 import { playWord, pauseAll, resolveRate } from '../lib/player'
-import { seededShuffle, makeSeed, orderSalt } from '../lib/shuffle'
+import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
 import { todayStr, weekStartStr } from '../lib/storage'
-import { currentSalt, createShare } from '../lib/api'
+import { currentSalt, currentShuffleMode, fetchShuffleSalt, createShare } from '../lib/api'
 import { buildCnOptions } from '../lib/translate'
 import type { AnswerRecord, AudioItem, Track } from '../types'
 
@@ -41,27 +41,33 @@ export default function Translate() {
   const playToken = useRef(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // 加载词单（与听写卷同源词库），按任务+方向种子洗牌
+  // 加载词单（与听写卷同源词库），按时间成分+盐+方向种子洗牌
   useEffect(() => {
     if (!track) return
     let cancel = false
-    loadAudioIndex().then(idxMap => {
+    fetchShuffleSalt().finally(() => {
       if (cancel) return
-      const fromAudio = idxMap[track.id]
-      let list: AudioItem[] = tuplesToItems(track.items)
-      if (fromAudio && fromAudio.length) {
-        list = fromAudio.map((a, i) => ({
-          no: a.no ?? i + 1,
-          word: a.word,
-          cn: a.cn || track.items[i]?.[2] || '',
-          file: a.file,
-        }))
-      }
-      if (list.length > 1) {
-        const salt = orderSalt(progress.settings.shuffleMode, weekStartStr(), currentSalt())
-        list = seededShuffle(list, makeSeed(todayStr(), profile.id, track.id + '-t', `${salt}|${dir}`))
-      }
-      setItems(list)
+      loadAudioIndex().then(idxMap => {
+        if (cancel) return
+        const fromAudio = idxMap[track.id]
+        let list: AudioItem[] = tuplesToItems(track.items)
+        if (fromAudio && fromAudio.length) {
+          list = fromAudio.map((a, i) => ({
+            no: a.no ?? i + 1,
+            word: a.word,
+            cn: a.cn || track.items[i]?.[2] || '',
+            file: a.file,
+          }))
+        }
+        if (list.length > 1) {
+          const mode = currentShuffleMode()
+          const epoch = orderEpoch(mode, todayStr(), weekStartStr())
+          const s = orderSalt(mode, weekStartStr(), currentSalt())
+          const extra = s ? `${s}|${dir}` : dir
+          list = seededShuffle(list, makeSeed(epoch, profile.id, track.id + '-t', extra))
+        }
+        setItems(list)
+      })
     })
     return () => { cancel = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps

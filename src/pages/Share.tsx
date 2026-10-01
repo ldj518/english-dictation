@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { fetchShare, paperFileUrl, type SharePayload } from '../lib/api'
+import { fetchShare, paperFileUrl, recordFileUrl, type SharePayload } from '../lib/api'
 
 /**
  * 只读分享页（/s/:id）：家人点开微信里的链接就能看到对错和纸质卷照片。
@@ -64,7 +64,27 @@ export default function Share() {
               <span><b>{data.right}</b> / {data.total} 对</span>
               <span style={{ color: '#e03131' }}>错 {data.total - data.right}</span>
             </div>
+            {typeof data.attemptNo === 'number' && data.attemptNo > 1 && (
+              <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: '#b45309', background: '#fff4e6', borderRadius: 8, padding: '5px 10px', display: 'inline-block' }}>
+                ⚠️ 当天第 {data.attemptNo} 次提交（重做出来的分数）
+              </div>
+            )}
           </div>
+
+          {(data.recordKeys || []).length > 0 && (
+            <div style={card}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>🎙️ 跟读录音（点播放听孩子读的）</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {data.recordKeys!.map(r => (
+                  <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontWeight: 700, fontSize: 14, minWidth: 76 }}>{r.word}</span>
+                    <audio controls preload="none" src={recordFileUrl(r.key)}
+                      style={{ height: 34, flex: 1, maxWidth: '100%' }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {data.wrongs.length > 0 && (
             <div style={card}>

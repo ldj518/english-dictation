@@ -4,9 +4,9 @@ import Shell from '../components/Shell'
 import PinGate from '../components/PinGate'
 import { getTrack, loadAudioIndex, tuplesToItems, DAILY } from '../lib/data'
 import { useStore } from '../lib/store'
-import { seededShuffle, makeSeed, orderSalt } from '../lib/shuffle'
+import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
 import { todayStr, weekStartStr } from '../lib/storage'
-import { currentSalt } from '../lib/api'
+import { currentSalt, currentShuffleMode, fetchShuffleSalt } from '../lib/api'
 import { sharePoster } from '../lib/poster'
 import { reportSession, uploadPhoto } from '../lib/api'
 import type { AudioItem, AnswerRecord, Track } from '../types'
@@ -34,21 +34,27 @@ export default function Paper() {
   useEffect(() => {
     if (!track) return
     let cancel = false
-    loadAudioIndex().then(idxMap => {
+    fetchShuffleSalt().finally(() => {
       if (cancel) return
-      const fromAudio = idxMap[track.id]
-      let list: AudioItem[] = tuplesToItems(track.items)
-      if (fromAudio && fromAudio.length) {
-        list = fromAudio.map((a, i) => ({
-          no: a.no ?? i + 1,
-          word: a.word,
-          cn: a.cn || track.items[i]?.[2] || '',
-          file: a.file,
-        }))
-      }
-      list = seededShuffle(list, makeSeed(todayStr(), profile.id, track.id,
-        orderSalt(progress.settings.shuffleMode, weekStartStr(), currentSalt()))) // 与打印卷顺序一致
-      setItems(list)
+      loadAudioIndex().then(idxMap => {
+        if (cancel) return
+        const fromAudio = idxMap[track.id]
+        let list: AudioItem[] = tuplesToItems(track.items)
+        if (fromAudio && fromAudio.length) {
+          list = fromAudio.map((a, i) => ({
+            no: a.no ?? i + 1,
+            word: a.word,
+            cn: a.cn || track.items[i]?.[2] || '',
+            file: a.file,
+          }))
+        }
+        // 与打印卷顺序一致：同模式（云端同步）+ 同时间成分 + 同盐
+        const mode = currentShuffleMode()
+        list = seededShuffle(list, makeSeed(
+          orderEpoch(mode, todayStr(), weekStartStr()), profile.id, track.id,
+          orderSalt(mode, weekStartStr(), currentSalt())))
+        setItems(list)
+      })
     })
     return () => { cancel = true }
   }, [track, profile.id])

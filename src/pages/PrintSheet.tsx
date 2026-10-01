@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
 import { useStore } from '../lib/store'
-import { seededShuffle, makeSeed, orderSalt } from '../lib/shuffle'
+import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
 import { todayStr, weekStartStr } from '../lib/storage'
-import { currentSalt } from '../lib/api'
+import { currentSalt, currentShuffleMode, fetchShuffleSalt } from '../lib/api'
 import { buildA4Pdf, downloadPdf, type PdfBlock } from '../lib/pdf'
 import PinGate from '../components/PinGate'
 import { isUnlocked } from '../lib/parentLock'
@@ -37,24 +37,31 @@ export default function PrintSheet() {
   useEffect(() => {
     if (!track) return
     let cancel = false
-    loadAudioIndex().then(idxMap => {
+    // 先拉一次云端盐+顺序模式：家长刚点过「立即重排」，打印卷必须跟着变
+    fetchShuffleSalt().finally(() => {
       if (cancel) return
-      const fromAudio = idxMap[track.id]
-      let list: AudioItem[] = tuplesToItems(track.items)
-      if (fromAudio && fromAudio.length) {
-        list = fromAudio.map((a, i) => ({
-          no: a.no ?? i + 1,
-          word: a.word,
-          cn: a.cn || track.items[i]?.[2] || '',
-          file: a.file,
-        }))
-      }
-      // 打印卷也按同一种子洗牌，保证「线上做的顺序」与「纸上做的顺序」一致
-      if (progress.settings.shuffle && list.length > 1) {
-        const salt = orderSalt(progress.settings.shuffleMode, weekStartStr(), currentSalt())
-        list = seededShuffle(list, makeSeed(todayStr(), profile.id, track.id, salt))
-      }
-      setItems(list)
+      loadAudioIndex().then(idxMap => {
+        if (cancel) return
+        const fromAudio = idxMap[track.id]
+        let list: AudioItem[] = tuplesToItems(track.items)
+        if (fromAudio && fromAudio.length) {
+          list = fromAudio.map((a, i) => ({
+            no: a.no ?? i + 1,
+            word: a.word,
+            cn: a.cn || track.items[i]?.[2] || '',
+            file: a.file,
+          }))
+        }
+        // 打印卷与线上卷同种子：同模式（云端同步）+ 同时间成分 + 同盐
+        // → 重排后「线上做的顺序」与「纸上做的顺序」永远一致
+        if (progress.settings.shuffle && list.length > 1) {
+          const mode = currentShuffleMode()
+          const epoch = orderEpoch(mode, todayStr(), weekStartStr())
+          const salt = orderSalt(mode, weekStartStr(), currentSalt())
+          list = seededShuffle(list, makeSeed(epoch, profile.id, track.id, salt))
+        }
+        setItems(list)
+      })
     })
     return () => { cancel = true }
   }, [track, profile.id, progress.settings.shuffle])

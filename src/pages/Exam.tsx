@@ -4,9 +4,9 @@ import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
 import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
 import { playWord, stopAll } from '../lib/player'
-import { seededShuffle, makeSeed, orderSalt } from '../lib/shuffle'
+import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
 import { todayStr, weekStartStr } from '../lib/storage'
-import { currentSalt } from '../lib/api'
+import { currentSalt, currentShuffleMode, fetchShuffleSalt } from '../lib/api'
 import type { AnswerRecord, AudioItem } from '../types'
 
 /**
@@ -35,24 +35,29 @@ export default function Exam() {
   useEffect(() => {
     if (!track) return
     let cancel = false
-    loadAudioIndex().then(idxMap => {
+    fetchShuffleSalt().finally(() => {
       if (cancel) return
-      const fromAudio = idxMap[track.id]
-      let list: AudioItem[] = tuplesToItems(track.items)
-      if (fromAudio && fromAudio.length) {
-        list = fromAudio.map((a, i) => ({
-          no: a.no ?? i + 1,
-          word: a.word,
-          cn: a.cn || track.items[i]?.[2] || '',
-          file: a.file,
-        }))
-      }
-      // 随机出题（防规律），周期与听写/打印卷一致
-      if (progress.settings.shuffle && list.length > 1) {
-        const salt = orderSalt(progress.settings.shuffleMode, weekStartStr(), currentSalt())
-        list = seededShuffle(list, makeSeed(todayStr(), profile.id, track.id, salt))
-      }
-      setItems(list)
+      loadAudioIndex().then(idxMap => {
+        if (cancel) return
+        const fromAudio = idxMap[track.id]
+        let list: AudioItem[] = tuplesToItems(track.items)
+        if (fromAudio && fromAudio.length) {
+          list = fromAudio.map((a, i) => ({
+            no: a.no ?? i + 1,
+            word: a.word,
+            cn: a.cn || track.items[i]?.[2] || '',
+            file: a.file,
+          }))
+        }
+        // 随机出题（防规律），时间成分+盐与听写/打印卷一致
+        if (progress.settings.shuffle && list.length > 1) {
+          const mode = currentShuffleMode()
+          const epoch = orderEpoch(mode, todayStr(), weekStartStr())
+          const salt = orderSalt(mode, weekStartStr(), currentSalt())
+          list = seededShuffle(list, makeSeed(epoch, profile.id, track.id, salt))
+        }
+        setItems(list)
+      })
     })
     return () => { cancel = true }
   }, [track, profile.id, progress.settings.shuffle])

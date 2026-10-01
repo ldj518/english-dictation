@@ -4,13 +4,17 @@ import Shell from '../components/Shell'
 import { useStore } from '../lib/store'
 import {
   fetchStats, checkBackend, fetchPinStatus, setParentPin, fetchPapers, paperFileUrl,
-  createShare, rotateShuffleSalt, type StatsResp, type PhotoItem,
+  createShare, rotateShuffleSalt, pushShuffleMode, currentShuffleMode, fetchShuffleSalt,
+  fetchRecordings, recordFileUrl,
+  type StatsResp, type PhotoItem, type RecItem,
 } from '../lib/api'
 import { todayStr } from '../lib/storage'
 import { sharePoster } from '../lib/poster'
 import type { Progress } from '../types'
 
 type Range = 'day' | 'week' | 'month'
+type ShuffleModeUi = 'daily' | 'weekly' | 'manual'
+const modeLabel: Record<ShuffleModeUi, string> = { daily: '每天换', weekly: '每周换', manual: '家长手动' }
 
 /**
  * 家长看板：按 日 / 周 / 月 查看学习进度。
@@ -19,7 +23,7 @@ type Range = 'day' | 'week' | 'month'
  */
 export default function Parent() {
   const nav = useNavigate()
-  const { profiles, profile, progress, switchProfile, updateSettings } = useStore()
+  const { profiles, profile, progress, switchProfile } = useStore()
   const [range, setRange] = useState<Range>('week')
   const [stats, setStats] = useState<StatsResp | null>(null)
   const [loading, setLoading] = useState(true)
@@ -36,7 +40,12 @@ export default function Parent() {
   const [photos, setPhotos] = useState<PhotoItem[] | null>(null)
   const [openDay, setOpenDay] = useState<string | null>(null)
 
+  /* ── 跟读录音 ── */
+  const [recs, setRecs] = useState<RecItem[] | null>(null)
+  const [openRecDay, setOpenRecDay] = useState<string | null>(null)
+
   /* ── 出题顺序 / 分享 ── */
+  const [mode, setMode] = useState<ShuffleModeUi>(() => currentShuffleMode())
   const [rotMsg, setRotMsg] = useState('')
   const [shareUrl, setShareUrl] = useState('')
   const [shareMsg, setShareMsg] = useState('')
@@ -68,8 +77,33 @@ export default function Parent() {
     if (online !== true) return
     let cancel = false
     fetchPapers(profile.id).then(list => { if (!cancel) setPhotos(list) })
+    fetchRecordings(profile.id).then(list => { if (!cancel) setRecs(list) })
     return () => { cancel = true }
   }, [online, profile.id])
+
+  // 进页面时以云端为准刷新顺序模式（可能在别的设备上切过档）
+  useEffect(() => {
+    let cancel = false
+    fetchShuffleSalt().finally(() => { if (!cancel) setMode(currentShuffleMode()) })
+    return () => { cancel = true }
+  }, [])
+
+  /** 切换顺序模式：本地立刻变 + 推到云端（所有设备生效） */
+  const switchMode = async (m: ShuffleModeUi) => {
+    setMode(m)
+    const okRes = await pushShuffleMode(m)
+    setRotMsg(okRes
+      ? `已切换：所有设备的出题顺序按「${modeLabel[m]}」生效`
+      : '云端没连上，本机已切换，其他设备暂时看不到')
+  }
+
+  const rotate = async () => {
+    setRotMsg('重排中…')
+    const s = await rotateShuffleSalt()
+    setRotMsg(s
+      ? '已重排：三种模式下都立刻生效，所有设备、所有天的题目顺序全部刷新（当天纸质卷跟着变）'
+      : '重排失败：网络不通，稍后再试')
+  }
 
   const savePin = async () => {
     if (!/^\d{4,6}$/.test(pin1)) { setPinMsg('必须是 4-6 位数字'); return }
@@ -83,15 +117,7 @@ export default function Parent() {
     }
   }
 
-  const rotate = async () => {
-    setRotMsg('重排中…')
-    const s = await rotateShuffleSalt()
-    setRotMsg(s
-      ? '已重排：所有设备、所有天的题目顺序全部刷新（当天纸质卷会跟着变）'
-      : '重排失败：网络不通，稍后再试')
-  }
-
-  /** 生成只读分享链接：对错统计 + 高频错词 + 最近的纸质卷照片 */
+  /** 生成只读分享链接：对错统计 + 高频错词 + 最近的纸质卷照片 + 跟读录音 */
   const makeShare = async () => {
     setShareMsg('生成中…')
     const url = await createShare({
@@ -106,12 +132,18 @@ export default function Parent() {
       right: S.right,
       wrongs: (stats?.topWrong || []).slice(0, 12).map(w => ({ word: w.word, cn: w.cn })),
       photoKeys: (photos || []).slice(0, 6).map(p => p.key),
+      recordKeys: (recs || []).slice(0, 12).map(r => {
+        // key: records/{sid}/{dayKey}/{trackId}/{no}-{word}-{uid}.{ext}
+        const seg = r.key.split('/')
+        const raw = (seg[4] || '').replace(/^\d{2}-/, '').replace(/-[a-z0-9]+\.\w+$/i, '')
+        return { word: raw, cn: '', key: r.key }
+      }),
     })
     if (!url) { setShareMsg('生成失败：网络不通'); return }
     setShareUrl(url)
     try {
       await navigator.clipboard.writeText(url)
-      setShareMsg('链接已复制，去微信粘贴发送即可。家人点开就能看对错和纸质照片。')
+      setShareMsg('链接已复制，去微信粘贴发送即可。家人点开就能看对错、纸质照片和跟读录音。')
     } catch {
       setShareMsg('链接已生成，长按复制下面这段地址发到微信：')
     }
@@ -127,7 +159,19 @@ export default function Parent() {
     return Object.entries(m).sort((a, b) => b[0].localeCompare(a[0]))
   }, [photos])
 
-  const shuffleMode = progress.settings.shuffleMode || 'daily'
+  // 录音按天分组（key 格式 records/{sid}/{dayKey}/{trackId}/{no}-{word}-{uid}.ext）
+  const recGroups = useMemo(() => {
+    const m: Record<string, { word: string; key: string }[]> = {}
+    for (const r of recs || []) {
+      const day = r.key.split('/')[2] || '未知日期'
+      const seg = r.key.split('/')
+      const raw = (seg[4] || '').replace(/^\d{2}-/, '').replace(/-[a-z0-9]+\.\w+$/i, '')
+      ;(m[day] ||= []).push({ word: raw, key: r.key })
+    }
+    return Object.entries(m).sort((a, b) => b[0].localeCompare(a[0]))
+  }, [recs])
+
+  const shuffleMode = mode
 
   const s = stats?.summary
 
@@ -313,18 +357,21 @@ export default function Parent() {
       <div className="card pad">
         <div style={{ fontWeight: 800, marginBottom: 6 }}>🔀 出题顺序</div>
         <div className="seg" style={{ marginBottom: 10 }}>
-          {([['daily', '每天换'], ['weekly', '每周换'], ['manual', '家长手动']] as const).map(([m, t]) => (
+          {(['daily', 'weekly', 'manual'] as ShuffleModeUi[]).map(m => (
             <button key={m} className={shuffleMode === m ? 'on' : ''} style={{ flex: 1 }}
-              onClick={() => updateSettings({ shuffleMode: m })}>{t}</button>
+              onClick={() => switchMode(m)}>{modeLabel[m]}</button>
           ))}
         </div>
         <div className="sub small" style={{ lineHeight: 1.7 }}>
-          {shuffleMode === 'daily' && '题目顺序每天自动换一次（现状），孩子背不住昨天的词序。'}
+          {shuffleMode === 'daily' && '顺序每天自动换一次，孩子背不住昨天的词序。'}
           {shuffleMode === 'weekly' && '一周内顺序固定方便对照，每周一自动全部重排。'}
-          {shuffleMode === 'manual' && '顺序长期不变，除非你在下面点「立即重排」。'}
+          {shuffleMode === 'manual' && '顺序长期不变，除非你点下面的「立即重排」。'}
         </div>
         <div className="row" style={{ gap: 10, marginTop: 10 }}>
           <button className="btn ghost sm" onClick={rotate}>🎲 立即重排（全部天）</button>
+        </div>
+        <div className="sub small" style={{ marginTop: 8, lineHeight: 1.7 }}>
+          「立即重排」在三种模式下都有效：点完当天线上卷和纸质卷就换新顺序。
         </div>
         {rotMsg && <div className="sub small" style={{ marginTop: 8, color: 'var(--blue)', fontWeight: 600 }}>{rotMsg}</div>}
       </div>
@@ -351,6 +398,37 @@ export default function Parent() {
                   <a key={p.key} href={paperFileUrl(p.key)} target="_blank" rel="noreferrer">
                     <img src={paperFileUrl(p.key)} alt={`纸质卷 ${day}`} loading="lazy" />
                   </a>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* 跟读录音 */}
+      <div className="card pad">
+        <div style={{ fontWeight: 800, marginBottom: 6 }}>🎙️ 跟读录音</div>
+        {!recs && <div className="sub small">云端未连接，录音看不了</div>}
+        {recs && recGroups.length === 0 && (
+          <div className="sub small">还没有录音。在「跟读录音」页录完并上传后会存到这里，也可以通过分享链接直接听。</div>
+        )}
+        {recGroups.map(([day, list]) => {
+          const open = openRecDay === day
+          return (
+            <div key={day} style={{ marginBottom: 12 }}>
+              <div className="between" style={{ marginBottom: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>{day} <span className="sub small">· {list.length} 条</span></div>
+                <button className="btn ghost sm" style={{ fontSize: 12 }} onClick={() => setOpenRecDay(open ? null : day)}>
+                  {open ? '收起' : (list.length > 4 ? `展开全部 ${list.length} 条` : '展开')}
+                </button>
+              </div>
+              <div className="reviewlist">
+                {(open ? list : list.slice(0, 4)).map(r => (
+                  <div key={r.key} className="rv" style={{ flexWrap: 'wrap' }}>
+                    <span className="w" style={{ minWidth: 72 }}>{r.word}</span>
+                    <audio controls preload="none" src={recordFileUrl(r.key)}
+                      style={{ height: 34, marginLeft: 'auto', maxWidth: '100%' }} />
+                  </div>
                 ))}
               </div>
             </div>

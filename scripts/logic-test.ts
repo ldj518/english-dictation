@@ -4,7 +4,7 @@
 import { judge, addWrong, advanceWrong, dueWrongWords, defaultProgress, REVIEW_STAGES } from '../src/lib/storage'
 import { settle, levelOf } from '../src/lib/gamify'
 import { ALL_TASKS as TASKS, WORDS, DAILY, UNITS, FINALS, UNIT_WORDS } from '../src/lib/data'
-import { seededShuffle, makeSeed, orderSalt } from '../src/lib/shuffle'
+import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../src/lib/shuffle'
 import { buildCnOptions } from '../src/lib/translate'
 import { weekStartStr } from '../src/lib/storage'
 import { resolveRate, SLOW_RATE } from '../src/lib/player'
@@ -174,14 +174,21 @@ log.push('【播放倍速】')
   t('慢速档明显慢于正常档', SLOW_RATE < resolveRate(false, 0.75))
 }
 
-// ── 7. 出题顺序盐（每天/每周/手动三档）──
-log.push('【出题顺序盐】')
+// ── 7. 出题顺序（时间成分 + 云端盐，每天/每周/手动三档）──
+log.push('【出题顺序】')
 {
-  t('daily 模式盐为空（日期本身就是盐）', orderSalt('daily', '2026-09-28', 'abc') === '')
-  t('weekly 模式盐=本周一', orderSalt('weekly', '2026-09-28', 'abc') === '2026-09-28')
+  // 盐：三种模式都参与种子（v2.1 的坑：daily 曾返回空串，重排点了没反应）
+  t('daily 模式盐=云端盐（重排立刻生效）', orderSalt('daily', '2026-09-28', 'abc') === 'abc')
+  t('weekly 模式盐=云端盐', orderSalt('weekly', '2026-09-28', 'abc') === 'abc')
   t('manual 模式盐=云端盐', orderSalt('manual', '2026-09-28', 'abc') === 'abc')
-  t('manual 无盐时兜底空串', orderSalt('manual', '2026-09-28', '') === '')
-  t('undefined 模式按 daily 处理', orderSalt(undefined, '2026-09-28', 'abc') === '')
+  t('无盐时兜底空串（不产生尾随 |）', orderSalt('manual', '2026-09-28', '') === '')
+  t('undefined 模式盐仍透传', orderSalt(undefined, '2026-09-28', 'abc') === 'abc')
+
+  // 时间成分：决定顺序多久自动变一次
+  t('daily 时间成分=今天', orderEpoch('daily', '2026-10-01', '2026-09-28') === '2026-10-01')
+  t('weekly 时间成分=本周一', orderEpoch('weekly', '2026-10-01', '2026-09-28') === '2026-09-28')
+  t('manual 时间成分=固定串', orderEpoch('manual', '2026-10-01', '2026-09-28') === 'fixed')
+  t('undefined 模式按 daily 处理', orderEpoch(undefined, '2026-10-01', '2026-09-28') === '2026-10-01')
 
   // 周一日期串：2026-10-01 是周四 → 本周一是 09-28；10-05 周一 → 自己
   t('周四归到本周一', weekStartStr(new Date(2026, 9, 1)) === '2026-09-28', weekStartStr(new Date(2026, 9, 1)))
@@ -195,6 +202,18 @@ log.push('【出题顺序盐】')
   const c = seededShuffle(arr, makeSeed('2026-10-01', 'p1', 'day01', 'salt2'))
   t('不同盐顺序不同', JSON.stringify(a) !== JSON.stringify(b) && JSON.stringify(b) !== JSON.stringify(c))
   t('同盐可复现', JSON.stringify(seededShuffle(arr, makeSeed('2026-10-01', 'p1', 'day01', 'salt1'))) === JSON.stringify(b))
+
+  // manual 档：时间成分固定 → 跨天顺序不变（这正是「家长手动」的语义）
+  const m1 = seededShuffle(arr, makeSeed(orderEpoch('manual', '2026-10-01', 'x'), 'p1', 'day01', 'salt1'))
+  const m2 = seededShuffle(arr, makeSeed(orderEpoch('manual', '2026-10-02', 'x'), 'p1', 'day01', 'salt1'))
+  t('manual 跨天顺序不变（重排才变）', JSON.stringify(m1) === JSON.stringify(m2))
+  // daily 档：跨天必须变
+  const d1 = seededShuffle(arr, makeSeed(orderEpoch('daily', '2026-10-01', 'x'), 'p1', 'day01', 'salt1'))
+  const d2 = seededShuffle(arr, makeSeed(orderEpoch('daily', '2026-10-02', 'x'), 'p1', 'day01', 'salt1'))
+  t('daily 跨天顺序变化', JSON.stringify(d1) !== JSON.stringify(d2))
+  // 立即重排：manual 档换盐 → 顺序立刻变化
+  const m3 = seededShuffle(arr, makeSeed(orderEpoch('manual', '2026-10-02', 'x'), 'p1', 'day01', 'salt2'))
+  t('manual 换盐后顺序立刻变', JSON.stringify(m2) !== JSON.stringify(m3))
 }
 
 // ── 8. 翻译关选项（英译汉四选一）──

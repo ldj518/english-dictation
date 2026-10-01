@@ -16,6 +16,7 @@ import Paper from './pages/Paper'
 import Parent from './pages/Parent'
 import Train from './pages/Train'
 import Translate from './pages/Translate'
+import Read from './pages/Read'
 import Share from './pages/Share'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -35,6 +36,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/parent" element={<Parent />} />
           <Route path="/train" element={<Train />} />
           <Route path="/translate/:id" element={<Translate />} />
+          <Route path="/read/:id" element={<Read />} />
           <Route path="/s/:id" element={<Share />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

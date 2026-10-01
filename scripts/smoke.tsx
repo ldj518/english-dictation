@@ -17,6 +17,7 @@ import PaperPage from '../src/pages/Paper'
 import ParentPage from '../src/pages/Parent'
 import TrainPage from '../src/pages/Train'
 import TranslatePage from '../src/pages/Translate'
+import ReadPage from '../src/pages/Read'
 import SharePage from '../src/pages/Share'
 
 type Case = [string, string, React.ComponentType]
@@ -38,6 +39,7 @@ const PARAM_CASES: [string, React.ComponentType][] = [
   ['/print/day01', PrintSheetPage],
   ['/paper/day01', PaperPage],
   ['/translate/day01', TranslatePage],
+  ['/read/day01', ReadPage],
   ['/s/sh_test123', SharePage],
 ]
 

@@ -16,8 +16,11 @@ public/audio/manifest.json
 .env
 .env.*
 !.env.example
+key.env
+*key.env
 *.pem
 *.key
+!*.example.key
 
 # 系统
 .DS_Store

@@ -140,8 +140,10 @@ for t in tasks:
             fn = f"{key_of(word)}.mp3"
             encode_mp3(clean, os.path.join(PUB, "words", fn))
             word_files[word] = fn
-            manifest["words"][word] = fn
-        items.append({"no": no, "word": word, "cn": cn, "file": word_files[word]})
+            # manifest 的 words 映射统一存 words/ 前缀的完整相对路径
+            manifest["words"][word] = f"words/{fn}"
+        # 注意：file 必须带 words/ 前缀，否则线上（R2 桶结构 words/xxx.mp3）会 404
+        items.append({"no": no, "word": word, "cn": cn, "file": f"words/{word_files[word]}"})
 
     manifest["tracks"].append({
         "id": tid,

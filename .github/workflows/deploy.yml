@@ -32,11 +32,45 @@ jobs:
           VITE_AUDIO_BASE: ${{ secrets.VITE_AUDIO_BASE }}
         run: npm run build
 
+      - name: Verify Cloudflare credentials
+        # 提前校验密钥：token 失效时给出明确报错，而不是在部署步骤里含糊失败。
+        # 只打印长度与前 8 位，绝不泄露完整 token。
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -e
+          echo "token length = ${#CF_TOKEN}"
+          echo "token prefix = ${CF_TOKEN:0:8}..."
+          echo "account id   = $CF_ACCOUNT"
+          if [ -z "$CF_TOKEN" ]; then
+            echo "::error::Secrets 里没有 CLOUDFLARE_API_TOKEN，请在仓库 Settings → Secrets 添加"
+            exit 1
+          fi
+          if [ -z "$CF_ACCOUNT" ]; then
+            echo "::error::Secrets 里没有 CLOUDFLARE_ACCOUNT_ID，请在仓库 Settings → Secrets 添加"
+            exit 1
+          fi
+          code=$(curl -s -o /tmp/cf.json -w "%{http_code}" \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/pages/projects" \
+            -H "Authorization: Bearer $CF_TOKEN")
+          echo "pages/projects HTTP = $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::Cloudflare 拒绝了该 Token（HTTP $code）。"
+            echo "::error::最常见原因：Token 已过期/被撤销，或权限未包含「Cloudflare Pages: Edit」。"
+            echo "::error::请到 https://dash.cloudflare.com/profile/api-tokens 重新创建并更新仓库 Secret。"
+            exit 1
+          fi
+          echo "✅ Cloudflare 凭据校验通过"
+
       - name: Publish to Cloudflare Pages
         # 带上 functions/ 目录（Pages Functions = 后端 API），
-        # D1 / R2 绑定已在 Pages 项目里配置好，wrangler 会自动使用
+        # D1 / R2 绑定已在 Pages 项目里配置好，wrangler 会自动使用。
+        # 版本与 package.json / package-lock.json 保持一致（4.145.0），
+        # 避免 wrangler-action 默认装到的版本与 Node 20 运行时不兼容。
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.145.0'
           command: pages deploy dist --project-name=english-dictation --branch=main

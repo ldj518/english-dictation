@@ -1,6 +1,28 @@
 import type { AudioItem } from '../types'
 import { itemUrl, trackUrl } from './assets'
 
+/**
+ * 慢速播放的倍速。
+ *
+ * 设计决策：**固定值，不乘用户设置**。
+ * 早期实现是 `settings.rate * 0.7`，当用户把设置调成 0.75× 时，
+ * 慢速会变成 0.525× —— 慢到听不出单词边界，等于没用。
+ * 固定 0.6× 才是「听得清但明显更慢」的可用档位。
+ */
+export const SLOW_RATE = 0.6
+
+/**
+ * 计算实际使用的播放倍速。
+ * @param slow 是否点了「慢速」
+ * @param userRate 用户在设置里的默认倍速
+ */
+export function resolveRate(slow: boolean, userRate: number): number {
+  if (slow) return SLOW_RATE
+  // 兜底：设置里出现非法值（0、负、NaN）时回落到 1×，避免播放静音
+  if (!Number.isFinite(userRate) || userRate <= 0) return 1
+  return Math.min(2, Math.max(0.25, userRate))
+}
+
 /** Web Speech API 兜底朗读（离线/网络差时用） */
 export function speakWord(word: string, rate = 1) {
   try {
@@ -66,9 +88,17 @@ export function preload(src: string) {
 
 /**
  * 播放一个词的音频。
+ *
+ * 关键：**每次播放都用独立的 Audio 元素**，不复用缓存里的同一个元素。
+ * 原因（真实踩坑）：缓存复用元素时，如果上一个 play() 还没结束就再次调用
+ * play()，浏览器会抛 AbortError 并忽略这次播放；而「慢速」按钮恰恰是在
+ * 自动播报还没结束时被点到的 —— 于是表现为「点了没反应」。
+ *
+ * 代价：每词新建一个 Audio 对象，但音频文件本身走 HTTP 缓存（R2 已设
+ * Cache-Control），不会重复下载，开销可忽略。
+ *
  * @param item 词条（file 为 null 时回退到 Web Speech）
  * @param rate 播放倍速
- * @returns 播放时长（毫秒估算）
  */
 export function playWord(item: AudioItem, rate = 1): Promise<void> {
   return new Promise(resolve => {
@@ -78,26 +108,70 @@ export function playWord(item: AudioItem, rate = 1): Promise<void> {
       resolve()
       return
     }
-    const a = getAudio(url)
+    // 先把正在播放的都停掉，避免声音叠在一起
+    pauseAll()
+    const a = new Audio(url)
+    a.preload = 'auto'
+    // 倍速必须在 play() 之前设好，否则部分浏览器会忽略
     a.playbackRate = rate
-    a.currentTime = 0
-    const done = () => { a.onended = null; a.onerror = null; resolve() }
-    a.onended = done
-    a.onerror = () => {
+    a.defaultPlaybackRate = rate
+    live.add(a)
+    let settled = false
+    const done = () => {
+      if (settled) return
+      settled = true
+      live.delete(a)
+      a.onended = null
       a.onerror = null
-      // 音频加载失败 → Web Speech 兜底
-      speakWord(item.word, rate)
       resolve()
     }
+    a.onended = done
+    a.onerror = () => {
+      live.delete(a)
+      // 音频加载失败 → Web Speech 兜底
+      if (!settled) { settled = true; speakWord(item.word, rate); resolve() }
+    }
     a.play().catch(() => {
-      // 自动播放被拦，等用户手势
-      resolve()
+      // 自动播放被拦：抛错也要 resolve，否则调用方会一直等待
+      if (!settled) {
+        // 记录一次失败，交给上层决定是否提示
+        lastError = 'autoplay-blocked'
+        settled = true
+        live.delete(a)
+        resolve()
+      }
     })
+    // 兜底：极端情况下 onended 不触发（流中断），按音频时长兜底收尾
+    a.onloadedmetadata = () => {
+      const dur = isFinite(a.duration) && a.duration > 0 ? a.duration : 2
+      const ms = Math.max(300, (dur / Math.max(0.25, rate)) * 1000 + 400)
+      setTimeout(done, ms)
+    }
   })
+}
+
+/** 正在播放的元素集合 */
+const live = new Set<HTMLAudioElement>()
+
+/** 最近一次播放失败原因（供 UI 判断是否需要提示用户） */
+let lastError: string | null = null
+export function takeLastError(): string | null {
+  const e = lastError
+  lastError = null
+  return e
+}
+
+/** 只暂停正在播放的元素（不影响预取缓存） */
+export function pauseAll() {
+  live.forEach(a => {
+    try { a.pause(); a.currentTime = 0 } catch { /* ignore */ }
+  })
+  live.clear()
 }
 
 export function stopAll() {
   try { speechSynthesis.cancel() } catch { /* ignore */ }
+  pauseAll()
   cache.forEach(a => { try { a.pause(); a.currentTime = 0 } catch { /* ignore */ } })
 }
 

@@ -5,6 +5,7 @@ import { judge, addWrong, advanceWrong, dueWrongWords, defaultProgress, REVIEW_S
 import { settle, levelOf } from '../src/lib/gamify'
 import { ALL_TASKS as TASKS, WORDS, DAILY, UNITS, FINALS, UNIT_WORDS } from '../src/lib/data'
 import { seededShuffle, makeSeed } from '../src/lib/shuffle'
+import { resolveRate, SLOW_RATE } from '../src/lib/player'
 
 let pass = 0, fail = 0
 const log: string[] = []
@@ -148,6 +149,27 @@ log.push('【随机洗牌】')
   const s1 = seededShuffle(words, makeSeed('2026-10-01', 'p1', 'unit01'))
   t('真实词表可洗牌', s1.length === words.length)
   t('真实词表确实乱序', JSON.stringify(s1) !== JSON.stringify(words))
+}
+
+// ── 6. 播放倍速（慢速按钮失效的回归测试）──
+log.push('【播放倍速】')
+{
+  t('慢速固定 0.6×', resolveRate(true, 1) === SLOW_RATE)
+  t('慢速不随用户设置变', resolveRate(true, 0.75) === SLOW_RATE && resolveRate(true, 1.15) === SLOW_RATE)
+  // 这是历史 bug：0.75 * 0.7 = 0.525，慢到听不清
+  t('慢速不会出现 0.525× 这种值', resolveRate(true, 0.75) !== 0.75 * 0.7)
+
+  t('正常播放用用户设置', resolveRate(false, 1) === 1)
+  t('正常播放 0.9×', resolveRate(false, 0.9) === 0.9)
+  t('正常播放 1.15×', resolveRate(false, 1.15) === 1.15)
+
+  // 异常输入兜底：不能出现 0 或 NaN（会导致音频静音/不播）
+  t('rate=0 兜底为 1', resolveRate(false, 0) === 1)
+  t('rate 负数兜底为 1', resolveRate(false, -1) === 1)
+  t('rate=NaN 兜底为 1', resolveRate(false, NaN) === 1)
+  t('rate 过大被夹到 2', resolveRate(false, 99) === 2)
+  t('rate 过小被夹到 0.25', resolveRate(false, 0.01) === 0.25)
+  t('慢速档明显慢于正常档', SLOW_RATE < resolveRate(false, 0.75))
 }
 
 console.log('══ 核心逻辑单测 ══')

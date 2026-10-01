@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
 import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
-import { playWord, stopAll, speakWord, prefetchAhead } from '../lib/player'
+import { playWord, stopAll, speakWord, prefetchAhead, pauseAll, resolveRate } from '../lib/player'
 import { seededShuffle, makeSeed, newSalt } from '../lib/shuffle'
 import { sharePoster } from '../lib/poster'
 import { todayStr } from '../lib/storage'
@@ -31,6 +31,7 @@ export default function Dictation() {
   const [playing, setPlaying] = useState(false)
   const [items, setItems] = useState<AudioItem[]>(() => track ? tuplesToItems(track.items) : [])
   const [salt, setSalt] = useState('')            // 手动重新洗牌的扰动
+  const [slowMode, setSlowMode] = useState(false) // 慢速播放高亮
   const startedAt = useRef(Date.now())
   const inputRef = useRef<HTMLInputElement>(null)
   const [ready, setReady] = useState(false)
@@ -79,26 +80,36 @@ export default function Dictation() {
 
   const cur = items[idx]
 
+  // 每次切题时递增，用来「打断」正在进行的自动播报
+  const playToken = useRef(0)
+
   // 每进入一题，自动播报
   useEffect(() => {
     if (!cur || phase !== 'ask') return
     let cancelled = false
+    const token = ++playToken.current
     ;(async () => {
       setVisible(false)
       setPlaying(true)
       // 提前缓冲后面几题，减少等待
       prefetchAhead(items, idx, 3)
       await new Promise(r => setTimeout(r, 250))
-      if (cancelled) return
+      // 若期间切了题 / 点了手动播放，本次自动播报作废
+      if (cancelled || token !== playToken.current) return
       const rep = Math.max(1, progress.settings.repeat)
+      const baseRate = resolveRate(false, progress.settings.rate)
       for (let i = 0; i < rep; i++) {
-        if (cancelled) return
-        await playWord(cur, progress.settings.rate)
+        if (cancelled || token !== playToken.current) return
+        await playWord(cur, baseRate)
         if (i < rep - 1) await new Promise(r => setTimeout(r, 700))
       }
-      if (!cancelled) setPlaying(false)
+      if (!cancelled && token === playToken.current) setPlaying(false)
     })()
-    return () => { cancelled = true; stopAll() }
+    return () => {
+      cancelled = true
+      // 只在「真的切走了」时打断声音；否则会误杀用户手动点的播放
+      pauseAll()
+    }
   }, [idx, cur, phase])
 
   // 自动聚焦
@@ -106,12 +117,24 @@ export default function Dictation() {
     if (phase === 'ask') setTimeout(() => inputRef.current?.focus(), 100)
   }, [idx, phase, visible])
 
+  // 切题时复位「慢速」高亮
+  useEffect(() => { setSlowMode(false) }, [idx])
+
   const pct = items.length ? Math.round(((idx + (phase === 'done' ? 1 : 0)) / items.length) * 100) : 0
 
+  /**
+   * 手动播放 / 重播。
+   *
+   * 关键：先 ++playToken 打断自动播报，否则两边会抢同一个播放通道，
+   * 表现为「点了没反应」。
+   */
   const replay = async (slow = false) => {
     if (!cur) return
+    playToken.current++          // 作废正在进行的自动播报
+    pauseAll()                   // 立刻停掉当前声音
     setPlaying(true)
-    await playWord(cur, slow ? progress.settings.rate * 0.7 : progress.settings.rate)
+    const rate = resolveRate(slow, progress.settings.rate)
+    await playWord(cur, rate)
     setPlaying(false)
   }
 
@@ -247,7 +270,11 @@ export default function Dictation() {
 
       <div className="controls">
         <button className="btn ghost" onClick={() => { setIdx(i => Math.max(0, i - 1)); setInput(''); setPhase('ask') }} disabled={idx === 0}>‹ 上一题</button>
-        <button className="btn ghost" onClick={() => replay(true)}>🐢 慢速</button>
+        <button
+          className={'btn ghost' + (slowMode ? ' on' : '')}
+          onClick={() => { setSlowMode(true); replay(true) }}
+          title="用 0.6 倍速慢放"
+        >🐢 慢速</button>
         <button className="btn ghost" onClick={() => { setPhase('done'); if (!answers.some(a => a.no === cur.no)) { const rec = { no: cur.no, word: cur.word, cn: cur.cn, input, correct: false }; recordAnswer(cur.word, cur.cn, input, false); setAnswers(a => [...a, rec]) } }}>跳过</button>
       </div>
 

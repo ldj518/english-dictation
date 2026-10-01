@@ -85,6 +85,7 @@ header{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.92);
 .btn:active{transform:scale(.98)}
 .btn:disabled{opacity:.45}
 .btn.ghost{background:#fff;color:var(--blue);border:1px solid var(--line)}
+.btn.ghost.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 .btn.ok{background:var(--ok)}
 .btn.bad{background:var(--bad)}
 .btn.gold{background:linear-gradient(135deg,#e8a900,#ffc633);color:#4a3500}
@@ -246,14 +247,26 @@ header{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.92);
   font-size:64px;font-weight:900;color:rgba(217,48,37,.07);letter-spacing:10px;
   pointer-events:none;user-select:none;white-space:nowrap}
 
-/* 打印规则：只留卷面，去掉一切界面 */
+/* 打印规则：只留卷面，去掉一切界面
+   注意：@page 必须放在最外层（不能嵌在 @media 里），否则部分浏览器会忽略，
+   导致打印出来不是 A4、且带默认边距。 */
+@page{size:A4 portrait;margin:14mm 12mm}
+
 @media print{
+  /* 隐藏一切非卷面元素：控制条、提示、顶栏、底部导航、浮动按钮 */
   .no-print{display:none !important}
-  body{background:#fff;padding:0}
-  .printWrap{max-width:none;padding:0}
-  .sheet{border:0;box-shadow:none;padding:0;border-radius:0}
-  .qitem{min-height:44px}
-  @page{size:A4;margin:16mm 14mm}
+  html,body{background:#fff !important;height:auto;padding:0 !important;margin:0 !important}
+  #root{min-height:0}
+  header,.tabbar,.wrap{display:none !important}
+  .printWrap{max-width:none;padding:0 !important;margin:0 !important;display:block}
+  .sheet{border:0;box-shadow:none;padding:0;border-radius:0;margin:0;background:#fff}
+  .qitem{min-height:42px;break-inside:avoid;page-break-inside:avoid}
+  .sheetHead{break-inside:avoid}
+  .shMeta{font-size:13px}
+  /* 打印时用纯黑，避免浅灰打印不清 */
+  .sheetFoot{color:#666}
+  .qline{border-bottom-color:#000}
+  .qitem{border-bottom-color:#bbb}
 }
 
 /* ═══════════ 拍照批改 ═══════════ */

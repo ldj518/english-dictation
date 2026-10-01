@@ -9,6 +9,7 @@ import { todayStr, weekStartStr } from '../lib/storage'
 import { currentSalt, currentShuffleMode, fetchShuffleSalt, createShare } from '../lib/api'
 import { buildCnOptions } from '../lib/translate'
 import AudioGate from '../components/AudioGate'
+import LetterKeyboard from '../components/LetterKeyboard'
 import type { AnswerRecord, AudioItem, Track } from '../types'
 
 /**
@@ -26,6 +27,8 @@ export default function Translate() {
   const { id = '' } = useParams()
   const nav = useNavigate()
   const { recordAnswer, submitSession, profile, progress } = useStore()
+  /** 内置 26 键键盘（默认开）：杜绝输入法联想把整词弹出来 */
+  const kb = progress.settings.kbBuiltIn !== false
   const track = getTrack(id)
 
   const [dir, setDir] = useState<'e2c' | 'c2e'>('e2c')
@@ -287,6 +290,7 @@ export default function Translate() {
                 if (e.key === 'Enter') { e.preventDefault(); phase === 'ask' ? submitTyping() : next() }
               }}
               placeholder="在这里写英文…"
+              inputMode={kb ? 'none' : 'text'}
               spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off"
               disabled={phase === 'done'}
             />
@@ -294,6 +298,14 @@ export default function Translate() {
               ? <button className="sub btn" onClick={submitTyping} disabled={!input.trim()}>确认</button>
               : <button className="sub btn ok" onClick={next}>下一题</button>}
           </div>
+          {kb && (
+            <LetterKeyboard
+              disabled={phase === 'done'}
+              onKey={c => setInput(v => v + c)}
+              onBackspace={() => setInput(v => v.slice(0, -1))}
+              onSubmit={() => (phase === 'ask' ? submitTyping() : next())}
+            />
+          )}
         </div>
       )}
 

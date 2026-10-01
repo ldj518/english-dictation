@@ -5,6 +5,7 @@ import { useStore, judge } from '../lib/store'
 import { WORDS, loadAudioIndex, UNITS } from '../lib/data'
 import { playWord, stopAll } from '../lib/player'
 import { playWordText } from '../lib/data'
+import LetterKeyboard from '../components/LetterKeyboard'
 import { reportSession } from '../lib/api'
 import type { AudioItem } from '../types'
 
@@ -106,7 +107,9 @@ function Flash() {
 /* ═══════════ 2. 限时挑战 ═══════════ */
 
 function Sprint({ onExit }: { onExit: () => void }) {
-  const { profile, submitSession, recordAnswer } = useStore()
+  const { profile, submitSession, recordAnswer, progress } = useStore()
+  /** 内置 26 键键盘（默认开）：杜绝输入法联想把整词弹出来 */
+  const kb = progress.settings.kbBuiltIn !== false
   const [phase, setPhase] = useState<'ready' | 'run' | 'end'>('ready')
   const [left, setLeft] = useState(60)
   const [idx, setIdx] = useState(0)
@@ -251,10 +254,19 @@ function Sprint({ onExit }: { onExit: () => void }) {
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
           placeholder="快速写…"
+          inputMode={kb ? 'none' : 'text'}
           autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false}
         />
         <button className="sub btn" onClick={submit} disabled={!input.trim()}>确</button>
       </div>
+
+      {kb && (
+        <LetterKeyboard
+          onKey={c => setInput(v => v + c)}
+          onBackspace={() => setInput(v => v.slice(0, -1))}
+          onSubmit={submit}
+        />
+      )}
     </>
   )
 }
@@ -263,6 +275,7 @@ function Sprint({ onExit }: { onExit: () => void }) {
 
 function Spell({ onExit }: { onExit: () => void }) {
   const { progress } = useStore()
+  const kb = progress.settings.kbBuiltIn !== false
   const [i, setI] = useState(0)
   const [input, setInput] = useState('')
   const [show, setShow] = useState(false)
@@ -319,6 +332,7 @@ function Spell({ onExit }: { onExit: () => void }) {
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); show ? next() : check() } }}
           placeholder="拼写…"
+          inputMode={kb ? 'none' : 'text'}
           autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false}
           disabled={show}
         />
@@ -326,6 +340,15 @@ function Spell({ onExit }: { onExit: () => void }) {
           ? <button className="sub btn ok" onClick={next}>下一题</button>
           : <button className="sub btn" onClick={check} disabled={!input.trim()}>确认</button>}
       </div>
+
+      {kb && (
+        <LetterKeyboard
+          disabled={show}
+          onKey={c => setInput(v => v + c)}
+          onBackspace={() => setInput(v => v.slice(0, -1))}
+          onSubmit={() => (show ? next() : check())}
+        />
+      )}
 
       {show && (
         <div className={'verdict ' + (judge(input, cur.word) ? 'ok' : 'bad')}>

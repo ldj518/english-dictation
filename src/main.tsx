@@ -18,6 +18,7 @@ import Train from './pages/Train'
 import Translate from './pages/Translate'
 import Read from './pages/Read'
 import Share from './pages/Share'
+import AudioFailToast from './components/AudioFailToast'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -40,6 +41,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/s/:id" element={<Share />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <AudioFailToast />
       </BrowserRouter>
     </StoreProvider>
   </React.StrictMode>

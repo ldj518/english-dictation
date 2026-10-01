@@ -126,5 +126,7 @@ export interface Progress {
     shuffle: boolean
     /** 打乱周期：每天（默认，日期即盐）/ 每周（周一换）/ 手动（家长点重排才换） */
     shuffleMode?: 'daily' | 'weekly' | 'manual'
+    /** 内置 26 键字母键盘（杜绝输入法联想作弊）；false 时用系统键盘 */
+    kbBuiltIn: boolean
   }
 }

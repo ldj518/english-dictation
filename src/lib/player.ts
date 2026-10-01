@@ -169,14 +169,17 @@ export function playWord(item: AudioItem, rate = 1): Promise<void> {
     a.onended = done
     a.onerror = () => {
       live.delete(a)
-      // 音频加载失败 → Web Speech 兜底
+      // 音频加载失败：记录原因 + 广播给 UI（toast 提示），再 Web Speech 兜底
+      lastError = 'load-failed'
+      try { window.dispatchEvent(new CustomEvent('eng-dict-audio-fail', { detail: 'load-failed' })) } catch { /* ignore */ }
       if (!settled) { settled = true; speakWord(item.word, rate); resolve() }
     }
     a.play().catch(() => {
       // 自动播放被拦：抛错也要 resolve，否则调用方会一直等待
       if (!settled) {
-        // 记录一次失败，交给上层决定是否提示
+        // 记录一次失败 + 广播，交给上层提示
         lastError = 'autoplay-blocked'
+        try { window.dispatchEvent(new CustomEvent('eng-dict-audio-fail', { detail: 'autoplay-blocked' })) } catch { /* ignore */ }
         settled = true
         live.delete(a)
         resolve()

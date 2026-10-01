@@ -113,6 +113,18 @@ export default function Settings() {
 
         <div className="field">
           <div>
+            <div className="k">内置字母键盘</div>
+            <div className="d">只有 26 个字母，不弹输入法联想词（推荐开）</div>
+          </div>
+          <button
+            className={'switch' + (s.kbBuiltIn !== false ? ' on' : '')}
+            onClick={() => updateSettings({ kbBuiltIn: s.kbBuiltIn === false })}
+            aria-label="内置键盘开关"
+          ><i /></button>
+        </div>
+
+        <div className="field">
+          <div>
             <div className="k">音质</div>
             <div className="d">当前 96kbps 高保真（无杂音）</div>
           </div>

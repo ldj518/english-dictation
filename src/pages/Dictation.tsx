@@ -10,6 +10,7 @@ import { currentSalt, currentShuffleMode, fetchShuffleSalt, createShare } from '
 import { sharePoster } from '../lib/poster'
 import PinGate from '../components/PinGate'
 import AudioGate from '../components/AudioGate'
+import LetterKeyboard from '../components/LetterKeyboard'
 import { todayStr } from '../lib/storage'
 import type { AnswerRecord, AudioItem, Track } from '../types'
 
@@ -30,6 +31,8 @@ export default function Dictation() {
   const { id = '' } = useParams()
   const nav = useNavigate()
   const { progress, recordAnswer, submitSession, updateSettings, profile } = useStore()
+  /** 内置 26 键键盘（默认开）：杜绝输入法联想把整词弹出来 */
+  const kb = progress.settings.kbBuiltIn !== false
   // /d/custom：错词本勾选的自定义词单（sessionStorage 传入）
   const isCustom = id === 'custom'
   const track = isCustom ? CUSTOM_TRACK : getTrack(id)
@@ -342,6 +345,7 @@ export default function Dictation() {
             }
           }}
           placeholder="在这里写英文…"
+          inputMode={kb ? 'none' : 'text'}
           spellCheck={false}
           autoComplete="off"
           autoCorrect="off"
@@ -352,6 +356,15 @@ export default function Dictation() {
           ? <button className="sub btn" onClick={submit} disabled={!input.trim()}>确认</button>
           : <button className="sub btn ok" onClick={next}>下一题</button>}
       </div>
+
+      {kb && (
+        <LetterKeyboard
+          disabled={phase === 'done'}
+          onKey={c => setInput(v => v + c)}
+          onBackspace={() => setInput(v => v.slice(0, -1))}
+          onSubmit={() => (phase === 'ask' ? submit() : next())}
+        />
+      )}
 
       {phase === 'done' && lastRec && (
         <div className={'verdict ' + (lastRec.correct ? 'ok' : 'bad')}>

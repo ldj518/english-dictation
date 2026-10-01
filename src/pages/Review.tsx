@@ -5,6 +5,7 @@ import { useStore, judge } from '../lib/store'
 import { dueWrongWords, todayStr } from '../lib/storage'
 import { playWordText } from '../lib/data'
 import { seededShuffle, makeSeed } from '../lib/shuffle'
+import LetterKeyboard from '../components/LetterKeyboard'
 import type { WrongWord } from '../types'
 
 type Mode = 'list' | 'quiz'
@@ -146,6 +147,7 @@ function WrongRow({ w, checked, onToggle, onSpeak }: { w: WrongWord; checked: bo
 /** 复习测验（顺序每次进入都打乱，防止记顺序） */
 function Quiz({ words, onExit }: { words: WrongWord[]; onExit: () => void }) {
   const { recordReview, progress, profile } = useStore()
+  const kb = progress.settings.kbBuiltIn !== false
   const shuffled = useMemo(() => {
     if (!progress.settings.shuffle || words.length < 2) return words
     // 复习用「进入时刻」当种子，每次进来顺序都不同
@@ -200,6 +202,7 @@ function Quiz({ words, onExit }: { words: WrongWord[]; onExit: () => void }) {
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); st === 'ask' ? submit() : next() } }}
           placeholder="写英文…"
+          inputMode={kb ? 'none' : 'text'}
           spellCheck={false} autoComplete="off" autoCapitalize="off" autoCorrect="off"
           disabled={st !== 'ask'}
         />
@@ -207,6 +210,15 @@ function Quiz({ words, onExit }: { words: WrongWord[]; onExit: () => void }) {
           ? <button className="sub btn" onClick={submit} disabled={!input.trim()}>确认</button>
           : <button className="sub btn ok" onClick={next}>下一个</button>}
       </div>
+
+      {kb && (
+        <LetterKeyboard
+          disabled={st !== 'ask'}
+          onKey={c => setInput(v => v + c)}
+          onBackspace={() => setInput(v => v.slice(0, -1))}
+          onSubmit={() => (st === 'ask' ? submit() : next())}
+        />
+      )}
 
       {st !== 'ask' && (
         <div className={'verdict ' + (st === 'ok' ? 'ok' : 'bad')}>

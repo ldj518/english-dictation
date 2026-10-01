@@ -8,6 +8,7 @@ import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
 import { todayStr, weekStartStr } from '../lib/storage'
 import { currentSalt, currentShuffleMode, fetchShuffleSalt } from '../lib/api'
 import AudioGate from '../components/AudioGate'
+import LetterKeyboard from '../components/LetterKeyboard'
 import type { AnswerRecord, AudioItem } from '../types'
 
 /**
@@ -21,6 +22,8 @@ export default function Exam() {
   const { id = '' } = useParams()
   const nav = useNavigate()
   const { progress, submitSession, profile } = useStore()
+  /** 内置 26 键键盘（默认开）：杜绝输入法联想把整词弹出来 */
+  const kb = progress.settings.kbBuiltIn !== false
   const track = getTrack(id)
 
   const [items, setItems] = useState<AudioItem[]>(() => track ? tuplesToItems(track.items) : [])
@@ -230,6 +233,7 @@ export default function Exam() {
             }
           }}
           placeholder="写英文…"
+          inputMode={kb ? 'none' : 'text'}
           spellCheck={false} autoComplete="off" autoCapitalize="off" autoCorrect="off"
         />
         <button
@@ -237,6 +241,14 @@ export default function Exam() {
           onClick={() => idx + 1 < items.length ? setIdx(i => i + 1) : submitAll()}
         >下一题</button>
       </div>
+
+      {kb && (
+        <LetterKeyboard
+          onKey={c => setInputs(s => ({ ...s, [cur.no]: (s[cur.no] || '') + c }))}
+          onBackspace={() => setInputs(s => ({ ...s, [cur.no]: (s[cur.no] || '').slice(0, -1) }))}
+          onSubmit={() => (idx + 1 < items.length ? setIdx(i => i + 1) : submitAll())}
+        />
+      )}
 
       <div className="controls">
         <button className="btn ghost" onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0}>‹ 上一题</button>

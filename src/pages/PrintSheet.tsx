@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
 import { useStore } from '../lib/store'
 import { seededShuffle, makeSeed } from '../lib/shuffle'
@@ -197,7 +197,7 @@ export default function PrintSheet() {
             4. 系统自动算分，写进孩子的学习记录和错词本
           </div>
           <div className="row" style={{ gap: 10, marginTop: 14 }}>
-            <a className="btn" href={`#/paper/${track?.id}`}>去批改 →</a>
+            <Link className="btn" to={`/paper/${track?.id}`}>去批改 →</Link>
           </div>
         </div>
       )}

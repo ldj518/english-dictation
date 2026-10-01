@@ -78,6 +78,34 @@ for (const [path, C] of PARAM_CASES) {
   }
 }
 
+// ── 回归：应用是 BrowserRouter（History 模式），页面里绝不允许出现 hash 链接 ──
+// <a href="#/xxx"> 在 BrowserRouter 下点击不会触发路由导航（只会改地址栏的 #），
+// 表现为「按钮点了没反应」。历史上「打纸质卷」「纸质批改」全中过招，必须机器拦截。
+{
+  let bad = 0
+  const all: [string, () => string][] = [
+    ...CASES.map(([p, , C]) => [p, () => render(p, C)] as [string, () => string]),
+    ...PARAM_CASES.map(([p, C]) => [p, () =>
+      renderToString(createElement(MemoryRouter, { initialEntries: [p] },
+        createElement(StoreProvider, null, createElement(C))))] as [string, () => string]),
+  ]
+  for (const [path, fn] of all) {
+    try {
+      const html = fn()
+      if (/href="#\//.test(html)) {
+        results.push(`  ✗ ${path} 含 hash 链接 href="#/..."（BrowserRouter 下点了不会跳转）`)
+        bad++
+      }
+    } catch { /* 渲染异常已在上面统计过 */ }
+  }
+  if (bad === 0) {
+    results.push('  ✓ 全部页面无 hash 链接（BrowserRouter 兼容）')
+    pass++
+  } else {
+    fail++
+  }
+}
+
 console.log('── 页面渲染冒烟测试 ──')
 console.log(results.join('\n'))
 console.log(`\n通过 ${pass} / 失败 ${fail}`)

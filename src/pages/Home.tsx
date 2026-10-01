@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore } from '../lib/store'
 import { levelOf, BADGES } from '../lib/gamify'
@@ -84,12 +84,15 @@ export default function Home() {
             ▶ 开始听写
           </button>
           <div className="row" style={{ gap: 8, marginTop: 10 }}>
-            <a className="btn ghost sm" href={`#/print/${nextTask.id}`} style={{ flex: 1, textAlign: 'center' }}>
+            {/* 注意：必须用 <Link> 而不是 href="#/..."。
+                应用是 BrowserRouter（History 模式），hash 链接不会触发路由导航，
+                点击只会往地址栏加个 #，页面纹丝不动（用户报的「点了没反应」就是这个） */}
+            <Link className="btn ghost sm" to={`/print/${nextTask.id}`} style={{ flex: 1, textAlign: 'center' }}>
               🖨️ 打纸质卷
-            </a>
-            <a className="btn ghost sm" href={`#/paper/${nextTask.id}`} style={{ flex: 1, textAlign: 'center' }}>
+            </Link>
+            <Link className="btn ghost sm" to={`/paper/${nextTask.id}`} style={{ flex: 1, textAlign: 'center' }}>
               📷 纸质批改
-            </a>
+            </Link>
           </div>
         </div>
       )}
@@ -185,7 +188,7 @@ function Cell({ t }: { t: Track }) {
         <div className="t">{t.wordCount} 词</div>
         {best ? <div className={'s ' + cls}>{best.score}%</div> : <div className="t">未做</div>}
       </button>
-      <a className="cellPrint" href={`#/print/${t.id}`} title="打印纸质卷">🖨️</a>
+      <Link className="cellPrint" to={`/print/${t.id}`} title="打印纸质卷">🖨️</Link>
     </div>
   )
 }

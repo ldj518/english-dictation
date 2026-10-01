@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
 import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
@@ -203,7 +203,8 @@ export default function Dictation() {
               🔀 换个顺序
             </button>
           )}
-          <a className="btn ghost sm" style={{ fontSize: 12 }} href={`#/print/${track.id}`}>🖨️ 打纸质卷</a>
+          {/* BrowserRouter 下必须用 <Link>；href="#/..." 是 hash 写法，点了不会跳转 */}
+          <Link className="btn ghost sm" style={{ fontSize: 12 }} to={`/print/${track.id}`}>🖨️ 打纸质卷</Link>
         </div>
       </div>
 

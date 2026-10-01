@@ -19,6 +19,9 @@ import TrainPage from '../src/pages/Train'
 import TranslatePage from '../src/pages/Translate'
 import ReadPage from '../src/pages/Read'
 import SharePage from '../src/pages/Share'
+import GamesPage from '../src/pages/Games'
+import MatchPage from '../src/pages/Match'
+import MonsterPage from '../src/pages/Monster'
 
 type Case = [string, string, React.ComponentType]
 
@@ -30,6 +33,9 @@ const CASES: Case[] = [
   ['设置', '/settings', SettingsPage],
   ['家长看板', '/parent', ParentPage],
   ['训练场', '/train', TrainPage],
+  ['游戏中心', '/games', GamesPage],
+  ['连连看', '/games/match', MatchPage],
+  ['错词大作战', '/games/monster', MonsterPage],
 ]
 
 // 需要路由参数的页面

@@ -5,7 +5,8 @@ import {
   loadProfiles, saveProfiles, activeProfileId, setActiveProfileId, reset as resetProgress,
 } from './storage'
 import { settle, addMinutes, type AwardCtx } from './gamify'
-import { reportSession, syncStudent, checkBackend, fetchShuffleSalt } from './api'
+import { reportSession, syncStudent, checkBackend, fetchShuffleSalt, pushProgressSnapshot } from './api'
+import { syncProfiles, pullAndMerge } from './sync'
 import type { Badge } from '../types'
 
 interface Ctx {
@@ -27,6 +28,8 @@ interface Ctx {
   updateSettings: (s: Partial<Progress['settings']>) => void
   clearWrong: () => void
   doReset: () => void
+  /** 游戏奖励积分（连连看等纯游戏用；不进答题统计，不进错词本） */
+  addPoints: (n: number) => void
   /** 每日计划完成到第几天（/d/plan 交卷后调） */
   markPlanDone: (day: number) => void
 }
@@ -44,20 +47,66 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setProgress(load(activeId))
   }, [activeId])
 
-  // 启动时：探测后端 + 把身份同步上去（供家长看板识别）+ 拉出题顺序盐
+  // 启动时：探测后端 + 双向同步（身份档案 + 进度快照）+ 拉出题顺序盐
   useEffect(() => {
     checkBackend().then(alive => {
       if (!alive) return
-      for (const p of profiles) {
-        syncStudent({ id: p.id, name: p.name, emoji: p.emoji, color: p.color })
+      // ① 身份档案：云端为准合并（改名后别的设备能看到；本地独有档案推上去）
+      void syncProfiles(loadProfiles()).then(({ profiles: merged }) => {
+        setProfiles(merged)
+        for (const p of merged) syncStudent(p)
+      })
+      // ② 进度快照：逐个身份拉云端做无损合并（换设备不再失忆）
+      for (const p of loadProfiles()) {
+        void pullAndMerge(p.id).then(merged => {
+          if (!merged) return
+          if (p.id === activeProfileId()) setProgress(merged)
+        })
       }
       fetchShuffleSalt().catch(() => { /* 静默，保持本地缓存 */ })
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // 切换身份：立即拉该孩子的云端快照合并（别的设备可能刚学完）
+  useEffect(() => {
+    checkBackend().then(alive => {
+      if (!alive) return
+      void pullAndMerge(activeId).then(merged => { if (merged) setProgress(merged) })
+    })
+  }, [activeId])
+
   // 每次进度变化按当前身份保存
   useEffect(() => { save(progress, activeId) }, [progress, activeId])
+
+  // ── 进度快照推送：节流 15s，离开页面时立即冲刷 ──
+  const pushTimer = React.useRef<number | null>(null)
+  useEffect(() => {
+    if (pushTimer.current) window.clearTimeout(pushTimer.current)
+    pushTimer.current = window.setTimeout(() => {
+      pushTimer.current = null
+      void pushProgressSnapshot(activeId, progress)
+    }, 15000)
+    const flush = () => {
+      if (!pushTimer.current) return
+      window.clearTimeout(pushTimer.current)
+      pushTimer.current = null
+      void pushProgressSnapshot(activeId, progress)
+    }
+    const onVis = () => { if (document.visibilityState === 'hidden') flush() }
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', onVis)
+      // 卸载（换身份/关页）也冲刷一次，避免丢最后 15 秒的进度
+      if (pushTimer.current) {
+        window.clearTimeout(pushTimer.current)
+        pushTimer.current = null
+        void pushProgressSnapshot(activeId, progress)
+      }
+    }
+  }, [progress, activeId])
 
   const profile = useMemo(
     () => profiles.find(p => p.id === activeId) || profiles[0],
@@ -73,6 +122,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setProfiles(prev => {
       const next = prev.map(p => (p.id === id ? { ...p, ...patch } : p))
       saveProfiles(next)
+      // 改名/换头像立即推云端——别的设备下次打开就能看到（v2.6 修复的名字不同步）
+      const p = next.find(x => x.id === id)
+      if (p) void syncStudent(p)
       return next
     })
   }, [])
@@ -181,6 +233,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setProgress(p => ({ ...p, wrong: {} }))
   }, [])
 
+  const addPoints = useCallback((n: number) => {
+    setProgress(p => ({ ...p, points: Math.max(0, p.points + n) }))
+  }, [])
+
   /** 每日计划完成记账：planDone 只进不退（重做旧的一遍不回退天数） */
   const markPlanDone = useCallback((day: number) => {
     setProgress(p => ({ ...p, planDone: Math.max(p.planDone || 0, day) }))
@@ -194,9 +250,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(() => ({
     progress, profiles, profile, switchProfile, updateProfile,
-    recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, markPlanDone,
+    recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone,
   }), [progress, profiles, profile, switchProfile, updateProfile,
-       recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, markPlanDone])
+       recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone])
 
   return (
     <C.Provider value={value}>

@@ -18,6 +18,9 @@ import Train from './pages/Train'
 import Translate from './pages/Translate'
 import Read from './pages/Read'
 import Share from './pages/Share'
+import Games from './pages/Games'
+import Match from './pages/Match'
+import Monster from './pages/Monster'
 import AudioFailToast from './components/AudioFailToast'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -36,6 +39,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/paper/:id" element={<Paper />} />
           <Route path="/parent" element={<Parent />} />
           <Route path="/train" element={<Train />} />
+          <Route path="/games" element={<Games />} />
+          <Route path="/games/match" element={<Match />} />
+          <Route path="/games/monster" element={<Monster />} />
           <Route path="/translate/:id" element={<Translate />} />
           <Route path="/read/:id" element={<Read />} />
           <Route path="/s/:id" element={<Share />} />

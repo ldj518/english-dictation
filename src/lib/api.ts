@@ -64,6 +64,35 @@ export async function syncStudent(s: { id: string; name: string; emoji: string; 
   return req('/students', { method: 'POST', body: JSON.stringify(s) })
 }
 
+export interface StudentRow { id: string; name: string; emoji: string; color: string }
+
+/** 拉全部孩子身份（云端为准做合并——改名后别的设备才能看到） */
+export async function fetchStudents(): Promise<StudentRow[]> {
+  const r = await req<{ students: StudentRow[] }>('/students')
+  return r?.students || []
+}
+
+/** 拉某孩子的进度快照（云端没有返回 null） */
+export async function fetchProgressSnapshot(studentId: string): Promise<unknown | null> {
+  try {
+    const r = await fetch(`${BASE}/progress?studentId=${encodeURIComponent(studentId)}`)
+    if (!r.ok) return null
+    const j = await r.json() as { ok: boolean; data?: unknown }
+    return j.ok ? (j.data ?? null) : null
+  } catch {
+    return null
+  }
+}
+
+/** 推送进度快照（fire-and-forget，失败静默） */
+export async function pushProgressSnapshot(studentId: string, data: unknown): Promise<boolean> {
+  const r = await req('/progress', {
+    method: 'POST',
+    body: JSON.stringify({ studentId, data }),
+  })
+  return !!r
+}
+
 export interface StatsResp {
   range: string
   today: string

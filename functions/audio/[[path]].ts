@@ -16,6 +16,14 @@ import { type Env, fail, preflight } from '../api/_utils'
 
 const ALLOWED_PREFIXES = ['words/', 'tracks/']
 
+/** 按扩展名映射 MIME（R2 元数据可能缺；.m4a 是 v2.6 AAC 逐词音频） */
+function contentTypeOf(key: string, fallback: string | undefined): string {
+  if (key.endsWith('.m4a')) return 'audio/mp4'
+  if (key.endsWith('.mp3')) return 'audio/mpeg'
+  if (key.endsWith('.json')) return 'application/json; charset=utf-8'
+  return fallback || 'application/octet-stream'
+}
+
 /** 解析 Range 头（iOS Safari 播放音频前会发 bytes=0-1 探测） */
 function parseRange(header: string | null):
   | { offset: number; length?: number }
@@ -64,7 +72,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, waitUntil
       const len = 'suffix' in range ? total - start : (range.length ?? total - start)
       const h = new Headers()
       obj.writeHttpMetadata(h)
-      h.set('Content-Type', obj.httpMetadata?.contentType || 'audio/mpeg')
+      h.set('Content-Type', contentTypeOf(key, obj.httpMetadata?.contentType))
       h.set('Accept-Ranges', 'bytes')
       h.set('Content-Range', `bytes ${start}-${start + len - 1}/${total}`)
       h.set('Cache-Control', 'public, max-age=31536000, immutable')
@@ -86,7 +94,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, waitUntil
 
     const h = new Headers()
     obj.writeHttpMetadata(h)
-    h.set('Content-Type', isManifest ? 'application/json; charset=utf-8' : (obj.httpMetadata?.contentType || 'audio/mpeg'))
+    h.set('Content-Type', isManifest ? 'application/json; charset=utf-8' : contentTypeOf(key, obj.httpMetadata?.contentType))
     h.set('Cache-Control', isManifest ? 'no-store' : 'public, max-age=31536000, immutable')
     if (!isManifest) {
       h.set('Accept-Ranges', 'bytes')

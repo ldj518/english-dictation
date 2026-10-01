@@ -51,7 +51,7 @@ def md5(path):
 
 
 def collect():
-    """收集待上传文件：tracks/*.mp3, words/*.mp3, manifest.json"""
+    """收集待上传文件：tracks/*.mp3, words/*.mp3+.m4a, manifest.json"""
     out = []
     for rel in ("manifest.json",):
         p = os.path.join(AUD, rel)
@@ -62,18 +62,24 @@ def collect():
         if not os.path.isdir(d):
             continue
         for fn in sorted(os.listdir(d)):
-            if fn.endswith(".mp3"):
+            if fn.endswith(".mp3") or fn.endswith(".m4a"):
                 out.append((f"{sub}/{fn}", os.path.join(d, fn)))
     return out
 
 
+# mimetypes 在部分 Windows 上把 .m4a 猜成 None，显式映射兜底
+CT_OVERRIDES = {".m4a": "audio/mp4", ".mp3": "audio/mpeg", ".json": "application/json"}
+
+
 def upload_one(job):
     key, path = job
-    ctype = mimetypes.guess_type(path)[0] or "application/octet-stream"
+    ext = os.path.splitext(key)[1].lower()
+    ctype = CT_OVERRIDES.get(ext) or mimetypes.guess_type(path)[0] or "application/octet-stream"
+    audio = ext in (".mp3", ".m4a")
     extra = {
         "ContentType": ctype,
         # 音频内容不变，长缓存；manifest 短缓存便于更新
-        "CacheControl": "public, max-age=31536000, immutable" if key.endswith(".mp3")
+        "CacheControl": "public, max-age=31536000, immutable" if audio
         else "public, max-age=60",
     }
     with open(path, "rb") as f:

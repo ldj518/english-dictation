@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
 import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
-import { playWord, stopAll, speakWord } from '../lib/player'
+import { playWord, stopAll, speakWord, prefetchAhead } from '../lib/player'
 import type { AnswerRecord, AudioItem } from '../types'
 
 export default function Dictation() {
@@ -54,6 +54,8 @@ export default function Dictation() {
     ;(async () => {
       setVisible(false)
       setPlaying(true)
+      // 提前缓冲后面几题，减少等待
+      prefetchAhead(items, idx, 3)
       await new Promise(r => setTimeout(r, 250))
       if (cancelled) return
       const rep = Math.max(1, progress.settings.repeat)

@@ -28,3 +28,5 @@ Thumbs.db
 # 截图/临时
 shot-*.png
 _*.png
+vite.config.ts.timestamp-*
+vite.config.ts.timestamp-*

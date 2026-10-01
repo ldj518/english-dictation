@@ -1,0 +1,40 @@
+name: Deploy to Cloudflare Pages
+
+# 推送到 main 就自动构建 + 部署
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:      # 也支持手动触发
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    name: Build & Deploy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        # 音频托管在 R2，构建时注入地址（在仓库 Secrets 里配置 VITE_AUDIO_BASE）
+        env:
+          VITE_AUDIO_BASE: ${{ secrets.VITE_AUDIO_BASE }}
+        run: npm run build
+
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=english-dictation --branch=main

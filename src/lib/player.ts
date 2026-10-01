@@ -21,14 +21,42 @@ export function speechSupported() {
 /** 预加载缓存 */
 const cache = new Map<string, HTMLAudioElement>()
 
+/** 缓存上限，防止长会话内存膨胀（每条约 40KB，200 条约 8MB） */
+const CACHE_MAX = 220
+
 function getAudio(src: string): HTMLAudioElement {
   let a = cache.get(src)
   if (!a) {
     a = new Audio(src)
     a.preload = 'auto'
+    // LRU：超限时淘汰最早的一条
+    if (cache.size >= CACHE_MAX) {
+      const first = cache.keys().next().value
+      if (first) {
+        const old = cache.get(first)
+        try { old?.pause() } catch { /* ignore */ }
+        cache.delete(first)
+      }
+    }
     cache.set(src, a)
   }
   return a
+}
+
+/** 预取一个词（不播放），用于提前缓冲下一题 */
+export function prefetch(item: AudioItem) {
+  const url = itemUrl(item)
+  if (url) {
+    const a = getAudio(url)
+    try { a.load() } catch { /* ignore */ }
+  }
+}
+
+/** 批量预取某任务接下来的 N 个词 */
+export function prefetchAhead(items: AudioItem[], from: number, n = 3) {
+  for (let i = from + 1; i <= Math.min(items.length - 1, from + n); i++) {
+    prefetch(items[i])
+  }
 }
 
 export function preload(src: string) {

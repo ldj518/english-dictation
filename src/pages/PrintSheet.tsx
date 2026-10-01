@@ -4,6 +4,7 @@ import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
 import { useStore } from '../lib/store'
 import { seededShuffle, makeSeed } from '../lib/shuffle'
 import { todayStr } from '../lib/storage'
+import { buildA4Pdf, downloadPdf, type PdfBlock } from '../lib/pdf'
 import type { AudioItem } from '../types'
 
 /**
@@ -55,6 +56,28 @@ export default function PrintSheet() {
   const title = track ? (track.label || `第 ${track.order} 天`) : ''
   const dateStr = todayStr()
 
+  /** 生成并下载真正的 A4 PDF 文件 */
+  const exportPdf = () => {
+    if (!track || !items.length) return
+    const blocks: PdfBlock[] = items.map((it, i) => ({
+      type: 'item',
+      no: String(i + 1).padStart(2, '0'),
+      left: mode === 'blank' ? '' : it.cn,
+      right: mode === 'answer' ? it.word : undefined,
+      line: mode !== 'answer',
+    }))
+    const nameMap = { writing: '汉译英', blank: '纯听写', answer: '答案版' } as const
+    const blob = buildA4Pdf({
+      title: '英语单词听写',
+      meta: [`姓名：${profile.name}`, `日期：${dateStr}`, `内容：${title}（${nameMap[mode]}）`],
+      blocks,
+      watermark: mode === 'answer' ? '批改专用' : undefined,
+      footer: `在线练习：tingxie.5208090.xyz · 共 ${items.length} 题`,
+      perPage: 30,
+    })
+    downloadPdf(blob, `听写卷_${profile.name}_${title}_${dateStr}.pdf`)
+  }
+
   /** 卷面信息（打印时用） */
   const head = (
     <div className="sheetHead">
@@ -82,7 +105,10 @@ export default function PrintSheet() {
           <button className={mode === 'blank' ? 'on' : ''} onClick={() => setMode('blank')}>纯听写卷</button>
           <button className={mode === 'answer' ? 'on' : ''} onClick={() => setMode('answer')}>答案版</button>
         </div>
-        <button className="btn" onClick={() => window.print()}>🖨️ 打印 / 存 PDF</button>
+        <button className="btn" style={{ background: '#d9480f' }} onClick={exportPdf}>
+          ⬇️ 下载 A4 PDF
+        </button>
+        <button className="btn ghost" onClick={() => window.print()}>🖨️ 直接打印</button>
       </div>
 
       <div className="tip no-print">

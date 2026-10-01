@@ -21,7 +21,7 @@ pack() {  # $1=入口 $2=输出名
 }
 
 RC=0
-for pair in "logic-test.ts:logic.mjs" "smoke.tsx:smoke.mjs"; do
+for pair in "logic-test.ts:logic.mjs" "api-test.ts:api.mjs" "smoke.tsx:smoke.mjs"; do
   file="${pair%%:*}"; out="${pair##*:}"
   echo "── $file ──"
   pack "$file" "$out"

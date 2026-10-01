@@ -94,6 +94,20 @@ export default function Home() {
         </div>
       )}
 
+      {/* 快捷入口：训练场 + 家长看板 */}
+      <div className="quickRow">
+        <button className="quick" onClick={() => nav('/train')}>
+          <span className="qi">🎯</span>
+          <span className="qt">训练场</span>
+          <span className="qd">闪卡·限时·拼写</span>
+        </button>
+        <button className="quick" onClick={() => nav('/parent')}>
+          <span className="qi">📊</span>
+          <span className="qt">家长看板</span>
+          <span className="qd">日/周/月进度</span>
+        </button>
+      </div>
+
       {/* 待复习提示 */}
       {due.length > 0 && (
         <div className="card pad" style={{ marginBottom: 14, borderColor: '#f0d69a', background: 'linear-gradient(180deg,#fffdf5,#fff)' }}>

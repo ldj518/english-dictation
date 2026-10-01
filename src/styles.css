@@ -275,3 +275,22 @@ header{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.92);
 .mb.ok.on{background:var(--ok);color:#fff;border-color:var(--ok)}
 .mb.bad.on{background:var(--bad);color:#fff;border-color:var(--bad)}
 .mb:active{transform:scale(.9)}
+
+/* ═══════════ 快捷入口（训练场/家长看板） ═══════════ */
+.quickRow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.quick{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px;box-shadow:var(--shadow);text-align:left;transition:.16s}
+.quick:active{transform:scale(.97)}
+.quick .qi{font-size:24px}
+.quick .qt{font-weight:800;font-size:15px;margin-top:2px}
+.quick .qd{font-size:11px;color:var(--sub)}
+
+/* ═══════════ 闪卡 ═══════════ */
+.cardFlip{perspective:1000px}
+.bigplay.flash-ok{box-shadow:0 0 0 6px var(--ok-soft),0 0 24px rgba(15,157,88,.35)}
+.bigplay.flash-bad{box-shadow:0 0 0 6px var(--bad-soft),0 0 24px rgba(217,48,37,.35)}
+.flash-ok{animation:flashOk .26s ease}
+.flash-bad{animation:flashBad .26s ease}
+@keyframes flashOk{0%{background:var(--ok-soft)}100%{background:transparent}}
+@keyframes flashBad{0%{background:var(--bad-soft)}100%{background:transparent}}

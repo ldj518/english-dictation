@@ -6,6 +6,7 @@ import { useStore } from '../lib/store'
 import { seededShuffle, makeSeed } from '../lib/shuffle'
 import { todayStr } from '../lib/storage'
 import { sharePoster } from '../lib/poster'
+import { reportSession, uploadPhoto } from '../lib/api'
 import type { AudioItem, AnswerRecord } from '../types'
 
 /**
@@ -23,6 +24,7 @@ export default function Paper() {
 
   const [items, setItems] = useState<AudioItem[]>([])
   const [photo, setPhoto] = useState<string>('')
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [marks, setMarks] = useState<Record<string, boolean>>({})
   const [result, setResult] = useState<{ score: number; right: number; total: number; newly: unknown[]; seconds: number } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -49,6 +51,7 @@ export default function Paper() {
   }, [track, profile.id])
 
   const onPhoto = (f: File) => {
+    setPhotoFile(f)
     const r = new FileReader()
     r.onload = () => setPhoto(String(r.result))
     r.readAsDataURL(f)
@@ -79,6 +82,25 @@ export default function Paper() {
     const sec = total * 12
     const { newly } = submitSession(track, recs, sec)
     setResult({ score, right, total, newly, seconds: sec })
+
+    // 上报后端：先把照片传 R2（有的话），再写记录
+    ;(async () => {
+      let photoKey: string | undefined
+      if (photoFile) {
+        const k = await uploadPhoto(photoFile, profile.id)
+        if (k) photoKey = k
+      }
+      await reportSession({
+        studentId: profile.id,
+        trackId: track.id,
+        trackLabel: (track.label || track.id) + '（纸质）',
+        kind: track.kind,
+        mode: 'paper',
+        seconds: sec,
+        records: recs,
+        photoKey,
+      })
+    })().catch(() => { /* 静默 */ })
   }
 
   if (!track) return <Shell title="未找到" back><div className="empty"><div className="i">🤔</div><div>没有这个任务</div></div></Shell>

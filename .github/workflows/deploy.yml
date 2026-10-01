@@ -33,6 +33,8 @@ jobs:
         run: npm run build
 
       - name: Publish to Cloudflare Pages
+        # 带上 functions/ 目录（Pages Functions = 后端 API），
+        # D1 / R2 绑定已在 Pages 项目里配置好，wrangler 会自动使用
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

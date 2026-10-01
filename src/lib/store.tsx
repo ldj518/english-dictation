@@ -5,6 +5,7 @@ import {
   loadProfiles, saveProfiles, activeProfileId, setActiveProfileId, reset as resetProgress,
 } from './storage'
 import { settle, addMinutes, type AwardCtx } from './gamify'
+import { reportSession, syncStudent, checkBackend } from './api'
 import type { Badge } from '../types'
 
 interface Ctx {
@@ -40,6 +41,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setProgress(load(activeId))
   }, [activeId])
+
+  // 启动时：探测后端 + 把身份同步上去（供家长看板识别）
+  useEffect(() => {
+    checkBackend().then(alive => {
+      if (!alive) return
+      for (const p of profiles) {
+        syncStudent({ id: p.id, name: p.name, emoji: p.emoji, color: p.color })
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // 每次进度变化按当前身份保存
   useEffect(() => { save(progress, activeId) }, [progress, activeId])
@@ -127,8 +139,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     // 重置缓冲
     buffer.current = { total: 0, right: 0, streak: 0, maxStreak: 0, records: [] }
     if (newly.length) setToast(newly)
+
+    // 上报后端（fire-and-forget，失败不影响本地）
+    reportSession({
+      studentId: activeId,
+      trackId: track.id,
+      trackLabel: result.trackLabel,
+      kind: track.kind,
+      mode: track.kind === 'daily' ? 'online' : 'exam',
+      seconds,
+      records,
+    }).catch(() => { /* 静默 */ })
+
     return { newly, result }
-  }, [])
+  }, [activeId])
 
   const recordReview = useCallback((word: string, cn: string, correct: boolean) => {
     setProgress(p => {

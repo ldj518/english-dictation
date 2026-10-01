@@ -14,6 +14,8 @@ import WordsPage from '../src/pages/Words'
 import SettingsPage from '../src/pages/Settings'
 import PrintSheetPage from '../src/pages/PrintSheet'
 import PaperPage from '../src/pages/Paper'
+import ParentPage from '../src/pages/Parent'
+import TrainPage from '../src/pages/Train'
 
 type Case = [string, string, React.ComponentType]
 
@@ -23,6 +25,8 @@ const CASES: Case[] = [
   ['词库', '/words', WordsPage],
   ['统计', '/stats', StatsPage],
   ['设置', '/settings', SettingsPage],
+  ['家长看板', '/parent', ParentPage],
+  ['训练场', '/train', TrainPage],
 ]
 
 // 需要路由参数的页面

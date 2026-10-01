@@ -7,6 +7,7 @@ import { playWord, stopAll } from '../lib/player'
 import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
 import { todayStr, weekStartStr } from '../lib/storage'
 import { currentSalt, currentShuffleMode, fetchShuffleSalt } from '../lib/api'
+import AudioGate from '../components/AudioGate'
 import type { AnswerRecord, AudioItem } from '../types'
 
 /**
@@ -28,6 +29,12 @@ export default function Exam() {
   const [playing, setPlaying] = useState(false)
   const [done, setDone] = useState(false)
   const [elapsed, setElapsed] = useState(0)
+  // 音频开始门：微信拦截无手势自动播放，第一题必须点「开始」后才能读
+  const [started, setStarted] = useState(false)
+  const start = () => {
+    setStarted(true)
+    startRef.current = Date.now() // 门上犹豫的时间不计入考试用时
+  }
   const startRef = useRef(Date.now())
   const commitRef = useRef(false)
 
@@ -71,9 +78,9 @@ export default function Exam() {
     return () => clearInterval(t)
   }, [done])
 
-  // 自动播报当前题
+  // 自动播报当前题（等开始门解锁后再读）
   useEffect(() => {
-    if (!cur || done) return
+    if (!started || !cur || done) return
     let cancel = false
     ;(async () => {
       setPlaying(true)
@@ -83,7 +90,7 @@ export default function Exam() {
       if (!cancel) setPlaying(false)
     })()
     return () => { cancel = true; stopAll() }
-  }, [idx, cur, done])
+  }, [idx, cur, done, started])
 
   const play = async () => {
     if (!cur) return
@@ -166,6 +173,19 @@ export default function Exam() {
           <button className="btn ghost" onClick={() => location.reload()}>🔁 再考一次</button>
           <button className="btn" onClick={() => nav('/')}>回首页</button>
         </div>
+      </Shell>
+    )
+  }
+
+  // ── 音频开始门 ──
+  if (!started) {
+    return (
+      <Shell title={track.label || '模考'} back noNav>
+        <AudioGate
+          onStart={start}
+          title="准备好考试了吗？"
+          tip="点按钮后自动读第一题，计时同时开始。"
+        />
       </Shell>
     )
   }

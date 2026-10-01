@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
 import { WORDS, loadAudioIndex, UNITS } from '../lib/data'
-import { playWord, speakWord, stopAll } from '../lib/player'
+import { playWord, stopAll } from '../lib/player'
+import { playWordText } from '../lib/data'
 import { reportSession } from '../lib/api'
 import type { AudioItem } from '../types'
 
@@ -79,7 +80,7 @@ function Flash() {
           <div style={{ marginTop: 20 }}>
             <div style={{ fontSize: 30, fontWeight: 800, color: 'var(--ok)', letterSpacing: 1 }}>{cur.word}</div>
             <button className="btn ghost sm" style={{ marginTop: 10 }}
-              onClick={() => speakWord(cur.word, 0.85)}>🔊 听发音</button>
+              onClick={() => { void playWordText(cur.word, 0.85) }}>🔊 听发音</button>
           </div>
         ) : (
           <button className="btn" style={{ marginTop: 24, maxWidth: 220 }}

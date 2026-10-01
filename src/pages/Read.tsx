@@ -7,6 +7,7 @@ import { playWord, pauseAll, resolveRate } from '../lib/player'
 import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
 import { todayStr, weekStartStr } from '../lib/storage'
 import { currentSalt, currentShuffleMode, fetchShuffleSalt, uploadRecording, createShare } from '../lib/api'
+import AudioGate from '../components/AudioGate'
 import type { AudioItem } from '../types'
 
 /**
@@ -68,6 +69,8 @@ export default function Read() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const autoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const playToken = useRef(0)
+  // 音频开始门：微信拦截无手势自动播放
+  const [started, setStarted] = useState(false)
 
   // 加载词单（时间成分+盐，与听写卷同源）
   useEffect(() => {
@@ -105,9 +108,9 @@ export default function Read() {
   const cur = items[idx]
   const curTake = takes[idx] || null
 
-  // 进题自动播标准音
+  // 进题自动播标准音（等开始门解锁后）
   useEffect(() => {
-    if (!cur || phase !== 'read') return
+    if (!started || !cur || phase !== 'read') return
     let cancelled = false
     const token = ++playToken.current
     ;(async () => {
@@ -117,7 +120,7 @@ export default function Read() {
     })()
     return () => { cancelled = true; pauseAll() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx, cur, phase])
+  }, [idx, cur, phase, started])
 
   // 卸载时清理麦克风/定时器/blob
   useEffect(() => () => {
@@ -298,6 +301,19 @@ export default function Read() {
   }
 
   if (!cur) return <Shell title="跟读录音" back noNav><div className="empty sub">加载中…</div></Shell>
+
+  // ── 音频开始门 ──
+  if (!started) {
+    return (
+      <Shell title="跟读录音" back noNav>
+        <AudioGate
+          onStart={() => setStarted(true)}
+          title="准备好跟读了吗？"
+          tip="每个词：听标准音 → 你跟着读一遍 → 录下来发给家长听。"
+        />
+      </Shell>
+    )
+  }
 
   const pct = items.length ? Math.round(((idx + 1) / items.length) * 100) : 0
 

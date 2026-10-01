@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import Shell from '../components/Shell'
 import { WORDS, UNITS, UNIT_WORDS } from '../lib/data'
-import { speakWord } from '../lib/player'
+import { playWordText } from '../lib/data'
 import { useStore } from '../lib/store'
 
 export default function Words() {
@@ -55,7 +55,7 @@ export default function Words() {
               borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 12,
               padding: '12px 16px',
             }}>
-              <button onClick={() => speakWord(w.word)} style={{ fontSize: 18, width: 32 }} aria-label="朗读">🔊</button>
+              <button onClick={() => { void playWordText(w.word) }} style={{ fontSize: 18, width: 32 }} aria-label="朗读">🔊</button>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>
                   {w.word}

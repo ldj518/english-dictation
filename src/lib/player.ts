@@ -40,6 +40,47 @@ export function speechSupported() {
   return typeof window !== 'undefined' && 'speechSynthesis' in window
 }
 
+/* ── 音频解锁（微信/iOS 自动播放拦截的根治手段）────────────── */
+
+/**
+ * 微信内置浏览器（iOS WKWebView / 安卓 X5）会静默拦截「没有用户手势链条」的
+ * audio.play() —— 表现为进入听写页后点了半天没声音，catch 里静默吞掉。
+ *
+ * 根治：在用户真实点按的处理函数里先调 unlockAudio()：
+ * 1) AudioContext 造 1 个静音 sample 并 start（iOS 经典解锁手法）
+ * 2) 播一个 44 字节的静音 wav data URI，解锁 <audio> 通道
+ * 之后同页面后续的 play() 都在「激活态」里，微信/iOS 放行。
+ */
+let _unlocked = false
+
+export function unlockAudio() {
+  if (_unlocked) return
+  _unlocked = true
+  try {
+    // ① AudioContext 静音样本解锁
+    const AC: typeof AudioContext | undefined =
+      window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (AC) {
+      const ctx = new AC()
+      try {
+        const buf = ctx.createBuffer(1, 1, 22050)
+        const src = ctx.createBufferSource()
+        src.buffer = buf
+        src.connect(ctx.destination)
+        src.start(0)
+        void ctx.resume()?.catch?.(() => { /* ignore */ })
+      } catch { /* ignore */ }
+      setTimeout(() => { void ctx.close()?.catch?.(() => { /* ignore */ }) }, 800)
+    }
+  } catch { /* ignore */ }
+  try {
+    // ② <audio> 元素解锁（44 字节静音 wav）
+    const a = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA')
+    a.preload = 'auto'
+    void a.play().catch(() => { /* ignore */ })
+  } catch { /* ignore */ }
+}
+
 /** 预加载缓存 */
 const cache = new Map<string, HTMLAudioElement>()
 

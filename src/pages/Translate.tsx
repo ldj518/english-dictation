@@ -8,6 +8,7 @@ import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
 import { todayStr, weekStartStr } from '../lib/storage'
 import { currentSalt, currentShuffleMode, fetchShuffleSalt, createShare } from '../lib/api'
 import { buildCnOptions } from '../lib/translate'
+import AudioGate from '../components/AudioGate'
 import type { AnswerRecord, AudioItem, Track } from '../types'
 
 /**
@@ -40,6 +41,12 @@ export default function Translate() {
   const startedAt = useRef(Date.now())
   const playToken = useRef(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  // 音频开始门：微信拦截无手势自动播放，第一题必须点「开始」后才能读
+  const [started, setStarted] = useState(false)
+  const start = () => {
+    setStarted(true)
+    startedAt.current = Date.now()
+  }
 
   // 加载词单（与听写卷同源词库），按时间成分+盐+方向种子洗牌
   useEffect(() => {
@@ -75,9 +82,9 @@ export default function Translate() {
 
   const cur = items[idx]
 
-  // 进题自动播一遍读音（两个方向都要听音）
+  // 进题自动播一遍读音（两个方向都要听音；等开始门解锁后）
   useEffect(() => {
-    if (!cur || phase !== 'ask') return
+    if (!started || !cur || phase !== 'ask') return
     let cancelled = false
     const token = ++playToken.current
     ;(async () => {
@@ -87,7 +94,7 @@ export default function Translate() {
     })()
     return () => { cancelled = true; pauseAll() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx, cur, phase])
+  }, [idx, cur, phase, started])
 
   // c2e 自动聚焦
   useEffect(() => {
@@ -215,6 +222,19 @@ export default function Translate() {
   }
 
   if (!cur) return <Shell title="翻译关" back noNav><div className="empty sub">加载中…</div></Shell>
+
+  // ── 音频开始门 ──
+  if (!started) {
+    return (
+      <Shell title="翻译关" back noNav>
+        <AudioGate
+          onStart={start}
+          title="准备好翻译关了吗？"
+          tip="英译汉 + 汉译英双向过一遍，点按钮开始。"
+        />
+      </Shell>
+    )
+  }
 
   const pct = items.length ? Math.round(((idx + (phase === 'done' ? 1 : 0)) / items.length) * 100) : 0
 

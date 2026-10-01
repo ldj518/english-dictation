@@ -2,15 +2,22 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
-import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
-import { playWord, stopAll, speakWord, prefetchAhead, pauseAll, resolveRate } from '../lib/player'
+import { getTrack, loadAudioIndex, tuplesToItems, wordFileMap, playWordText } from '../lib/data'
+import { playWord, stopAll, prefetchAhead, pauseAll, resolveRate } from '../lib/player'
 import { seededShuffle, makeSeed, newSalt, orderSalt, orderEpoch } from '../lib/shuffle'
 import { weekStartStr } from '../lib/storage'
 import { currentSalt, currentShuffleMode, fetchShuffleSalt, createShare } from '../lib/api'
 import { sharePoster } from '../lib/poster'
 import PinGate from '../components/PinGate'
+import AudioGate from '../components/AudioGate'
 import { todayStr } from '../lib/storage'
-import type { AnswerRecord, AudioItem } from '../types'
+import type { AnswerRecord, AudioItem, Track } from '../types'
+
+/** 自定义错词卷（错词本勾选 → /d/custom）：一个合成的任务壳 */
+const CUSTOM_TRACK: Track = {
+  id: 'custom', kind: 'daily', group: 'daily', order: 0, label: '错词听写',
+  file: '', seconds: 0, wordCount: 0, sections: [], items: [],
+}
 
 /** 秒 → 中文时长 */
 function fmtSec(s: number): string {
@@ -23,7 +30,9 @@ export default function Dictation() {
   const { id = '' } = useParams()
   const nav = useNavigate()
   const { progress, recordAnswer, submitSession, updateSettings, profile } = useStore()
-  const track = getTrack(id)
+  // /d/custom：错词本勾选的自定义词单（sessionStorage 传入）
+  const isCustom = id === 'custom'
+  const track = isCustom ? CUSTOM_TRACK : getTrack(id)
 
   const [idx, setIdx] = useState(0)
   const [input, setInput] = useState('')
@@ -38,11 +47,45 @@ export default function Dictation() {
   const startedAt = useRef(Date.now())
   const inputRef = useRef<HTMLInputElement>(null)
   const [ready, setReady] = useState(false)
+  // 音频开始门：微信会拦截无手势的自动播放，第一题必须由「点我开始」触发
+  const [started, setStarted] = useState(false)
 
-  // 加载音频索引（带逐词 mp3 文件名），并按种子洗牌（防规律）
+  /** 点开始：解锁音频通道 + 计时从这一刻起算（门上等待的时间不算用时） */
+  const start = () => {
+    setStarted(true)
+    startedAt.current = Date.now()
+  }
+
+  // 加载词单并按种子洗牌
   useEffect(() => {
     if (!track) return
     let cancel = false
+
+    // ── 自定义错词卷：sessionStorage 词单 + 全词库真音频映射 ──
+    if (isCustom) {
+      wordFileMap().then(map => {
+        if (cancel) return
+        let list: AudioItem[] = []
+        try {
+          const cw = sessionStorage.getItem('custom-words')
+          if (cw) list = (JSON.parse(cw) as { word: string; cn: string }[]).map((w, i) => ({
+            no: i + 1, word: w.word, cn: w.cn, file: map.get(w.word) || null,
+          }))
+          sessionStorage.removeItem('custom-words')
+        } catch { /* ignore */ }
+        if (list.length > 1) {
+          const mode = currentShuffleMode()
+          const epoch = orderEpoch(mode, todayStr(), weekStartStr())
+          const baseSalt = orderSalt(mode, weekStartStr(), currentSalt())
+          const combined = salt ? (baseSalt ? `${baseSalt}|${salt}` : salt) : baseSalt
+          list = seededShuffle(list, makeSeed(epoch, profile.id, 'custom', combined))
+        }
+        setItems(list)
+        setReady(true)
+      })
+      return () => { cancel = true }
+    }
+
     // 先拉一次云端盐+顺序模式（家长重排/切档后，下次进页立刻生效；离线时用本地缓存）
     fetchShuffleSalt().finally(() => {
       if (cancel) return
@@ -106,9 +149,9 @@ export default function Dictation() {
   // 每次切题时递增，用来「打断」正在进行的自动播报
   const playToken = useRef(0)
 
-  // 每进入一题，自动播报
+  // 每进入一题，自动播报（必须等「点我开始」解锁音频后才允许）
   useEffect(() => {
-    if (!cur || phase !== 'ask') return
+    if (!started || !cur || phase !== 'ask') return
     let cancelled = false
     const token = ++playToken.current
     ;(async () => {
@@ -133,7 +176,7 @@ export default function Dictation() {
       // 只在「真的切走了」时打断声音；否则会误杀用户手动点的播放
       pauseAll()
     }
-  }, [idx, cur, phase])
+  }, [idx, cur, phase, started])
 
   // 自动聚焦
   useEffect(() => {
@@ -163,7 +206,7 @@ export default function Dictation() {
 
   const showMeaning = () => {
     setVisible(true)
-    speakWord(cur.word, 0.9)
+    void playWord(cur, 0.9)
   }
 
   const submit = () => {
@@ -215,6 +258,20 @@ export default function Dictation() {
     startedAt.current = Date.now()
     setSalt(newSalt())
     window.scrollTo({ top: 0 })
+  }
+
+  // ── 音频开始门：微信内置浏览器会拦截无手势的自动播放（表现为「没声音」），
+  //    第一题必须在真实点按之后才开始读 ──
+  if (!started && !result) {
+    return (
+      <Shell title={track.label || `第 ${track.order} 天`} back noNav>
+        <AudioGate
+          onStart={start}
+          title="准备好听写了吗？"
+          tip="点按钮后系统自动读第一题，听完在这里写英文。"
+        />
+      </Shell>
+    )
   }
 
   // ── 结果页 ──
@@ -390,23 +447,29 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
         </div>
       </div>
 
-      {/* 巩固闭环：翻译关 + 跟读 + 错词加练 */}
+      {/* 巩固闭环：翻译关 + 跟读 + 错词加练（自定义错词卷没有对应任务，隐藏这两个入口） */}
       <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
-        <button className="btn" style={{ background: 'var(--blue)' }} onClick={() => nav(`/translate/${track?.id}`)}>
-          🔤 进入翻译关
-        </button>
-        <button className="btn" style={{ background: '#7048e8' }} onClick={() => nav(`/read/${track?.id}`)}>
-          🎙️ 跟读录音
-        </button>
+        {track && getTrack(track.id) && (
+          <button className="btn" style={{ background: 'var(--blue)' }} onClick={() => nav(`/translate/${track.id}`)}>
+            🔤 进入翻译关
+          </button>
+        )}
+        {track && getTrack(track.id) && (
+          <button className="btn" style={{ background: '#7048e8' }} onClick={() => nav(`/read/${track.id}`)}>
+            🎙️ 跟读录音
+          </button>
+        )}
         {wrongs.length > 0 && (
           <button className="btn gold" onClick={onRetrain}>
             ⚡ 错词加练（{wrongs.length} 词）
           </button>
         )}
       </div>
-      <div className="sub small center" style={{ marginTop: 6 }}>
-        翻译关换个方向再过一遍 · 跟读录下来发给家长听
-      </div>
+      {track && getTrack(track.id) && (
+        <div className="sub small center" style={{ marginTop: 6 }}>
+          翻译关换个方向再过一遍 · 跟读录下来发给家长听
+        </div>
+      )}
 
       {/* 分享：链接为主（点开看对错），海报兜底 */}
       <div className="row" style={{ gap: 10 }}>
@@ -452,6 +515,8 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
                   <span className="mk">✗</span>
                   <span className="w">{a.word}</span>
                   <span className="sub small">{a.cn}</span>
+                  <button className="btn ghost sm" style={{ marginLeft: 'auto', fontSize: 12, flexShrink: 0 }}
+                    onClick={() => playWordText(a.word)} aria-label="读这个词">🔊</button>
                 </div>
               ))}
             </div>
@@ -471,7 +536,9 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
                 <span className="mk">{a.correct ? '✓' : '✗'}</span>
                 <span className="w">{a.word}</span>
                 {!a.correct && a.input && <span className="mine">{a.input}</span>}
-                <span className="sub small" style={{ marginLeft: 'auto' }}>{a.cn}</span>
+                <span className="sub small">{a.cn}</span>
+                <button className="btn ghost sm" style={{ marginLeft: 'auto', fontSize: 12, flexShrink: 0 }}
+                  onClick={() => playWordText(a.word)} aria-label="读这个词">🔊</button>
               </div>
             ))}
           </div>

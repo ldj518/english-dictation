@@ -65,6 +65,45 @@ export const UNIT_WORDS: Record<string, string[]> = (() => {
   return m
 })()
 
+/* ── 单词 → 真人音频文件（点读用）────────────────────────── */
+
+let _wordFiles: Map<string, string> | null = null
+
+/**
+ * 全词库的 word → file 映射（扫一遍音频清单，同词取第一个命中的文件）。
+ * 错词本/词库/结果页的「点喇叭读真音」都靠它——
+ * 以前这些地方用 Web Speech 兜底，就是用户投诉的「机械杂音」。
+ */
+export async function wordFileMap(): Promise<Map<string, string>> {
+  if (_wordFiles) return _wordFiles
+  const idx = await loadAudioIndex()
+  if (!_wordFiles) {
+    const m = new Map<string, string>()
+    for (const items of Object.values(idx)) {
+      for (const it of items) {
+        if (it.file && !m.has(it.word)) m.set(it.word, it.file)
+      }
+    }
+    _wordFiles = m
+  }
+  return _wordFiles
+}
+
+/**
+ * 按单词文本播放真人音频（有文件用文件，没有回退 Web Speech）。
+ * 供没有 track 上下文的页面使用（错词本、词库、结果页点读）。
+ */
+export async function playWordText(word: string, rate = 1): Promise<void> {
+  const { playWord, speakWord } = await import('./player')
+  const map = await wordFileMap()
+  const file = map.get(word)
+  if (file) {
+    await playWord({ no: 0, word, cn: '', file }, rate)
+  } else {
+    speakWord(word, rate)
+  }
+}
+
 /** 按单元分组的词条（用于词库浏览） */
 export const WORDS_BY_UNIT = (() => {
   const m: Record<string, Word[]> = {}

@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
 import { dueWrongWords, todayStr } from '../lib/storage'
-import { playWord, speakWord } from '../lib/player'
+import { playWordText } from '../lib/data'
 import { seededShuffle, makeSeed } from '../lib/shuffle'
 import type { WrongWord } from '../types'
 
@@ -10,17 +11,41 @@ type Mode = 'list' | 'quiz'
 
 export default function Review() {
   const { progress, recordReview, clearWrong } = useStore()
+  const nav = useNavigate()
   const [mode, setMode] = useState<Mode>('list')
   const [filter, setFilter] = useState<'due' | 'all'>('due')
+  const [sel, setSel] = useState<Set<string>>(new Set())
 
   const all = useMemo(() => Object.values(progress.wrong).sort((a, b) => b.count - a.count), [progress.wrong])
   const due = useMemo(() => dueWrongWords(progress), [progress.wrong])
 
   const list = filter === 'due' ? due : all
+  const selCount = list.filter(w => sel.has(w.word)).length
+  const allOn = list.length > 0 && selCount === list.length
 
-  const speak = (w: string) => {
-    const file = undefined // 用 Web Speech，够用
-    speakWord(w, 0.85)
+  const speak = (w: string) => { void playWordText(w, 0.85) }
+
+  const toggle = (word: string) => setSel(prev => {
+    const next = new Set(prev)
+    if (next.has(word)) next.delete(word); else next.add(word)
+    return next
+  })
+
+  const toggleAll = () => setSel(prev => {
+    const next = new Set(prev)
+    if (allOn) list.forEach(w => next.delete(w.word))
+    else list.forEach(w => next.add(w.word))
+    return next
+  })
+
+  /** 勾选的词 → 自定义错词卷（/d/custom 从 sessionStorage 取词单） */
+  const startCustomDictation = () => {
+    const chosen = list.filter(w => sel.has(w.word))
+    if (!chosen.length) return
+    try {
+      sessionStorage.setItem('custom-words', JSON.stringify(chosen.map(w => ({ word: w.word, cn: w.cn }))))
+    } catch { return }
+    nav('/d/custom')
   }
 
   if (mode === 'quiz') {
@@ -67,21 +92,38 @@ export default function Review() {
           <div className="mt">保持下去，做错的题正在变成会的题</div>
         </div>
       ) : (
-        <div className="card">
-          {list.map(w => <WrongRow key={w.word} w={w} onSpeak={() => speak(w.word)} />)}
-        </div>
+        <>
+          <div className="card pad" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn ghost sm" onClick={toggleAll}>{allOn ? '取消全选' : '✅ 全选'}</button>
+            {selCount > 0 && (
+              <button className="btn ghost sm" onClick={() => setSel(new Set())}>清空勾选</button>
+            )}
+            <span className="sub small" style={{ flex: 1, textAlign: 'right' }}>
+              已选 {selCount}/{list.length}
+            </span>
+            <button className="btn gold sm" onClick={startCustomDictation} disabled={!selCount}>
+              ▶ 听写所选{selCount ? ` (${selCount})` : ''}
+            </button>
+          </div>
+          <div className="card">
+            {list.map(w => (
+              <WrongRow key={w.word} w={w} checked={sel.has(w.word)} onToggle={() => toggle(w.word)} onSpeak={() => speak(w.word)} />
+            ))}
+          </div>
+        </>
       )}
     </Shell>
   )
 }
 
-function WrongRow({ w, onSpeak }: { w: WrongWord; onSpeak: () => void }) {
+function WrongRow({ w, checked, onToggle, onSpeak }: { w: WrongWord; checked: boolean; onToggle: () => void; onSpeak: () => void }) {
   const stages = ['1天', '2天', '4天', '7天', '15天', '30天']
   const overdue = w.dueAt <= Date.now()
   const days = Math.ceil((w.dueAt - Date.now()) / 86400000)
 
   return (
     <div className="pad" style={{ borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <input type="checkbox" checked={checked} onChange={onToggle} style={{ width: 20, height: 20, flexShrink: 0 }} aria-label="选择" />
       <button onClick={onSpeak} style={{ fontSize: 20, width: 36, textAlign: 'center' }} aria-label="朗读">🔊</button>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 16 }}>{w.word}</div>
@@ -116,7 +158,7 @@ function Quiz({ words, onExit }: { words: WrongWord[]; onExit: () => void }) {
   const [stat, setStat] = useState({ ok: 0, bad: 0 })
   const cur = shuffled[i]
 
-  const play = () => speakWord(cur.word, 0.85)
+  const play = () => { void playWordText(cur.word, 0.85) }
 
   const submit = () => {
     const ok = judge(input, cur.word)
@@ -128,7 +170,7 @@ function Quiz({ words, onExit }: { words: WrongWord[]; onExit: () => void }) {
   const next = () => {
     if (i + 1 >= shuffled.length) { onExit(); return }
     setI(i + 1); setInput(''); setSt('ask')
-    setTimeout(() => speakWord(shuffled[i + 1].word, 0.85), 200)
+    setTimeout(() => { void playWordText(shuffled[i + 1].word, 0.85) }, 200)
   }
 
   if (!cur) { onExit(); return null }

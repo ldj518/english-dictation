@@ -4,7 +4,9 @@
 import { judge, addWrong, advanceWrong, dueWrongWords, defaultProgress, REVIEW_STAGES } from '../src/lib/storage'
 import { settle, levelOf } from '../src/lib/gamify'
 import { ALL_TASKS as TASKS, WORDS, DAILY, UNITS, FINALS, UNIT_WORDS } from '../src/lib/data'
-import { seededShuffle, makeSeed } from '../src/lib/shuffle'
+import { seededShuffle, makeSeed, orderSalt } from '../src/lib/shuffle'
+import { buildCnOptions } from '../src/lib/translate'
+import { weekStartStr } from '../src/lib/storage'
 import { resolveRate, SLOW_RATE } from '../src/lib/player'
 
 let pass = 0, fail = 0
@@ -170,6 +172,58 @@ log.push('【播放倍速】')
   t('rate 过大被夹到 2', resolveRate(false, 99) === 2)
   t('rate 过小被夹到 0.25', resolveRate(false, 0.01) === 0.25)
   t('慢速档明显慢于正常档', SLOW_RATE < resolveRate(false, 0.75))
+}
+
+// ── 7. 出题顺序盐（每天/每周/手动三档）──
+log.push('【出题顺序盐】')
+{
+  t('daily 模式盐为空（日期本身就是盐）', orderSalt('daily', '2026-09-28', 'abc') === '')
+  t('weekly 模式盐=本周一', orderSalt('weekly', '2026-09-28', 'abc') === '2026-09-28')
+  t('manual 模式盐=云端盐', orderSalt('manual', '2026-09-28', 'abc') === 'abc')
+  t('manual 无盐时兜底空串', orderSalt('manual', '2026-09-28', '') === '')
+  t('undefined 模式按 daily 处理', orderSalt(undefined, '2026-09-28', 'abc') === '')
+
+  // 周一日期串：2026-10-01 是周四 → 本周一是 09-28；10-05 周一 → 自己
+  t('周四归到本周一', weekStartStr(new Date(2026, 9, 1)) === '2026-09-28', weekStartStr(new Date(2026, 9, 1)))
+  t('周一归自己', weekStartStr(new Date(2026, 9, 5)) === '2026-10-05')
+  t('周日仍归本周', weekStartStr(new Date(2026, 9, 4)) === '2026-09-28')
+
+  // 盐参与种子：不同盐必须产生不同顺序（重排要真的「变」）
+  const arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  const a = seededShuffle(arr, makeSeed('2026-10-01', 'p1', 'day01', ''))
+  const b = seededShuffle(arr, makeSeed('2026-10-01', 'p1', 'day01', 'salt1'))
+  const c = seededShuffle(arr, makeSeed('2026-10-01', 'p1', 'day01', 'salt2'))
+  t('不同盐顺序不同', JSON.stringify(a) !== JSON.stringify(b) && JSON.stringify(b) !== JSON.stringify(c))
+  t('同盐可复现', JSON.stringify(seededShuffle(arr, makeSeed('2026-10-01', 'p1', 'day01', 'salt1'))) === JSON.stringify(b))
+}
+
+// ── 8. 翻译关选项（英译汉四选一）──
+log.push('【翻译关选项】')
+{
+  const items = [
+    { word: 'apple', cn: '苹果' },
+    { word: 'banana', cn: '香蕉' },
+    { word: 'cat', cn: '猫' },
+    { word: 'dog', cn: '狗' },
+    { word: 'egg', cn: '鸡蛋' },
+    { word: 'fish', cn: '鱼' },
+  ]
+  const o1 = buildCnOptions(items, 'apple', 'seed-a')
+  t('返回 4 个选项', o1.length === 4)
+  t('有且仅有 1 个正确项', o1.filter(o => o.correct).length === 1)
+  t('正确项是目标词释义', o1.find(o => o.correct)?.cn === '苹果')
+  t('无重复释义', new Set(o1.map(o => o.cn)).size === 4)
+  t('同种子可复现', JSON.stringify(o1) === JSON.stringify(buildCnOptions(items, 'apple', 'seed-a')))
+  t('不同种子顺序可不同', JSON.stringify(o1) !== JSON.stringify(buildCnOptions(items, 'apple', 'seed-b')) || o1.length === 4)
+
+  // 词卷太小（只有 2 个词）时不崩、不掺重复
+  const tiny = [{ word: 'hot', cn: '热' }, { word: 'cold', cn: '冷' }]
+  const o2 = buildCnOptions(tiny, 'hot', 's')
+  t('小词卷降级到 2 选项', o2.length === 2 && new Set(o2.map(o => o.cn)).size === 2)
+
+  // 目标词无释义时不崩
+  const bad = [{ word: 'x', cn: '' }, { word: 'y', cn: '有释义' }]
+  t('空释义返回空选项', buildCnOptions(bad, 'x', 's').length === 0)
 }
 
 console.log('══ 核心逻辑单测 ══')

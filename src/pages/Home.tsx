@@ -65,12 +65,12 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 继续上次 */}
+      {/* 今日任务：自动推进到第一个没完成的 */}
       {nextTask && (
         <div className="card pad" style={{ marginBottom: 14 }}>
           <div className="between" style={{ marginBottom: 12 }}>
             <div>
-              <div className="sub">接下来练习</div>
+              <div className="sub">今日任务 · 第 {nextTask.order} / {DAILY.length} 天</div>
               <div style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>
                 {nextTask.label || `第 ${nextTask.order} 天`}
                 <span className="sub" style={{ fontWeight: 400, marginLeft: 8, fontSize: 13 }}>
@@ -87,6 +87,9 @@ export default function Home() {
             {/* 注意：必须用 <Link> 而不是 href="#/..."。
                 应用是 BrowserRouter（History 模式），hash 链接不会触发路由导航，
                 点击只会往地址栏加个 #，页面纹丝不动（用户报的「点了没反应」就是这个） */}
+            <Link className="btn ghost sm" to={`/translate/${nextTask.id}`} style={{ flex: 1, textAlign: 'center' }}>
+              🔤 翻译关
+            </Link>
             <Link className="btn ghost sm" to={`/print/${nextTask.id}`} style={{ flex: 1, textAlign: 'center' }}>
               🖨️ 打纸质卷
             </Link>

@@ -44,7 +44,7 @@ export interface ReportPayload {
   trackId: string
   trackLabel: string
   kind: string
-  mode: 'online' | 'exam' | 'paper'
+  mode: 'online' | 'exam' | 'paper' | 'translate'
   seconds: number
   records: { no: number; word: string; cn: string; input: string; correct: boolean }[]
   photoKey?: string
@@ -121,4 +121,115 @@ export async function uploadPhoto(file: File, studentId: string): Promise<string
 /** 上报时补齐 dayKey（后端也会算，这里冗余一份便于调试） */
 export function currentDayKey(): string {
   return todayStr()
+}
+
+/* ── 出题顺序盐（家长「立即重排」用）────────────────── */
+
+const SALT_KEY = 'eng-dict-shuffle-salt'
+let _salt: string | null = null
+
+/** 当前云端盐（先取缓存，启动时 fetchShuffleSalt 刷新） */
+export function currentSalt(): string {
+  if (_salt === null) {
+    try { _salt = localStorage.getItem(SALT_KEY) || '' } catch { _salt = '' }
+  }
+  return _salt
+}
+
+/** 拉取云端盐并缓存（fire-and-forget，失败保持旧值） */
+export async function fetchShuffleSalt(): Promise<string> {
+  const r = await req<{ salt: string }>('/shuffle')
+  if (r && typeof r.salt === 'string') {
+    _salt = r.salt
+    try { localStorage.setItem(SALT_KEY, r.salt) } catch { /* ignore */ }
+  }
+  return currentSalt()
+}
+
+/** 立即重排：生成新盐存云端。成功返回新盐，失败返回 null */
+export async function rotateShuffleSalt(): Promise<string | null> {
+  const salt = Math.random().toString(36).slice(2, 10)
+  const r = await req<{ salt: string }>('/shuffle', {
+    method: 'POST',
+    body: JSON.stringify({ salt }),
+  })
+  if (!r) return null
+  _salt = salt
+  try { localStorage.setItem(SALT_KEY, salt) } catch { /* ignore */ }
+  return salt
+}
+
+/* ── 家长解锁码 ─────────────────────────────────────── */
+
+export interface PinStatusResp { exists: boolean; lockedUntil: number | null }
+
+export async function fetchPinStatus() {
+  return req<PinStatusResp>('/parent-pin')
+}
+
+export async function verifyParentPin(pin: string): Promise<{ ok: boolean; msg: string; offline?: boolean }> {
+  try {
+    const r = await fetch(BASE + '/parent-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'verify', pin }),
+    })
+    const j = await r.json() as { ok: boolean; error?: string }
+    if (j.ok) return { ok: true, msg: '' }
+    return { ok: false, msg: j.error || '密码不对' }
+  } catch {
+    return { ok: false, msg: '网络不通，无法校验。请检查网络后重试', offline: true }
+  }
+}
+
+export async function setParentPin(pin: string, oldPin?: string): Promise<{ ok: boolean; msg: string }> {
+  const r = await req('/parent-pin', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'set', pin, oldPin: oldPin || undefined }),
+  })
+  return r ? { ok: true, msg: '' } : { ok: false, msg: '设置失败：旧码不对 / 已锁定 / 网络不通' }
+}
+
+/* ── 纸质卷照片 ─────────────────────────────────────── */
+
+export interface PhotoItem { key: string; size: number; uploaded: number }
+
+export async function fetchPapers(studentId: string): Promise<PhotoItem[] | null> {
+  const r = await req<{ photos: PhotoItem[] }>(`/papers?studentId=${encodeURIComponent(studentId)}`)
+  return r ? r.photos : null
+}
+
+/** 照片取图地址（走 Functions 代理，不放公开桶） */
+export function paperFileUrl(key: string): string {
+  return `${BASE}/paper-file?key=${encodeURIComponent(key)}`
+}
+
+/* ── 只读分享 ───────────────────────────────────────── */
+
+export interface SharePayload {
+  v: 1
+  studentName: string
+  emoji: string
+  title: string
+  date: string
+  score: number
+  sessions: number
+  total: number
+  right: number
+  wrongs: { word: string; cn: string }[]
+  photoKeys: string[]
+}
+
+/** 生成分享，成功返回 /s/:id 完整链接 */
+export async function createShare(payload: SharePayload): Promise<string | null> {
+  const r = await req<{ id: string }>('/share', {
+    method: 'POST',
+    body: JSON.stringify({ payload }),
+  })
+  if (!r || !r.id) return null
+  return `${location.origin}/s/${r.id}`
+}
+
+export async function fetchShare(id: string): Promise<{ payload: SharePayload; createdAt: number } | null> {
+  return req<{ payload: SharePayload; createdAt: number }>(`/share?id=${encodeURIComponent(id)}`)
 }

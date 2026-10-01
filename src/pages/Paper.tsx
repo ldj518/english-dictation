@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
+import PinGate from '../components/PinGate'
 import { getTrack, loadAudioIndex, tuplesToItems, DAILY } from '../lib/data'
 import { useStore } from '../lib/store'
-import { seededShuffle, makeSeed } from '../lib/shuffle'
-import { todayStr } from '../lib/storage'
+import { seededShuffle, makeSeed, orderSalt } from '../lib/shuffle'
+import { todayStr, weekStartStr } from '../lib/storage'
+import { currentSalt } from '../lib/api'
 import { sharePoster } from '../lib/poster'
 import { reportSession, uploadPhoto } from '../lib/api'
-import type { AudioItem, AnswerRecord } from '../types'
+import type { AudioItem, AnswerRecord, Track } from '../types'
 
 /**
  * 纸质卷批改。
@@ -19,7 +21,7 @@ import type { AudioItem, AnswerRecord } from '../types'
 export default function Paper() {
   const { id = '' } = useParams()
   const nav = useNavigate()
-  const { submitSession, profile } = useStore()
+  const { submitSession, profile, progress } = useStore()
   const track = getTrack(id)
 
   const [items, setItems] = useState<AudioItem[]>([])
@@ -44,7 +46,8 @@ export default function Paper() {
           file: a.file,
         }))
       }
-      list = seededShuffle(list, makeSeed(todayStr(), profile.id, track.id)) // 与打印卷顺序一致
+      list = seededShuffle(list, makeSeed(todayStr(), profile.id, track.id,
+        orderSalt(progress.settings.shuffleMode, weekStartStr(), currentSalt()))) // 与打印卷顺序一致
       setItems(list)
     })
     return () => { cancel = true }
@@ -105,10 +108,74 @@ export default function Paper() {
 
   if (!track) return <Shell title="未找到" back><div className="empty"><div className="i">🤔</div><div>没有这个任务</div></div></Shell>
 
-  if (result) {
+  return (
+    <Shell title="纸质卷批改" back sub={`${doneCount}/${items.length}`} noNav>
+      {/* 批改页整页是答案对照，必须家长解锁（防孩子自己进来「批改」成全对） */}
+      <PinGate title="批改需家长解锁">
+        {result ? (
+          <ResultView result={result} track={track} />
+        ) : (
+          <>
+            <div className="card pad">
+              <div style={{ fontWeight: 800, marginBottom: 8 }}>① 拍下孩子的纸质卷</div>
+              <div className="sub small" style={{ marginBottom: 10 }}>
+                照片会传到云端存档，家长看板随时回看，也可以直接分享给家人看。
+              </div>
+              {photo ? (
+                <div className="photoBox">
+                  <img src={photo} alt="纸质卷照片" />
+                  <button className="btn ghost sm" onClick={() => setPhoto('')}>重拍</button>
+                </div>
+              ) : (
+                <button className="btn ghost" onClick={() => fileRef.current?.click()}>📷 拍照 / 选照片</button>
+              )}
+              <input
+                ref={fileRef} type="file" accept="image/*" capture="environment" hidden
+                onChange={e => { const f = e.target.files?.[0]; if (f) onPhoto(f) }}
+              />
+            </div>
+
+            <div className="card pad">
+              <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div style={{ fontWeight: 800 }}>② 逐题对照，点 ✓ / ✗</div>
+                <div className="row" style={{ gap: 6 }}>
+                  <button className="btn ghost sm" onClick={() => markAll(true)}>全对</button>
+                  <button className="btn ghost sm" onClick={() => markAll(false)}>全错</button>
+                </div>
+              </div>
+              <div className="marklist">
+                {items.map((it, i) => (
+                  <div className={'mrow' + (marks[it.word] === undefined ? '' : marks[it.word] ? ' ok' : ' bad')} key={it.word + i}>
+                    <span className="mno">{String(i + 1).padStart(2, '0')}</span>
+                    <span className="mw">{it.word}</span>
+                    <span className="mcn">{it.cn}</span>
+                    <div className="mbtns">
+                      <button className={'mb ok' + (marks[it.word] === true ? ' on' : '')} onClick={() => mark(it.word, true)}>✓</button>
+                      <button className={'mb bad' + (marks[it.word] === false ? ' on' : '')} onClick={() => mark(it.word, false)}>✗</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="center mt" style={{ paddingBottom: 40 }}>
+              <button className="btn" onClick={commit} disabled={doneCount < items.length}>
+                {doneCount < items.length ? `还剩 ${items.length - doneCount} 题没勾` : '✓ 完成批改，算分入库'}
+              </button>
+            </div>
+          </>
+        )}
+      </PinGate>
+    </Shell>
+  )
+
+  function ResultView({ result, track }: {
+    result: { score: number; right: number; total: number; newly: unknown[]; seconds: number }
+    track: Track
+  }) {
     const wrongs = items.filter(i => !marks[i.word])
     return (
-      <Shell title="纸质卷批改结果" back noNav>
+      <>
         <div className="card">
           <div className="scorebig">
             <div className="emoji">{result.score >= 90 ? '🎉' : result.score >= 70 ? '👍' : '💪'}</div>
@@ -148,59 +215,8 @@ export default function Paper() {
           <button className="btn ghost" onClick={() => { setResult(null); setMarks({}) }}>重新批改</button>
           <button className="btn" onClick={() => nav('/')}>回首页</button>
         </div>
-      </Shell>
+      </>
     )
   }
-
-  return (
-    <Shell title="纸质卷批改" back sub={`${doneCount}/${items.length}`} noNav>
-      <div className="card pad">
-        <div style={{ fontWeight: 800, marginBottom: 8 }}>① 拍下孩子的纸质卷</div>
-        <div className="sub small" style={{ marginBottom: 10 }}>
-          照片只在本机显示，用于对照批改，不会上传。
-        </div>
-        {photo ? (
-          <div className="photoBox">
-            <img src={photo} alt="纸质卷照片" />
-            <button className="btn ghost sm" onClick={() => setPhoto('')}>重拍</button>
-          </div>
-        ) : (
-          <button className="btn ghost" onClick={() => fileRef.current?.click()}>📷 拍照 / 选照片</button>
-        )}
-        <input
-          ref={fileRef} type="file" accept="image/*" capture="environment" hidden
-          onChange={e => { const f = e.target.files?.[0]; if (f) onPhoto(f) }}
-        />
-      </div>
-
-      <div className="card pad">
-        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <div style={{ fontWeight: 800 }}>② 逐题对照，点 ✓ / ✗</div>
-          <div className="row" style={{ gap: 6 }}>
-            <button className="btn ghost sm" onClick={() => markAll(true)}>全对</button>
-            <button className="btn ghost sm" onClick={() => markAll(false)}>全错</button>
-          </div>
-        </div>
-        <div className="marklist">
-          {items.map((it, i) => (
-            <div className={'mrow' + (marks[it.word] === undefined ? '' : marks[it.word] ? ' ok' : ' bad')} key={it.word + i}>
-              <span className="mno">{String(i + 1).padStart(2, '0')}</span>
-              <span className="mw">{it.word}</span>
-              <span className="mcn">{it.cn}</span>
-              <div className="mbtns">
-                <button className={'mb ok' + (marks[it.word] === true ? ' on' : '')} onClick={() => mark(it.word, true)}>✓</button>
-                <button className={'mb bad' + (marks[it.word] === false ? ' on' : '')} onClick={() => mark(it.word, false)}>✗</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="center mt" style={{ paddingBottom: 40 }}>
-        <button className="btn" onClick={commit} disabled={doneCount < items.length}>
-          {doneCount < items.length ? `还剩 ${items.length - doneCount} 题没勾` : '✓ 完成批改，算分入库'}
-        </button>
-      </div>
-    </Shell>
-  )
 }
+

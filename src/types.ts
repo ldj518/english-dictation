@@ -124,5 +124,7 @@ export interface Progress {
     voiceMode: 'normal' | 'slow'
     /** 出题是否随机打乱（防规律） */
     shuffle: boolean
+    /** 打乱周期：每天（默认，日期即盐）/ 每周（周一换）/ 手动（家长点重排才换） */
+    shuffleMode?: 'daily' | 'weekly' | 'manual'
   }
 }

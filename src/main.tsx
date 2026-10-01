@@ -15,6 +15,8 @@ import PrintSheet from './pages/PrintSheet'
 import Paper from './pages/Paper'
 import Parent from './pages/Parent'
 import Train from './pages/Train'
+import Translate from './pages/Translate'
+import Share from './pages/Share'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -32,6 +34,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/paper/:id" element={<Paper />} />
           <Route path="/parent" element={<Parent />} />
           <Route path="/train" element={<Train />} />
+          <Route path="/translate/:id" element={<Translate />} />
+          <Route path="/s/:id" element={<Share />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

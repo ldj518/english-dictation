@@ -307,3 +307,25 @@ header{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.92);
 .flash-bad{animation:flashBad .26s ease}
 @keyframes flashOk{0%{background:var(--ok-soft)}100%{background:transparent}}
 @keyframes flashBad{0%{background:var(--bad-soft)}100%{background:transparent}}
+
+/* ── 家长解锁码门禁 ─────────────────────────────── */
+.pinInput{font-size:20px;letter-spacing:6px;text-align:center;width:140px;padding:10px 12px;
+  border:2px solid var(--line);border-radius:10px;outline:none;background:#fff}
+.pinInput:focus{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-soft)}
+.pinInput.wide{width:100%;text-align:left;letter-spacing:2px;font-size:15px;padding:11px 12px}
+
+/* ── 翻译关 ────────────────────────────────────── */
+.wordBig{font-size:34px;font-weight:800;letter-spacing:.5px;margin:6px 0 2px}
+.optGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:14px}
+.opt{padding:14px 10px;font-size:15px;font-weight:600;border:2px solid var(--line);
+  border-radius:12px;background:#fff;color:var(--txt,#1c2333);line-height:1.5}
+.opt:active{border-color:var(--blue)}
+.opt.right{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.opt.dim{opacity:.45}
+.opt:disabled{cursor:default}
+
+/* ── 家长看板照片墙 ─────────────────────────────── */
+.photoGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.photoGrid img{width:100%;height:110px;object-fit:cover;border-radius:10px;
+  border:0.5px solid var(--line);background:#f7f8fa;cursor:zoom-in}

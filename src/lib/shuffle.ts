@@ -63,3 +63,18 @@ export function makeSeed(date: string, profileId: string, trackId: string, salt 
 export function newSalt(): string {
   return Math.random().toString(36).slice(2, 8)
 }
+
+/** 打乱周期模式 */
+export type ShuffleMode = 'daily' | 'weekly' | 'manual'
+
+/**
+ * 按家长选的周期算出「顺序盐」：
+ * - daily：空盐（种子里的日期本身就是盐，天然每天一换）
+ * - weekly：本周一日期（一周内稳定，周一自动全换）
+ * - manual：云端盐（家长不点「立即重排」就永远不变）
+ */
+export function orderSalt(mode: ShuffleMode | undefined, weekStart: string, remoteSalt: string): string {
+  if (mode === 'weekly') return weekStart
+  if (mode === 'manual') return remoteSalt || ''
+  return ''
+}

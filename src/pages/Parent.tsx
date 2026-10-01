@@ -2,8 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore } from '../lib/store'
-import { fetchStats, checkBackend, type StatsResp } from '../lib/api'
+import {
+  fetchStats, checkBackend, fetchPinStatus, setParentPin, fetchPapers, paperFileUrl,
+  createShare, rotateShuffleSalt, type StatsResp, type PhotoItem,
+} from '../lib/api'
+import { todayStr } from '../lib/storage'
 import { sharePoster } from '../lib/poster'
+import type { Progress } from '../types'
 
 type Range = 'day' | 'week' | 'month'
 
@@ -14,11 +19,27 @@ type Range = 'day' | 'week' | 'month'
  */
 export default function Parent() {
   const nav = useNavigate()
-  const { profiles, profile, progress, switchProfile } = useStore()
+  const { profiles, profile, progress, switchProfile, updateSettings } = useStore()
   const [range, setRange] = useState<Range>('week')
   const [stats, setStats] = useState<StatsResp | null>(null)
   const [loading, setLoading] = useState(true)
   const [online, setOnline] = useState<boolean | null>(null)
+
+  /* ── 家长解锁码 ── */
+  const [pinExists, setPinExists] = useState<boolean | null>(null)
+  const [oldPin, setOldPin] = useState('')
+  const [pin1, setPin1] = useState('')
+  const [pin2, setPin2] = useState('')
+  const [pinMsg, setPinMsg] = useState('')
+
+  /* ── 纸质卷照片 ── */
+  const [photos, setPhotos] = useState<PhotoItem[] | null>(null)
+  const [openDay, setOpenDay] = useState<string | null>(null)
+
+  /* ── 出题顺序 / 分享 ── */
+  const [rotMsg, setRotMsg] = useState('')
+  const [shareUrl, setShareUrl] = useState('')
+  const [shareMsg, setShareMsg] = useState('')
 
   useEffect(() => {
     let cancel = false
@@ -35,6 +56,78 @@ export default function Parent() {
     })
     return () => { cancel = true }
   }, [profile.id, range])
+
+  // 解锁码状态 + 照片列表
+  useEffect(() => {
+    let cancel = false
+    fetchPinStatus().then(r => { if (!cancel) setPinExists(!!r?.exists) }).catch(() => { if (!cancel) setPinExists(null) })
+    return () => { cancel = true }
+  }, [])
+
+  useEffect(() => {
+    if (online !== true) return
+    let cancel = false
+    fetchPapers(profile.id).then(list => { if (!cancel) setPhotos(list) })
+    return () => { cancel = true }
+  }, [online, profile.id])
+
+  const savePin = async () => {
+    if (!/^\d{4,6}$/.test(pin1)) { setPinMsg('必须是 4-6 位数字'); return }
+    if (pin1 !== pin2) { setPinMsg('两次输入不一致'); return }
+    const r = await setParentPin(pin1, oldPin || undefined)
+    if (r.ok) {
+      setPin1(''); setPin2(''); setOldPin(''); setPinExists(true)
+      setPinMsg('已保存。以后打开「答案版」和「纸质批改」都要输这个码')
+    } else {
+      setPinMsg(r.msg)
+    }
+  }
+
+  const rotate = async () => {
+    setRotMsg('重排中…')
+    const s = await rotateShuffleSalt()
+    setRotMsg(s
+      ? '已重排：所有设备、所有天的题目顺序全部刷新（当天纸质卷会跟着变）'
+      : '重排失败：网络不通，稍后再试')
+  }
+
+  /** 生成只读分享链接：对错统计 + 高频错词 + 最近的纸质卷照片 */
+  const makeShare = async () => {
+    setShareMsg('生成中…')
+    const url = await createShare({
+      v: 1,
+      studentName: profile.name,
+      emoji: profile.emoji,
+      title: `家长看板 · ${rangeLabel[range]}`,
+      date: todayStr(),
+      score: S.acc,
+      sessions: S.sessions,
+      total: S.total,
+      right: S.right,
+      wrongs: (stats?.topWrong || []).slice(0, 12).map(w => ({ word: w.word, cn: w.cn })),
+      photoKeys: (photos || []).slice(0, 6).map(p => p.key),
+    })
+    if (!url) { setShareMsg('生成失败：网络不通'); return }
+    setShareUrl(url)
+    try {
+      await navigator.clipboard.writeText(url)
+      setShareMsg('链接已复制，去微信粘贴发送即可。家人点开就能看对错和纸质照片。')
+    } catch {
+      setShareMsg('链接已生成，长按复制下面这段地址发到微信：')
+    }
+  }
+
+  // 照片按天分组（key 格式 papers/{sid}/{dayKey}/{uid}.ext）
+  const photoGroups = useMemo(() => {
+    const m: Record<string, PhotoItem[]> = {}
+    for (const p of photos || []) {
+      const day = p.key.split('/')[2] || '未知日期'
+      ;(m[day] ||= []).push(p)
+    }
+    return Object.entries(m).sort((a, b) => b[0].localeCompare(a[0]))
+  }, [photos])
+
+  const shuffleMode = progress.settings.shuffleMode || 'daily'
 
   const s = stats?.summary
 
@@ -177,6 +270,106 @@ export default function Parent() {
           <div className="sub small" style={{ marginTop: 4 }}>让孩子做一次听写，这里就有数据了</div>
         </div>
       )}
+
+      {/* 家长解锁码 */}
+      <div className="card pad">
+        <div style={{ fontWeight: 800, marginBottom: 6 }}>🔐 家长解锁码</div>
+        <div className="sub small" style={{ marginBottom: 10, lineHeight: 1.7 }}>
+          「答案版」卷面和「纸质批改」页都要输这个码才能看，防止孩子自己偷看答案。
+          {pinExists === false && ' 还没设置，建议现在设一个。'}
+          {pinExists === true && ' 已设置。修改需先输旧码；连错 3 次锁 10 分钟。'}
+        </div>
+        {pinExists === true && (
+          <input
+            className="pinInput wide"
+            placeholder="旧码（修改才需要）"
+            value={oldPin}
+            onChange={e => setOldPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            inputMode="numeric" autoComplete="off"
+            style={{ marginBottom: 8 }}
+          />
+        )}
+        <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+          <input
+            className="pinInput wide" style={{ flex: 1 }}
+            placeholder="新码（4-6 位数字）"
+            value={pin1}
+            onChange={e => setPin1(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            inputMode="numeric" autoComplete="off"
+          />
+          <input
+            className="pinInput wide" style={{ flex: 1 }}
+            placeholder="再输一遍确认"
+            value={pin2}
+            onChange={e => setPin2(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            inputMode="numeric" autoComplete="off"
+          />
+        </div>
+        <button className="btn sm" onClick={savePin} disabled={pin1.length < 4 || pin1 !== pin2}>保存解锁码</button>
+        {pinMsg && <div className="sub small" style={{ marginTop: 8, color: 'var(--blue)', fontWeight: 600 }}>{pinMsg}</div>}
+      </div>
+
+      {/* 出题顺序控制 */}
+      <div className="card pad">
+        <div style={{ fontWeight: 800, marginBottom: 6 }}>🔀 出题顺序</div>
+        <div className="seg" style={{ marginBottom: 10 }}>
+          {([['daily', '每天换'], ['weekly', '每周换'], ['manual', '家长手动']] as const).map(([m, t]) => (
+            <button key={m} className={shuffleMode === m ? 'on' : ''} style={{ flex: 1 }}
+              onClick={() => updateSettings({ shuffleMode: m })}>{t}</button>
+          ))}
+        </div>
+        <div className="sub small" style={{ lineHeight: 1.7 }}>
+          {shuffleMode === 'daily' && '题目顺序每天自动换一次（现状），孩子背不住昨天的词序。'}
+          {shuffleMode === 'weekly' && '一周内顺序固定方便对照，每周一自动全部重排。'}
+          {shuffleMode === 'manual' && '顺序长期不变，除非你在下面点「立即重排」。'}
+        </div>
+        <div className="row" style={{ gap: 10, marginTop: 10 }}>
+          <button className="btn ghost sm" onClick={rotate}>🎲 立即重排（全部天）</button>
+        </div>
+        {rotMsg && <div className="sub small" style={{ marginTop: 8, color: 'var(--blue)', fontWeight: 600 }}>{rotMsg}</div>}
+      </div>
+
+      {/* 纸质卷照片 */}
+      <div className="card pad">
+        <div style={{ fontWeight: 800, marginBottom: 6 }}>📷 纸质卷照片</div>
+        {!photos && <div className="sub small">云端未连接，照片看不了（本机拍照批改不受影响）</div>}
+        {photos && photoGroups.length === 0 && (
+          <div className="sub small">还没有照片。在「纸质批改」页拍照后会自动存到这里。</div>
+        )}
+        {photoGroups.map(([day, list]) => {
+          const open = openDay === day
+          return (
+            <div key={day} style={{ marginBottom: 12 }}>
+              <div className="between" style={{ marginBottom: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>{day} <span className="sub small">· {list.length} 张</span></div>
+                <button className="btn ghost sm" style={{ fontSize: 12 }} onClick={() => setOpenDay(open ? null : day)}>
+                  {open ? '收起' : (list.length > 4 ? `展开全部 ${list.length} 张` : '展开')}
+                </button>
+              </div>
+              <div className="photoGrid">
+                {(open ? list : list.slice(0, 4)).map(p => (
+                  <a key={p.key} href={paperFileUrl(p.key)} target="_blank" rel="noreferrer">
+                    <img src={paperFileUrl(p.key)} alt={`纸质卷 ${day}`} loading="lazy" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* 分享 */}
+      <div className="card pad">
+        <div style={{ fontWeight: 800, marginBottom: 6 }}>🔗 分享给家人（微信直接发链接）</div>
+        <div className="sub small" style={{ marginBottom: 10, lineHeight: 1.7 }}>
+          生成一条只读链接：点开就是 {profile.name} 的对错统计、高频错词和最近的纸质卷照片，不用截图。
+        </div>
+        <button className="btn" style={{ background: '#07c160' }} onClick={makeShare}>生成分享链接</button>
+        {shareMsg && <div className="sub small" style={{ marginTop: 8, color: 'var(--blue)', fontWeight: 600, lineHeight: 1.7 }}>{shareMsg}</div>}
+        {shareUrl && shareMsg.startsWith('链接已生成') && (
+          <div className="tip" style={{ marginTop: 8, wordBreak: 'break-all', userSelect: 'all' }}>{shareUrl}</div>
+        )}
+      </div>
 
       <div className="row" style={{ gap: 10 }}>
         <button className="btn ghost" onClick={() => location.reload()}>🔄 刷新数据</button>

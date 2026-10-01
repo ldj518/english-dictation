@@ -2,9 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
 import { useStore } from '../lib/store'
-import { seededShuffle, makeSeed } from '../lib/shuffle'
-import { todayStr } from '../lib/storage'
+import { seededShuffle, makeSeed, orderSalt } from '../lib/shuffle'
+import { todayStr, weekStartStr } from '../lib/storage'
+import { currentSalt } from '../lib/api'
 import { buildA4Pdf, downloadPdf, type PdfBlock } from '../lib/pdf'
+import PinGate from '../components/PinGate'
+import { isUnlocked } from '../lib/parentLock'
 import type { AudioItem } from '../types'
 
 /**
@@ -48,7 +51,8 @@ export default function PrintSheet() {
       }
       // 打印卷也按同一种子洗牌，保证「线上做的顺序」与「纸上做的顺序」一致
       if (progress.settings.shuffle && list.length > 1) {
-        list = seededShuffle(list, makeSeed(todayStr(), profile.id, track.id))
+        const salt = orderSalt(progress.settings.shuffleMode, weekStartStr(), currentSalt())
+        list = seededShuffle(list, makeSeed(todayStr(), profile.id, track.id, salt))
       }
       setItems(list)
     })
@@ -61,6 +65,10 @@ export default function PrintSheet() {
   /** 生成并下载真正的 A4 PDF 文件 */
   const exportPdf = () => {
     if (!track || !items.length) { setHint('还没有题目，稍等一下再试'); return }
+    if (mode === 'answer' && !isUnlocked()) {
+      setHint('答案版需要家长解锁：先在下方输入解锁码，再下载。')
+      return
+    }
     setBusy(true)
     setHint('')
     try {
@@ -91,6 +99,10 @@ export default function PrintSheet() {
 
   /** 打印：微信/手机内置浏览器常不支持 window.print，给出替代指引 */
   const doPrint = () => {
+    if (mode === 'answer' && !isUnlocked()) {
+      setHint('答案版需要家长解锁：先在下方输入解锁码，再打印。')
+      return
+    }
     const ua = navigator.userAgent
     const inWechat = /MicroMessenger/i.test(ua)
     try {
@@ -157,35 +169,44 @@ export default function PrintSheet() {
         ③ 用 WPS / 手机自带「打印」打开这个 PDF 即可（电脑上直接 Ctrl+P）
       </div>
 
-      {/* ── 卷面 ── */}
-      <div className={'sheet' + (mode === 'answer' ? ' sheet-answer' : '')}>
-        {head}
-
-        {mode === 'answer' && <div className="wm">批改专用</div>}
-
-        <div className="qlist">
-          {items.map((it, i) => (
-            <div className="qitem" key={it.word + i}>
-              <span className="qno">{String(i + 1).padStart(2, '0')}.</span>
-              {mode === 'writing' && (
-                <span className="qcn">{it.cn}</span>
-              )}
-              {mode === 'blank' && <span className="qcn qcn-blank">（　　　　　　　　　）</span>}
-              {mode === 'answer' && (
-                <>
+      {/* ── 卷面（答案版必须过家长解锁门禁）── */}
+      {mode === 'answer' ? (
+        <PinGate title="答案版需家长解锁">
+          <div className="sheet sheet-answer">
+            {head}
+            <div className="wm">批改专用</div>
+            <div className="qlist">
+              {items.map((it, i) => (
+                <div className="qitem" key={it.word + i}>
+                  <span className="qno">{String(i + 1).padStart(2, '0')}.</span>
                   <span className="qcn">{it.cn}</span>
                   <span className="qans">{it.word}</span>
-                </>
-              )}
-              {mode !== 'answer' && <span className="qline" />}
+                </div>
+              ))}
             </div>
-          ))}
+            <div className="sheetFoot">
+              共 {items.length} 题 · 在线练习：tingxie.5208090.xyz
+            </div>
+          </div>
+        </PinGate>
+      ) : (
+        <div className="sheet">
+          {head}
+          <div className="qlist">
+            {items.map((it, i) => (
+              <div className="qitem" key={it.word + i}>
+                <span className="qno">{String(i + 1).padStart(2, '0')}.</span>
+                {mode === 'writing' && <span className="qcn">{it.cn}</span>}
+                {mode === 'blank' && <span className="qcn qcn-blank">（　　　　　　　　　）</span>}
+                <span className="qline" />
+              </div>
+            ))}
+          </div>
+          <div className="sheetFoot">
+            共 {items.length} 题 · 在线练习：tingxie.5208090.xyz
+          </div>
         </div>
-
-        <div className="sheetFoot">
-          共 {items.length} 题 · 在线练习：tingxie.5208090.xyz
-        </div>
-      </div>
+      )}
 
       {mode === 'answer' && (
         <div className="sheet no-print" style={{ marginTop: 20 }}>

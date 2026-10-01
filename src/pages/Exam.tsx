@@ -4,8 +4,9 @@ import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
 import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
 import { playWord, stopAll } from '../lib/player'
-import { seededShuffle, makeSeed } from '../lib/shuffle'
-import { todayStr } from '../lib/storage'
+import { seededShuffle, makeSeed, orderSalt } from '../lib/shuffle'
+import { todayStr, weekStartStr } from '../lib/storage'
+import { currentSalt } from '../lib/api'
 import type { AnswerRecord, AudioItem } from '../types'
 
 /**
@@ -46,9 +47,10 @@ export default function Exam() {
           file: a.file,
         }))
       }
-      // 随机出题（防规律）
+      // 随机出题（防规律），周期与听写/打印卷一致
       if (progress.settings.shuffle && list.length > 1) {
-        list = seededShuffle(list, makeSeed(todayStr(), profile.id, track.id))
+        const salt = orderSalt(progress.settings.shuffleMode, weekStartStr(), currentSalt())
+        list = seededShuffle(list, makeSeed(todayStr(), profile.id, track.id, salt))
       }
       setItems(list)
     })

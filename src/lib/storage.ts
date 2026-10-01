@@ -79,7 +79,7 @@ export const defaultProgress = (): Progress => ({
   totalRight: 0,
   history: [],
   minutes: {},
-  settings: { rate: 1, repeat: 2, gap: 4, voiceMode: 'normal', shuffle: true },
+  settings: { rate: 1, repeat: 2, gap: 4, voiceMode: 'normal', shuffle: true, shuffleMode: 'daily' },
 })
 
 export function load(profileId = activeProfileId()): Progress {
@@ -106,6 +106,14 @@ export function reset(profileId = activeProfileId()) {
 export function todayStr(d = new Date()): string {
   const z = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`
+}
+
+/** 本周一的日期串（yyyy-mm-dd，本地时区）。「每周换顺序」用它当盐 */
+export function weekStartStr(d = new Date()): string {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const day = (x.getDay() + 6) % 7   // 周一=0
+  x.setDate(x.getDate() - day)
+  return todayStr(x)
 }
 
 const DAY = 86400000

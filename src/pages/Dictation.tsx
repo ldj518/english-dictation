@@ -4,7 +4,9 @@ import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
 import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
 import { playWord, stopAll, speakWord, prefetchAhead, pauseAll, resolveRate } from '../lib/player'
-import { seededShuffle, makeSeed, newSalt } from '../lib/shuffle'
+import { seededShuffle, makeSeed, newSalt, orderSalt } from '../lib/shuffle'
+import { weekStartStr } from '../lib/storage'
+import { currentSalt, createShare } from '../lib/api'
 import { sharePoster } from '../lib/poster'
 import { todayStr } from '../lib/storage'
 import type { AnswerRecord, AudioItem } from '../types'
@@ -53,11 +55,25 @@ export default function Dictation() {
           file: a.file,
         }))
       }
-      // 随机出题：同一天同一人顺序稳定；不同天/不同人顺序不同
+      // 随机出题：同一天同一人顺序稳定；不同天/不同人/重排后顺序不同
       if (progress.settings.shuffle && list.length > 1) {
-        const seed = makeSeed(todayStr(), profile.id, track.id, salt)
+        const baseSalt = orderSalt(progress.settings.shuffleMode, weekStartStr(), currentSalt())
+        // 与打印卷/批改页同种子（同盐）——本地「换个顺序」的扰动必须为空串时才不拼接，
+        // 否则 weekly 模式会出现 '2026-09-28|' ≠ '2026-09-28' 的尾随差异，纸质和线上顺序对不上
+        const combined = salt ? (baseSalt ? `${baseSalt}|${salt}` : salt) : baseSalt
+        const seed = makeSeed(todayStr(), profile.id, track.id, combined)
         list = seededShuffle(list, seed)
       }
+      // 错词加练：sessionStorage 单次传递的词单，命中则只练这些词
+      try {
+        const rw = sessionStorage.getItem('retrain-words')
+        if (rw) {
+          sessionStorage.removeItem('retrain-words')
+          const set = new Set(JSON.parse(rw) as string[])
+          const filtered = list.filter(i => set.has(i.word))
+          if (filtered.length) list = filtered
+        }
+      } catch { /* ignore */ }
       setItems(list)
       setReady(true)
     })
@@ -176,9 +192,21 @@ export default function Dictation() {
 
   if (!track) return <Shell title="未找到" back><div className="empty"><div className="i">🤔</div><div>没有这个任务</div></div></Shell>
 
+  // ── 错词加练：只重练本次答错的词（换盐触发重载 → 读取 retrain-words 过滤）──
+  const onRetrain = () => {
+    if (!track) return
+    const wrongWords = [...new Set(answers.filter(a => !a.correct).map(a => a.word))]
+    if (!wrongWords.length) return
+    try { sessionStorage.setItem('retrain-words', JSON.stringify(wrongWords)) } catch { /* ignore */ }
+    setResult(null); setIdx(0); setInput(''); setAnswers([]); setPhase('ask')
+    startedAt.current = Date.now()
+    setSalt(newSalt())
+    window.scrollTo({ top: 0 })
+  }
+
   // ── 结果页 ──
   if (result) {
-    return <ResultView track={track} result={result} answers={answers} profile={profile} onHome={() => nav('/')} />
+    return <ResultView track={track} result={result} answers={answers} profile={profile} onHome={() => nav('/')} onRetrain={onRetrain} />
   }
 
   const lastRec = answers[answers.length - 1]
@@ -286,17 +314,44 @@ export default function Dictation() {
   )
 }
 
-function ResultView({ track, result, answers, profile, onHome }: {
+function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
   track: ReturnType<typeof getTrack>
   result: { score: number; right: number; total: number; newly: unknown[]; seconds: number }
   answers: AnswerRecord[]
   profile: { id: string; name: string; emoji: string; color: string }
   onHome: () => void
+  onRetrain: () => void
 }) {
   const nav = useNavigate()
   const wrongs = answers.filter(a => !a.correct)
+  const [shareHint, setShareHint] = useState('')
   const emoji = result.score === 100 ? '🏆' : result.score >= 90 ? '🎉' : result.score >= 70 ? '👍' : result.score >= 50 ? '💪' : '📖'
   const word = result.score === 100 ? '完美通关！' : result.score >= 90 ? '太棒了！' : result.score >= 70 ? '不错，继续加油' : result.score >= 50 ? '还差一点' : '多练几遍就熟了'
+
+  /** 生成只读分享链接（微信里直接发链接，点开看对错，不用截图） */
+  const makeShare = async () => {
+    setShareHint('生成中…')
+    const url = await createShare({
+      v: 1,
+      studentName: profile.name,
+      emoji: profile.emoji,
+      title: `听写结果 · ${track?.label || track?.id || ''}`,
+      date: todayStr(),
+      score: result.score,
+      sessions: 1,
+      total: result.total,
+      right: result.right,
+      wrongs: wrongs.map(w => ({ word: w.word, cn: w.cn })),
+      photoKeys: [],
+    })
+    if (!url) { setShareHint('生成失败：网络不通，可改用「生成成绩海报」'); return }
+    try {
+      await navigator.clipboard.writeText(url)
+      setShareHint('链接已复制，去微信粘贴发送即可')
+    } catch {
+      setShareHint(url)
+    }
+  }
 
   return (
     <Shell title="听写结果" back noNav>
@@ -313,20 +368,36 @@ function ResultView({ track, result, answers, profile, onHome }: {
         </div>
       </div>
 
-      {/* 家长微信分享 */}
+      {/* 巩固闭环：翻译关 + 错词加练 */}
       <div className="row" style={{ gap: 10 }}>
+        <button className="btn" style={{ background: 'var(--blue)' }} onClick={() => nav(`/translate/${track?.id}`)}>
+          🔤 进入翻译关
+        </button>
+        {wrongs.length > 0 && (
+          <button className="btn gold" onClick={onRetrain}>
+            ⚡ 错词加练（{wrongs.length} 词）
+          </button>
+        )}
+      </div>
+      <div className="sub small center" style={{ marginTop: 6 }}>
+        翻译关：英译汉四选一 + 汉译英拼写，同一批词换个方向再过一遍
+      </div>
+
+      {/* 分享：链接为主（点开看对错），海报兜底 */}
+      <div className="row" style={{ gap: 10 }}>
+        <button className="btn" style={{ background: '#07c160' }} onClick={makeShare}>🔗 分享链接（发微信）</button>
         <button
-          className="btn"
-          style={{ background: '#07c160' }}
+          className="btn ghost"
           onClick={() => sharePoster({
             profile, trackLabel: track?.label || track?.id || '', date: todayStr(),
             score: result.score, right: result.right, total: result.total, seconds: result.seconds,
             answers: answers.map(a => ({ word: a.word, cn: a.cn, correct: a.correct, input: a.input })),
           })}
-        >
-          📤 生成成绩海报（发微信）
-        </button>
+        >📤 海报</button>
       </div>
+      {shareHint && (
+        <div className="tip" style={{ background: '#e7f5ee', color: '#0b7285', wordBreak: 'break-all' }}>{shareHint}</div>
+      )}
 
       {(result.newly as { icon: string; name: string }[]).length > 0 && (
         <div className="card pad" style={{ borderColor: '#f0dc9a' }}>

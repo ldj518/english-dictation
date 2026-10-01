@@ -5,7 +5,7 @@ import {
   loadProfiles, saveProfiles, activeProfileId, setActiveProfileId, reset as resetProgress,
 } from './storage'
 import { settle, addMinutes, type AwardCtx } from './gamify'
-import { reportSession, syncStudent, checkBackend } from './api'
+import { reportSession, syncStudent, checkBackend, fetchShuffleSalt } from './api'
 import type { Badge } from '../types'
 
 interface Ctx {
@@ -20,8 +20,8 @@ interface Ctx {
   updateProfile: (id: string, patch: Partial<Profile>) => void
   /** 记录一道题（错词会自动入本） */
   recordAnswer: (word: string, cn: string, input: string, correct: boolean) => void
-  /** 提交一次会话 */
-  submitSession: (track: Track, records: AnswerRecord[], seconds: number) => { newly: Badge[]; result: SessionResult }
+  /** 提交一次会话（mode 可指定上报形态：翻译关等，默认按任务类型推断） */
+  submitSession: (track: Track, records: AnswerRecord[], seconds: number, mode?: 'online' | 'exam' | 'paper' | 'translate') => { newly: Badge[]; result: SessionResult }
   /** 复习模式：答对推进，答错重置 */
   recordReview: (word: string, cn: string, correct: boolean) => void
   updateSettings: (s: Partial<Progress['settings']>) => void
@@ -42,13 +42,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setProgress(load(activeId))
   }, [activeId])
 
-  // 启动时：探测后端 + 把身份同步上去（供家长看板识别）
+  // 启动时：探测后端 + 把身份同步上去（供家长看板识别）+ 拉出题顺序盐
   useEffect(() => {
     checkBackend().then(alive => {
       if (!alive) return
       for (const p of profiles) {
         syncStudent({ id: p.id, name: p.name, emoji: p.emoji, color: p.color })
       }
+      fetchShuffleSalt().catch(() => { /* 静默，保持本地缓存 */ })
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -106,7 +107,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const submitSession = useCallback((track: Track, records: AnswerRecord[], seconds: number) => {
+  const submitSession = useCallback((track: Track, records: AnswerRecord[], seconds: number, mode?: 'online' | 'exam' | 'paper' | 'translate') => {
     const total = records.length
     const right = records.filter(r => r.correct).length
     const score = total ? Math.round((right / total) * 100) : 0
@@ -146,7 +147,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       trackId: track.id,
       trackLabel: result.trackLabel,
       kind: track.kind,
-      mode: track.kind === 'daily' ? 'online' : 'exam',
+      mode: mode || (track.kind === 'daily' ? 'online' : 'exam'),
       seconds,
       records,
     }).catch(() => { /* 静默 */ })

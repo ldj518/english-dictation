@@ -20,10 +20,14 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # 用 22：Node 20 已被 GitHub 标记弃用（会被强制跑在 Node 24 上），
+          # 而 cloudflare/wrangler-action@v3 在强制迁移后 npx 会失败。
+          # 直接用 Node 22 可完全避开该问题。
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
+        # npm ci 会安装 devDependencies 里的 wrangler（版本由 package-lock 锁定）
         run: npm ci
 
       - name: Build
@@ -64,13 +68,16 @@ jobs:
           echo "✅ Cloudflare 凭据校验通过"
 
       - name: Publish to Cloudflare Pages
-        # 带上 functions/ 目录（Pages Functions = 后端 API），
+        # 直接调用本地依赖里的 wrangler，不再用 cloudflare/wrangler-action@v3。
+        # 原因：该 action 会在 CI 里用 npx 临时拉取 wrangler，在 Node 20→24 强制迁移后
+        # 报 "npx failed with exit code 1"；直接用 npm ci 装好的本地 wrangler 更稳、更可控。
+        # functions/ 目录会被自动识别为 Pages Functions（后端 API），
         # D1 / R2 绑定已在 Pages 项目里配置好，wrangler 会自动使用。
-        # 版本与 package.json / package-lock.json 保持一致（4.145.0），
-        # 避免 wrangler-action 默认装到的版本与 Node 20 运行时不兼容。
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.145.0'
-          command: pages deploy dist --project-name=english-dictation --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -e
+          npx --no-install wrangler --version
+          npx --no-install wrangler pages deploy dist \
+            --project-name=english-dictation --branch=main

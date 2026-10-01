@@ -27,9 +27,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const safeWord = word.replace(/[^a-zA-Z'-]/g, '').slice(0, 40)
     if (!safeWord) return fail('单词不合法')
     if (!['webm', 'mp4', 'ogg', 'wav'].includes(ext)) return fail('音频格式不支持')
-    if ((request.headers.get('Content-Length') || '0') > String(MAX_BYTES)) {
-      return fail('录音太大了', 413)
-    }
+    // ⚠️ Content-Length 必须转数字再比：字符串比较下 "4" > "2097152"（字典序），
+    // 会出现 4 字节也被判「录音太大」的假拒绝（线上实测踩过）
+    const contentLen = parseInt(request.headers.get('Content-Length') || '0', 10)
+    if (contentLen > MAX_BYTES) return fail('录音太大了', 413)
 
     const buf = await request.arrayBuffer()
     if (!buf.byteLength) return fail('空的录音')

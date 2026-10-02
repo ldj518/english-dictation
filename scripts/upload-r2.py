@@ -40,8 +40,9 @@ s3 = boto3.client(
 )
 
 CHECK_ONLY = "--check" in sys.argv
-# 换版重传场景（如 w4）：只传 words/*.m4a + manifest，跳过 tracks 与旧 mp3，省 200MB+ 带宽
-ONLY_NEW = "--new-m4a" in sys.argv
+# 换版重传场景：只传新代际逐词音频 + manifest，跳过 tracks 与旧格式，省带宽
+ONLY_M4A = "--new-m4a" in sys.argv   # w4：words/*.m4a
+ONLY_WAV = "--wav" in sys.argv       # w5/w6：words/*.wav
 
 
 def md5(path):
@@ -53,35 +54,47 @@ def md5(path):
 
 
 def collect():
-    """收集待上传文件：tracks/*.mp3, words/*.mp3+.m4a, manifest.json"""
+    """收集待上传文件。--wav/--new-m4a 模式按 manifest 精确上传（只传清单引用的
+    words 文件，天然跳过历史代际残留）；全量模式扫目录。"""
     out = []
-    for rel in ("manifest.json",):
-        p = os.path.join(AUD, rel)
-        if os.path.exists(p):
-            out.append((rel, p))
+    man_path = os.path.join(AUD, "manifest.json")
+    if ONLY_WAV or ONLY_M4A:
+        if not os.path.exists(man_path):
+            print("✗ 缺 manifest.json，无法按清单上传")
+            sys.exit(1)
+        out.append(("manifest.json", man_path))
+        man = json.load(open(man_path, encoding="utf-8"))
+        want = ".m4a" if ONLY_M4A else ".wav"
+        for rel in sorted(set(man.get("words", {}).values())):
+            if not rel.endswith(want):
+                continue
+            p = os.path.join(AUD, rel.replace("/", os.sep))
+            if os.path.exists(p):
+                out.append((rel, p))
+            else:
+                print(f"  ✗ 清单引用但本地缺失: {rel}")
+        return out
+    if os.path.exists(man_path):
+        out.append(("manifest.json", man_path))
     for sub in ("tracks", "words"):
-        if ONLY_NEW and sub == "tracks":
-            continue
         d = os.path.join(AUD, sub)
         if not os.path.isdir(d):
             continue
         for fn in sorted(os.listdir(d)):
-            if fn.endswith(".mp3") or fn.endswith(".m4a"):
-                if ONLY_NEW and not fn.endswith(".m4a"):
-                    continue
+            if fn.endswith(".mp3") or fn.endswith(".m4a") or fn.endswith(".wav"):
                 out.append((f"{sub}/{fn}", os.path.join(d, fn)))
     return out
 
 
 # mimetypes 在部分 Windows 上把 .m4a 猜成 None，显式映射兜底
-CT_OVERRIDES = {".m4a": "audio/mp4", ".mp3": "audio/mpeg", ".json": "application/json"}
+CT_OVERRIDES = {".m4a": "audio/mp4", ".mp3": "audio/mpeg", ".wav": "audio/wav", ".json": "application/json"}
 
 
 def upload_one(job):
     key, path = job
     ext = os.path.splitext(key)[1].lower()
     ctype = CT_OVERRIDES.get(ext) or mimetypes.guess_type(path)[0] or "application/octet-stream"
-    audio = ext in (".mp3", ".m4a")
+    audio = ext in (".mp3", ".m4a", ".wav")
     extra = {
         "ContentType": ctype,
         # 音频内容不变，长缓存；manifest 短缓存便于更新

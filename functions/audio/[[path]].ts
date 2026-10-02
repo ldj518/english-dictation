@@ -16,8 +16,9 @@ import { type Env, fail, preflight } from '../api/_utils'
 
 const ALLOWED_PREFIXES = ['words/', 'tracks/']
 
-/** 按扩展名映射 MIME（R2 元数据可能缺；.m4a 是 v2.6 AAC 逐词音频） */
+/** 按扩展名映射 MIME（R2 元数据可能缺；.wav 是 v3.3.1 w5 无损逐词音频） */
 function contentTypeOf(key: string, fallback: string | undefined): string {
+  if (key.endsWith('.wav')) return 'audio/wav'
   if (key.endsWith('.m4a')) return 'audio/mp4'
   if (key.endsWith('.mp3')) return 'audio/mpeg'
   if (key.endsWith('.json')) return 'application/json; charset=utf-8'

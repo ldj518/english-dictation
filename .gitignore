@@ -37,3 +37,4 @@ vite.config.ts.timestamp-*
 # wrangler 缓存
 .wrangler/
 .dev.vars
+scripts/_zz_probe/

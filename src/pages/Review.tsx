@@ -19,6 +19,11 @@ export default function Review() {
 
   const all = useMemo(() => Object.values(progress.wrong).sort((a, b) => b.count - a.count), [progress.wrong])
   const due = useMemo(() => dueWrongWords(progress), [progress.wrong])
+  /** 近 7 天错过的词（错次多的优先，最多 20 个）——周末一键测一遍 */
+  const weekly = useMemo(
+    () => all.filter(w => w.lastAt >= Date.now() - 7 * 86400000).slice(0, 20),
+    [all],
+  )
 
   const list = filter === 'due' ? due : all
   const selCount = list.filter(w => sel.has(w.word)).length
@@ -49,6 +54,15 @@ export default function Review() {
     nav('/d/custom')
   }
 
+  /** 本周错词一键成卷：近 7 天错过的词（≤20）→ 自定义错词卷 */
+  const startWeeklyQuiz = () => {
+    if (!weekly.length) return
+    try {
+      sessionStorage.setItem('custom-words', JSON.stringify(weekly.map(w => ({ word: w.word, cn: w.cn }))))
+    } catch { return }
+    nav('/d/custom')
+  }
+
   if (mode === 'quiz') {
     return <Quiz words={list.length ? list : all} onExit={() => setMode('list')} />
   }
@@ -63,10 +77,15 @@ export default function Review() {
           答错的词会自动进来。按遗忘曲线（1→2→4→7→15→30 天）安排复习，
           连续答对到满级就自动毕业消失——不用你手动删。
         </div>
-        <div className="mt" style={{ display: 'flex', gap: 8 }}>
+        <div className="mt" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn gold sm" onClick={() => setMode('quiz')} disabled={!list.length}>
             ▶ 开始复习{list.length ? ` (${list.length})` : ''}
           </button>
+          {weekly.length > 0 && (
+            <button className="btn sm" style={{ background: '#7048e8', color: '#fff' }} onClick={startWeeklyQuiz}>
+              📋 本周错词测一次 ({weekly.length})
+            </button>
+          )}
           {all.length > 0 && (
             <button className="btn ghost sm" onClick={() => { if (confirm('确定清空错词本？此操作不可恢复。')) clearWrong() }}>
               清空

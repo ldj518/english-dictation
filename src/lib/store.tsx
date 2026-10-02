@@ -22,8 +22,10 @@ interface Ctx {
   updateProfile: (id: string, patch: Partial<Profile>) => void
   /** 记录一道题（错词会自动入本） */
   recordAnswer: (word: string, cn: string, input: string, correct: boolean) => void
-  /** 提交一次会话（mode 可指定上报形态：翻译关等，默认按任务类型推断） */
-  submitSession: (track: Track, records: AnswerRecord[], seconds: number, mode?: 'online' | 'exam' | 'paper' | 'translate') => { newly: Badge[]; result: SessionResult }
+  /** 提交一次会话（mode 可指定上报形态：翻译关等，默认按任务类型推断；
+   *  opts.skipBest：拼写类练习不占任务的「最好成绩」，避免污染听写分数显示） */
+  submitSession: (track: Track, records: AnswerRecord[], seconds: number,
+    mode?: 'online' | 'exam' | 'paper' | 'translate' | 'spell', opts?: { skipBest?: boolean }) => { newly: Badge[]; result: SessionResult }
   /** 复习模式：答对推进，答错重置 */
   recordReview: (word: string, cn: string, correct: boolean) => void
   updateSettings: (s: Partial<Progress['settings']>) => void
@@ -193,7 +195,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const submitSession = useCallback((track: Track, records: AnswerRecord[], seconds: number, mode?: 'online' | 'exam' | 'paper' | 'translate') => {
+  const submitSession = useCallback((track: Track, records: AnswerRecord[], seconds: number,
+    mode?: 'online' | 'exam' | 'paper' | 'translate' | 'spell', opts?: { skipBest?: boolean }) => {
     const total = records.length
     const right = records.filter(r => r.correct).length
     const score = total ? Math.round((right / total) * 100) : 0
@@ -207,10 +210,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const b = buffer.current
       // 打卡
       checkIn(np)
-      // 最好成绩
-      const prevBest = np.best[track.id]
-      if (!prevBest || score > prevBest.score) {
-        np.best[track.id] = { score, at: Date.now(), right, total }
+      // 最好成绩（拼写类练习跳过：不占任务卡上显示的听写分数）
+      if (!opts?.skipBest) {
+        const prevBest = np.best[track.id]
+        if (!prevBest || score > prevBest.score) {
+          np.best[track.id] = { score, at: Date.now(), right, total }
+        }
       }
       np.attempts[track.id] = (np.attempts[track.id] || 0) + 1
       np.history = [result, ...np.history].slice(0, 200)

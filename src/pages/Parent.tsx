@@ -12,8 +12,9 @@ import {
   type StatsResp, type PhotoItem, type RecItem, type BooksResp, type ParentRules,
 } from '../lib/api'
 import { getPlanTrack } from '../lib/data'
-import { todayStr } from '../lib/storage'
+import { todayStr, load } from '../lib/storage'
 import { sharePoster } from '../lib/poster'
+import { pullAndMerge } from '../lib/sync'
 
 type Range = 'day' | 'week' | 'month'
 type Tab = 'board' | 'admin'
@@ -87,6 +88,12 @@ export default function Parent() {
   const [rulesMsg, setRulesMsg] = useState('')
   const [msgText, setMsgText] = useState('')
 
+  /* ── 本周速览（v3.0）：独立于看板档位，始终显示本周大盘 ── */
+  const [weekStats, setWeekStats] = useState<StatsResp | null>(null)
+
+  /* ── 导出备份（v3.0） ── */
+  const [exporting, setExporting] = useState(false)
+
   useEffect(() => {
     let cancel = false
     setLoading(true)
@@ -115,6 +122,16 @@ export default function Parent() {
     let cancel = false
     fetchPapers(profile.id).then(list => { if (!cancel) setPhotos(list) })
     fetchRecordings(profile.id).then(list => { if (!cancel) setRecs(list) })
+    return () => { cancel = true }
+  }, [online, profile.id])
+
+  // 本周速览：独立拉一周统计，看板档位切到「今天/本月」也看得见本周大盘
+  useEffect(() => {
+    if (online !== true) return
+    let cancel = false
+    fetchStats(profile.id, 'week', 30)
+      .then(s => { if (!cancel) setWeekStats(s) })
+      .catch(() => {})
     return () => { cancel = true }
   }, [online, profile.id])
 
@@ -180,6 +197,25 @@ export default function Parent() {
   }
 
   /** 生成只读分享链接：对错统计 + 高频错词 + 最近的纸质卷照片 + 跟读录音 */
+  /** 导出备份 JSON：先以云端为准合并拿最新并集；云端不通就导本地进度 */
+  const exportBackup = async () => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const merged = await pullAndMerge(profile.id).catch(() => null)
+      const data = merged || load(profile.id)
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `听写备份_${profile.name}_${todayStr()}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const makeShare = async () => {
     setShareMsg('生成中…')
     const url = await createShare({
@@ -289,6 +325,33 @@ export default function Parent() {
       {/* ══════════ 学习看板 ══════════ */}
       {tab === 'board' && (
         <>
+          {/* 本周速览（v3.0）：不跟档位走，打开就能看到本周大盘 */}
+          {weekStats && weekStats.summary.sessions > 0 && (() => {
+            const w = weekStats.summary
+            return (
+              <div className="card pad" style={{ marginBottom: 14, background: 'linear-gradient(180deg,#f4f8ff,#fff)', borderColor: '#c9dbf5' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <div style={{ fontWeight: 800, fontSize: 15 }}>📅 本周速览</div>
+                  <div className="sub small">周一至今 · 云端</div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                  <div style={{ flex: 1, background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 6px', textAlign: 'center' }}>
+                    <div style={{ fontWeight: 800, fontSize: 18 }}>{w.sessions}</div>
+                    <div className="sub" style={{ fontSize: 12, marginTop: 2 }}>次听写</div>
+                  </div>
+                  <div style={{ flex: 1, background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 6px', textAlign: 'center' }}>
+                    <div style={{ fontWeight: 800, fontSize: 18 }}>{Math.round(w.acc)}%</div>
+                    <div className="sub" style={{ fontSize: 12, marginTop: 2 }}>正确率</div>
+                  </div>
+                  <div style={{ flex: 1, background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 6px', textAlign: 'center' }}>
+                    <div style={{ fontWeight: 800, fontSize: 18 }}>{fmtSec(w.seconds) || '0秒'}</div>
+                    <div className="sub" style={{ fontSize: 12, marginTop: 2 }}>累计用时</div>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+
           {/* 周期切换 */}
           <div className="seg" style={{ marginBottom: 14, width: '100%' }}>
             {(['day', 'week', 'month'] as Range[]).map(r => (
@@ -508,8 +571,11 @@ export default function Parent() {
             )}
           </div>
 
-          <div className="row" style={{ gap: 10 }}>
+          <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
             <button className="btn ghost" onClick={() => location.reload()}>🔄 刷新数据</button>
+            <button className="btn ghost" onClick={exportBackup} disabled={exporting}>
+              {exporting ? '⏳ 导出中…' : '⬇️ 导出备份'}
+            </button>
             <button className="btn" style={{ background: '#07c160' }} onClick={() => {
               const acc = S.acc
               sharePoster({

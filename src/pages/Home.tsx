@@ -125,6 +125,12 @@ export default function Home() {
             <Link className="btn ghost sm" to="/translate/plan" style={{ flex: '1 1 40%', textAlign: 'center' }}>
               🔤 翻译巩固
             </Link>
+            <Link className="btn ghost sm" to="/spell/plan" style={{ flex: '1 1 40%', textAlign: 'center' }}>
+              ✏️ 首字母填空
+            </Link>
+            <Link className="btn ghost sm" to="/listen/plan" style={{ flex: '1 1 40%', textAlign: 'center' }}>
+              📄 纸听一遍
+            </Link>
           </div>
         </div>
       )}
@@ -166,6 +172,9 @@ export default function Home() {
                 点击只会往地址栏加个 #，页面纹丝不动（用户报的「点了没反应」就是这个） */}
             <Link className="btn ghost sm" to={`/translate/${nextTask.id}`} style={{ flex: '1 1 40%', textAlign: 'center' }}>
               🔤 翻译关
+            </Link>
+            <Link className="btn ghost sm" to={`/spell/${nextTask.id}`} style={{ flex: '1 1 40%', textAlign: 'center' }}>
+              ✏️ 首字母填空
             </Link>
             <Link className="btn ghost sm" to={`/read/${nextTask.id}`} style={{ flex: '1 1 40%', textAlign: 'center' }}>
               🎙️ 跟读录音

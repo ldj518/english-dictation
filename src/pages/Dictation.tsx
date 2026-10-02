@@ -658,6 +658,11 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
             🔤 进入翻译关
           </button>
         )}
+        {track && (
+          <button className="btn" style={{ background: '#7048e8' }} onClick={() => nav(`/spell/${track.id}`)}>
+            ✏️ 首字母填空
+          </button>
+        )}
         {track && getTrack(track.id) && (
           <button className="btn" style={{ background: '#7048e8' }} onClick={() => nav(`/read/${track.id}`)}>
             🎙️ 跟读录音

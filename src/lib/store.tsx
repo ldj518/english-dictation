@@ -82,6 +82,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setProgress(p => ({ ...p, settings: { ...p.settings, ...rulesRef.current } }))
   }, [])
 
+  // 快照推送门闩（v3.5.1 热修）：活跃身份的首次拉取完成之前，禁止推送快照。
+  // 否则无痕/新设备带着空进度启动，15 秒后就会把云端快照覆盖成空——
+  // 设备 A 的记录在云端被抹掉，设备 B 自己也永远拉不到（实测踩坑）。
+  const syncReadyRef = React.useRef(false)
+
   useEffect(() => {
     checkBackend().then(alive => {
       if (!alive) return
@@ -93,12 +98,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       // ② 进度快照：逐个身份拉云端做无损合并（换设备不再失忆）
       for (const p of loadProfiles()) {
         void pullAndMerge(p.id).then(merged => {
-          if (!merged) return
           if (p.id === activeProfileId()) {
-            setProgress(merged)
-            applyRulesPatch()
+            // 拉取成功结算（含云端确无快照/无变化）：推送门闩放行
+            syncReadyRef.current = true
+            if (merged) {
+              setProgress(merged)
+              applyRulesPatch()
+            }
           }
-        })
+        }).catch(() => { /* 拉取异常：门闩保持关闭，绝不让空进度上云 */ })
       }
       fetchShuffleSalt().catch(() => { /* 静默，保持本地缓存 */ })
       // ③ 家长管控规则：云端为准覆盖本地管控项（家长在自己手机上改，孩子设备生效）
@@ -114,7 +122,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     checkBackend().then(alive => {
       if (!alive) return
-      void pullAndMerge(activeId).then(merged => { if (merged) setProgress(merged) })
+      void pullAndMerge(activeId).then(merged => {
+        syncReadyRef.current = true
+        if (merged) setProgress(merged)
+      }).catch(() => { /* 拉取异常：门闩保持关闭 */ })
     })
   }, [activeId])
 
@@ -122,17 +133,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { save(progress, activeId) }, [progress, activeId])
 
   // ── 进度快照推送：节流 15s，离开页面时立即冲刷 ──
+  // 三个推送口都要过 syncReadyRef 门闩（见上）：拉取没结算前，本机进度
+  // 可能还是空的，推上去就是把云端快照清空
   const pushTimer = React.useRef<number | null>(null)
   useEffect(() => {
     if (pushTimer.current) window.clearTimeout(pushTimer.current)
     pushTimer.current = window.setTimeout(() => {
       pushTimer.current = null
+      if (!syncReadyRef.current) return
       void pushProgressSnapshot(activeId, progress)
     }, 15000)
     const flush = () => {
       if (!pushTimer.current) return
       window.clearTimeout(pushTimer.current)
       pushTimer.current = null
+      if (!syncReadyRef.current) return
       void pushProgressSnapshot(activeId, progress)
     }
     const onVis = () => { if (document.visibilityState === 'hidden') flush() }
@@ -145,7 +160,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (pushTimer.current) {
         window.clearTimeout(pushTimer.current)
         pushTimer.current = null
-        void pushProgressSnapshot(activeId, progress)
+        if (syncReadyRef.current) void pushProgressSnapshot(activeId, progress)
       }
     }
   }, [progress, activeId])

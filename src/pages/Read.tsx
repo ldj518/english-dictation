@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore } from '../lib/store'
-import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems } from '../lib/data'
+import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems, wordFileMap } from '../lib/data'
 import { playWord, pauseAll, resolveRate } from '../lib/player'
 import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
 import { todayStr, weekStartStr } from '../lib/storage'
@@ -87,7 +87,11 @@ export default function Read() {
     let cancel = false
     fetchShuffleSalt().finally(() => {
       if (cancel) return
-      loadAudioIndex().then(idxMap => {
+      // wordFileMap：plan/mix 等动态任务不在 manifest.tracks 里，
+      // idxMap 查不到 → 此前直接落 file=null → Web Speech 兜底，
+      // 微信 X5 内核没有英文 TTS → 跟读标准音完全无声（实测踩坑）。
+      // 按词补 file 后走真人音频，与 Learn/Listen/Spell/Translate 同规。
+      Promise.all([loadAudioIndex(), wordFileMap()]).then(([idxMap, fmap]) => {
         if (cancel) return
         const fromAudio = idxMap[track.id]
         let list: AudioItem[] = tuplesToItems(track.items)
@@ -98,6 +102,8 @@ export default function Read() {
             cn: a.cn || track.items[i]?.[2] || '',
             file: a.file,
           }))
+        } else {
+          list = list.map(it => ({ ...it, file: fmap.get(it.word) || null }))
         }
         if (list.length > 1) {
           const mode = currentShuffleMode()

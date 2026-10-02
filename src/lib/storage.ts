@@ -120,6 +120,37 @@ export function setDeviceOwner(id: string) {
   try { localStorage.setItem(OWNER_KEY, id) } catch { /* ignore */ }
 }
 
+/* ── 家长查看回切标记（v3.3.2）──────────────────────────
+   家长在家长中心切到别的孩子看板时，立即记录「进页时是谁」。
+   正常退出家长中心会自动切回并清标记；若中途直接关掉浏览器
+   （unmount 来不及跑），下次启动在这里兜底恢复——防止设备归属
+   残留在被查看的孩子身上。 */
+const REVERT_KEY = 'eng-dict-revert-owner'
+
+/** 家长中心切人查看的瞬间调用：记下该切回谁 */
+export function markRevertOwner(id: string) {
+  try { localStorage.setItem(REVERT_KEY, id) } catch { /* ignore */ }
+}
+
+/** 正常切回后调用：清掉标记 */
+export function clearRevertOwner() {
+  try { localStorage.removeItem(REVERT_KEY) } catch { /* ignore */ }
+}
+
+/** 启动兜底：发现回切标记且目标身份有效 → 恢复归属并清标记 */
+export function consumeRevertOwner(): void {
+  try {
+    const id = localStorage.getItem(REVERT_KEY)
+    if (!id) return
+    localStorage.removeItem(REVERT_KEY)
+    if (!loadProfiles().some(p => p.id === id)) return
+    setDeviceOwner(id)
+    setActiveProfileId(id)
+  } catch { /* ignore */ }
+}
+// 模块加载即消费：store 初始化读 activeProfileId()、选人门读 deviceOwner() 之前生效
+consumeRevertOwner()
+
 export function todayStr(d = new Date()): string {
   const z = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`

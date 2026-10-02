@@ -10,8 +10,8 @@ import { deviceOwner } from '../lib/storage'
  * 默认还是上次用的人，做的题全记到别人头上。
  *
  * 解法：这台设备还没选过人时，全屏问一次「今天谁学？」，
- * 点大头像进入并记住；之后每次打开直接进。换人在首页头像条/设置里点一下即可
- * （switchProfile 会同步更新设备主人标记）。
+ * 点大头像进入并记住；之后每次打开直接进。换人走首页/设置页的
+ * 身份按钮（ProfileSwitcher 弹层，switchProfile 会同步更新设备主人标记）。
  */
 export default function ProfileGate({ children }: { children: React.ReactNode }) {
   const { profiles, switchProfile } = useStore()
@@ -62,7 +62,7 @@ export default function ProfileGate({ children }: { children: React.ReactNode })
         ))}
       </div>
       <div className="sub small" style={{ marginTop: 28 }}>
-        用错了也没关系：首页点头像条随时换人
+        用错了也没关系：首页点自己的名字随时换人
       </div>
     </div>
   )

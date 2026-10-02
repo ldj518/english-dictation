@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
+import ProfileSwitcher from '../components/ProfileSwitcher'
 import { useStore } from '../lib/store'
 import { levelOf, BADGES } from '../lib/gamify'
 import { DAILY, UNITS, FINALS, getPlanTrack } from '../lib/data'
@@ -13,7 +14,7 @@ type Tab = 'daily' | 'unit' | 'final'
 
 export default function Home() {
   const nav = useNavigate()
-  const { progress, profiles, profile, switchProfile } = useStore()
+  const { progress, profile } = useStore()
   const [tab, setTab] = useState<Tab>('daily')
 
   const lv = levelOf(progress.points)
@@ -77,22 +78,9 @@ export default function Home() {
     <Shell title="英语听写" right={
       <button className="iconbtn" onClick={() => nav('/settings')} aria-label="设置">⚙️</button>
     }>
-      {/* 身份切换 */}
+      {/* 身份：只显示当前孩子；切人走弹层（有意操作，防误触记错人） */}
       <div className="profileBar">
-        <div className="pList">
-          {profiles.map(p => (
-            <button
-              key={p.id}
-              className={'pChip' + (p.id === profile.id ? ' on' : '')}
-              style={p.id === profile.id ? { borderColor: p.color, background: p.color + '14' } : {}}
-              onClick={() => switchProfile(p.id)}
-            >
-              <span className="pe">{p.emoji}</span>
-              <span className="pn">{p.name}</span>
-            </button>
-          ))}
-        </div>
-        <button className="iconbtn" onClick={() => nav('/settings')} aria-label="设置">⚙️</button>
+        <ProfileSwitcher />
       </div>
 
       {/* 家长寄语（家长中心设置，云端同步） */}
@@ -108,8 +96,9 @@ export default function Home() {
         </div>
       )}
 
-      {/* 等级总览 */}
+      {/* 等级总览（带当前身份：孩子随时能确认「现在是我」） */}
       <div className="hero">
+        <div className="who">{profile.emoji} {profile.name}的学习基地</div>
         <div className="lv">LEVEL {lv.lv}</div>
         <div className="nm">{lv.name}</div>
         <div className="bar"><i style={{ width: pct + '%' }} /></div>

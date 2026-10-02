@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
+import ProfileSwitcher from '../components/ProfileSwitcher'
 import { useStore } from '../lib/store'
 import { load } from '../lib/storage'
 import { speechSupported } from '../lib/player'
 
 export default function Settings() {
   const nav = useNavigate()
-  const { progress, updateSettings, doReset, profiles, profile, switchProfile, updateProfile } = useStore()
+  const { progress, updateSettings, doReset, profiles, profile, updateProfile } = useStore()
   const s = progress.settings
 
   const exportData = () => {
@@ -37,37 +38,39 @@ export default function Settings() {
 
   return (
     <Shell title="设置" back>
-      {/* 孩子身份 */}
+      {/* 孩子身份：切换走弹层（与首页一致）；下方列表只管改名/头像，不再负责切换 */}
       <div className="card pad">
         <div style={{ fontWeight: 800, marginBottom: 4 }}>👦👧 孩子身份</div>
         <div className="sub small" style={{ marginBottom: 12 }}>
-          每个孩子的进度、错词本、成绩都是独立的。点一下切换。
+          每个孩子的进度、错词本、成绩都是独立的。要换人点上面的身份按钮。
+        </div>
+        <div className="profileBar" style={{ marginBottom: 6 }}>
+          <ProfileSwitcher />
         </div>
         {profiles.map(p => (
           <div key={p.id} className="field">
             <div className="row" style={{ gap: 10 }}>
-              <button
-                className="pChip"
-                style={{ borderColor: p.id === profile.id ? p.color : undefined }}
-                onClick={() => switchProfile(p.id)}
-              >
+              <div className="pChip" style={{ borderColor: p.id === profile.id ? p.color : undefined, cursor: 'default' }}>
                 <span className="pe">{p.emoji}</span>
                 <span className="pn">{p.name}</span>
                 {p.id === profile.id && <span className="small" style={{ color: p.color }}>· 当前</span>}
-              </button>
-            </div>
-            <div className="row" style={{ gap: 6 }}>
-              <select
-                value={p.emoji}
-                onChange={e => updateProfile(p.id, { emoji: e.target.value })}
-                style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '4px 6px', background: '#fff' }}
-              >
-                {EMOJIS.map(em => <option key={em} value={em}>{em}</option>)}
-              </select>
-              <button className="btn ghost sm" onClick={() => renameProfile(p.id, p.name)}>改名</button>
+              </div>
+              <div className="row" style={{ gap: 6 }}>
+                <select
+                  value={p.emoji}
+                  onChange={e => updateProfile(p.id, { emoji: e.target.value })}
+                  style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '4px 6px', background: '#fff' }}
+                >
+                  {EMOJIS.map(em => <option key={em} value={em}>{em}</option>)}
+                </select>
+                <button className="btn ghost sm" onClick={() => renameProfile(p.id, p.name)}>改名</button>
+              </div>
             </div>
           </div>
         ))}
+        <div className="sub small" style={{ marginTop: 2, lineHeight: 1.6 }}>
+          换头像、改名字：直接在对应孩子那行操作。
+        </div>
       </div>
 
       <div className="card pad">

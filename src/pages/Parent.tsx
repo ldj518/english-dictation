@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import PinGate from '../components/PinGate'
 import { useStore, applyRules } from '../lib/store'
+import { markRevertOwner, clearRevertOwner } from '../lib/storage'
 import {
   fetchStats, checkBackend, fetchPinStatus, setParentPin, fetchPapers, paperFileUrl,
   createShare, rotateShuffleSalt, pushShuffleMode, currentShuffleMode, fetchShuffleSalt,
@@ -61,6 +62,21 @@ export default function Parent() {
   const [stats, setStats] = useState<StatsResp | null>(null)
   const [loading, setLoading] = useState(true)
   const [online, setOnline] = useState<boolean | null>(null)
+
+  /* ── v3.3.2 身份隔离：家长切人看板不改设备归属 ──
+     家长切到另一个孩子查看 → 离开家长中心时自动切回进页时的身份，
+     设备主人（deviceOwner）也随之还原。否则家长看完弟弟，
+     哥哥再打开应用看到的是弟弟的数据，还被记成弟弟。
+     切换瞬间会落盘回切标记（markRevertOwner）：若家长中途直接关
+     浏览器、这段自动切回来不及跑，下次启动 consumeRevertOwner 兜底恢复。 */
+  const enterIdRef = useRef(profile.id)
+  const curIdRef = useRef(profile.id)
+  curIdRef.current = profile.id
+  useEffect(() => () => {
+    if (curIdRef.current !== enterIdRef.current) switchProfile(enterIdRef.current)
+    clearRevertOwner()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   /* ── 家长解锁码 ── */
   const [pinExists, setPinExists] = useState<boolean | null>(null)
@@ -429,7 +445,7 @@ export default function Parent() {
             )
           })()}
 
-          {/* 切换孩子 */}
+          {/* 切换孩子（家长视角查看；离开本页自动切回进来的身份，不影响孩子使用） */}
           {profiles.length > 1 && (
             <div className="profileBar">
               <div className="pList">
@@ -437,12 +453,23 @@ export default function Parent() {
                   <button key={p.id}
                     className={'pChip' + (p.id === profile.id ? ' on' : '')}
                     style={p.id === profile.id ? { borderColor: p.color, background: p.color + '14' } : {}}
-                    onClick={() => switchProfile(p.id)}>
+                    onClick={() => {
+                      if (p.id === profile.id) return
+                      // 切换瞬间先落盘「该切回谁」：万一家长中途直接关浏览器，
+                      // unmount 的自动切回跑不到，下次启动靠这个标记兜底恢复
+                      markRevertOwner(enterIdRef.current)
+                      switchProfile(p.id)
+                    }}>
                     <span className="pe">{p.emoji}</span>
                     <span className="pn">{p.name}</span>
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+          {profiles.length > 1 && (
+            <div className="sub small" style={{ margin: '-4px 0 12px', lineHeight: 1.6 }}>
+              这里切换只是家长查看，退出家长中心会自动切回「{profiles.find(p => p.id === enterIdRef.current)?.name}」，不影响孩子的设备归属。
             </div>
           )}
 

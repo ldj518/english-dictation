@@ -14,7 +14,7 @@ import LetterKeyboard from '../components/LetterKeyboard'
 import { todayStr } from '../lib/storage'
 import type { AnswerRecord, AudioItem, Track } from '../types'
 
-/** 自定义错词卷（错词本勾选 → /d/custom）：一个合成的任务壳 */
+/** 自定义错词卷（错词本勾选 / 短语专项 → /d/custom）：一个合成的任务壳 */
 const CUSTOM_TRACK: Track = {
   id: 'custom', kind: 'daily', group: 'daily', order: 0, label: '错词听写',
   file: '', seconds: 0, wordCount: 0, sections: [], items: [],
@@ -104,6 +104,12 @@ export default function Dictation() {
     if (isCustom) {
       wordFileMap().then(map => {
         if (cancel) return
+        // 入方可选自定义标签（短语专项等），缺省「错词听写」
+        const customLabel = sessionStorage.getItem('custom-label')
+        if (customLabel) {
+          sessionStorage.removeItem('custom-label')
+          setTrack({ ...CUSTOM_TRACK, label: customLabel })
+        }
         let list: AudioItem[] = []
         try {
           const cw = sessionStorage.getItem('custom-words')

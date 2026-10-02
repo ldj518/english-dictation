@@ -128,6 +128,8 @@ export interface Progress {
   planLog?: Record<number, string>
   /** 完美一天奖励（v3.3）：日期 -> 已发放。听写+复习清零+翻译关全齐 +30 分，每天一次 */
   trioDone?: Record<string, boolean>
+  /** 单元过关记录（v3.4）：unitId -> 首次过关分数与日期。≥85% 过关，Home 单元卡亮章 */
+  passed?: Record<string, { at: number; score: number }>
   /** 设置 */
   settings: {
     rate: number
@@ -144,5 +146,7 @@ export interface Progress {
     syncPaper: boolean
     /** 预习环节档位（v2.8 家长管控）：recommended 可跳过 / force 强制先学 / off 关闭 */
     prepMode?: 'recommended' | 'force' | 'off'
+    /** 考试日期（v3.4 冲刺包，家长管控）：yyyy-mm-dd，空串/缺省 = 未设置 */
+    examDate?: string
   }
 }

@@ -4,9 +4,10 @@ import Shell from '../components/Shell'
 import ProfileSwitcher from '../components/ProfileSwitcher'
 import { useStore } from '../lib/store'
 import { levelOf, BADGES } from '../lib/gamify'
-import { DAILY, UNITS, FINALS, getPlanTrack } from '../lib/data'
+import { DAILY, UNITS, FINALS, getPlanTrack, WORDS } from '../lib/data'
 import { fetchWordbooks, fetchParentRules } from '../lib/api'
 import { dueWrongWords, todayStr } from '../lib/storage'
+import { seededShuffle, makeSeed } from '../lib/shuffle'
 import { dueReviews } from '../lib/reviewQueue'
 import type { Track } from '../types'
 
@@ -136,6 +137,50 @@ export default function Home() {
         </div>
       </div>
 
+      {/* 考前冲刺（v3.4）：家长设了考试日期，考前 14 天开始显示 */}
+      {(() => {
+        const examDate = progress.settings.examDate
+        if (!examDate) return null
+        const exam = new Date(examDate + 'T00:00:00').getTime()
+        const today0 = new Date(todayStr() + 'T00:00:00').getTime()
+        const daysLeft = Math.round((exam - today0) / 86400000)
+        if (daysLeft < 0 || daysLeft > 14) return null // 考完/冲刺期外不打扰
+        const urgent = daysLeft <= 3
+        return (
+          <div className="card pad" style={{ marginBottom: 14, borderColor: urgent ? '#f1b3b3' : '#f0d69a', background: urgent ? 'linear-gradient(180deg,#fff5f5,#fff)' : 'linear-gradient(180deg,#fffdf5,#fff)' }}>
+            <div className="between">
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 15 }}>
+                  🎯 距考试还有 {daysLeft === 0 ? '不到 1' : daysLeft} 天
+                </div>
+                <div className="sub small" style={{ marginTop: 3, lineHeight: 1.7 }}>
+                  {daysLeft === 0
+                    ? '今天就是考试日。放轻松，正常发挥就好。'
+                    : urgent
+                      ? '最后几天：把错词本清干净，错词卷多过一遍，别碰太新的题。'
+                      : '每天两件事：① 清掉当天到期的错词 ② 做一张薄弱单元的过关测试。'}
+                </div>
+              </div>
+              {daysLeft > 0 && (
+                <button className="btn sm" style={{ background: '#a32d2d' }} onClick={() => {
+                  // 冲刺卷：近 14 天碰过的错词优先，按累计错误次数排
+                  const since = Date.now() - 14 * 86400000
+                  const pool = Object.values(progress.wrong).filter(w => w.lastAt >= since)
+                  const list = (pool.length ? pool : Object.values(progress.wrong))
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 20)
+                    .map(w => ({ word: w.word, cn: w.cn }))
+                  if (!list.length) { alert('错词本是空的，直接做今天的每日计划卷就行'); return }
+                  sessionStorage.setItem('custom-words', JSON.stringify(list))
+                  sessionStorage.setItem('custom-label', '考前冲刺卷')
+                  nav('/d/custom')
+                }}>⚡ 一键冲刺卷</button>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
       {/* 每日计划：三态引导（v3.3）——正常 / 断 1 天橙 / 断 2 天+ 红 */}
       {plan && (() => {
         const miss = gapDays - 1
@@ -203,6 +248,28 @@ export default function Home() {
             </div>
           </div>
           <button className="btn gold sm" onClick={() => nav('/d/mix')}>开始</button>
+        </div>
+      </div>
+
+      {/* 短语专项（v3.4）：87 条固定搭配每日一组，对标考试「短语/介词搭配」失分点 */}
+      <div className="card pad" style={{ marginBottom: 14 }}>
+        <div className="between">
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>🔗 短语专项 · 每日 12 条</div>
+            <div className="sub small" style={{ marginTop: 3 }}>
+              hold on、take a message 这类固定搭配，考试最爱考。每天专攻一组
+            </div>
+          </div>
+          <button className="btn sm" onClick={() => {
+            // 词源=词库里含空格的短语条目（87 条）；同一天同一人固定同一组
+            const pool = WORDS.filter(w => w.word.includes(' '))
+            const list = seededShuffle(pool, makeSeed(todayStr(), profile.id, 'phrases'))
+              .slice(0, 12)
+              .map(w => ({ word: w.word, cn: w.cn }))
+            sessionStorage.setItem('custom-words', JSON.stringify(list))
+            sessionStorage.setItem('custom-label', '短语专项')
+            nav('/d/custom')
+          }}>开始</button>
         </div>
       </div>
 
@@ -367,6 +434,8 @@ function Cell({ t }: { t: Track }) {
   const nav = useNavigate()
   const { progress } = useStore()
   const best = progress.best[t.id]
+  // 单元过关章（v3.4）：≥85 分过关后单元卡常亮
+  const passed = t.kind === 'unit' ? progress.passed?.[t.id] : undefined
 
   const cls = !best ? '' : best.score >= 90 ? 's100' : best.score >= 60 ? 's60' : 's0'
   const title = t.kind === 'daily' ? `第 ${t.order} 天`
@@ -379,10 +448,13 @@ function Cell({ t }: { t: Track }) {
   return (
     <div className={'cellWrap'}>
       <button className={'cell' + (best ? ' done' : '')} onClick={go}>
-        <div className="n">{title}</div>
-        <div className="t">{t.wordCount} 词</div>
+        <div className="n">{title}{passed ? ' 🏅' : ''}</div>
+        <div className="t">{t.wordCount} 词{passed ? ` · 过关 ${passed.score} 分` : ''}</div>
         {best ? <div className={'s ' + cls}>{best.score}%</div> : <div className="t">未做</div>}
       </button>
+      {t.kind === 'unit' && (
+        <Link className="cellPrint cellTest" to={`/test/${t.id}`} title="过关测试（20 题，85 分过关）">🎯</Link>
+      )}
       <Link className="cellPrint" to={`/print/${t.id}`} title="打印纸质卷">🖨️</Link>
     </div>
   )

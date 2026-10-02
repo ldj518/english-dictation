@@ -26,6 +26,8 @@ interface RulePayload {
   syncPaper?: boolean
   prepMode?: PrepMode
   parentMessage?: string
+  /** v3.4 冲刺包：考试日期 yyyy-mm-dd，空串 = 清除 */
+  examDate?: string
 }
 
 interface SettingRow { value: string; updated_at: number }
@@ -57,6 +59,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     if (body.parentMessage !== undefined) {
       // 100 字上限：一句话足够，也防塞奇怪内容
       rules.parentMessage = String(body.parentMessage).slice(0, 100)
+    }
+    if (body.examDate !== undefined) {
+      // 只认 yyyy-mm-dd 或空串（清除）；日期合法性交给 <input type="date">
+      const s = String(body.examDate).trim()
+      if (s && !/^\d{4}-\d{2}-\d{2}$/.test(s)) return fail('考试日期格式不对')
+      rules.examDate = s
     }
 
     if (!Object.keys(rules).length) return fail('没有要保存的内容')

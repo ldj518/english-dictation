@@ -27,7 +27,9 @@ interface Ctx {
   /** 提交一次会话（mode 可指定上报形态：翻译关等，默认按任务类型推断；
    *  opts.skipBest：拼写类练习不占任务的「最好成绩」，避免污染听写分数显示） */
   submitSession: (track: Track, records: AnswerRecord[], seconds: number,
-    mode?: 'online' | 'exam' | 'paper' | 'translate' | 'spell' | 'forms', opts?: { skipBest?: boolean }) => { newly: Badge[]; result: SessionResult }
+    mode?: 'online' | 'exam' | 'paper' | 'translate' | 'spell' | 'forms' | 'unittest', opts?: { skipBest?: boolean }) => { newly: Badge[]; result: SessionResult }
+  /** 单元过关（v3.4）：≥85% 时记 passed[unitId]，同单元保留最高分 */
+  passUnit: (unitId: string, score: number) => void
   /** 复习模式：答对推进，答错重置 */
   recordReview: (word: string, cn: string, correct: boolean) => void
   updateSettings: (s: Partial<Progress['settings']>) => void
@@ -53,6 +55,7 @@ export function applyRules(s: ParentRules): Partial<Progress['settings']> {
   if (s.shuffle !== undefined) out.shuffle = s.shuffle
   if (s.syncPaper !== undefined) out.syncPaper = s.syncPaper
   if (s.prepMode !== undefined) out.prepMode = s.prepMode
+  if (s.examDate !== undefined) out.examDate = s.examDate
   return out
 }
 
@@ -200,7 +203,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const submitSession = useCallback((track: Track, records: AnswerRecord[], seconds: number,
-    mode?: 'online' | 'exam' | 'paper' | 'translate' | 'spell' | 'forms', opts?: { skipBest?: boolean }) => {
+    mode?: 'online' | 'exam' | 'paper' | 'translate' | 'spell' | 'forms' | 'unittest', opts?: { skipBest?: boolean }) => {
     const total = records.length
     const right = records.filter(r => r.correct).length
     const score = total ? Math.round((right / total) * 100) : 0
@@ -352,13 +355,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setProgress(np)
   }, [activeId])
 
+  /** 单元过关（v3.4）：≥85% 调用；同单元只保留最高分，同分保留更早时间 */
+  const passUnit = useCallback((unitId: string, score: number) => {
+    setProgress(p => {
+      const prev = p.passed?.[unitId]
+      if (prev && prev.score >= score) return p
+      return { ...p, passed: { ...(p.passed || {}), [unitId]: { at: Date.now(), score } } }
+    })
+  }, [])
+
   const value = useMemo(() => ({
     progress, profiles, profile, switchProfile, updateProfile,
     recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone,
-    markLearned, awardDailyBonus,
+    markLearned, awardDailyBonus, passUnit,
   }), [progress, profiles, profile, switchProfile, updateProfile,
        recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone,
-       markLearned, awardDailyBonus])
+       markLearned, awardDailyBonus, passUnit])
 
   return (
     <C.Provider value={value}>

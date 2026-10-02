@@ -131,6 +131,14 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     trioDone[k] = trioDone[k] || v
   }
 
+  // 单元过关记录（v3.4）：同单元取分数高者；同分取更早的过关时间（首次过关语义）
+  const passed: NonNullable<Progress['passed']> = { ...(a.passed || {}) }
+  for (const [k, v] of Object.entries(b.passed || {})) {
+    const cur = passed[k]
+    if (!cur) { passed[k] = v; continue }
+    passed[k] = v.score > cur.score ? v : (v.score === cur.score && v.at < cur.at ? v : cur)
+  }
+
   // streakDays/lastDay 跟连续天数大的一方走
   const streakLocal = a.streakDays || 0
   const streakRemote = b.streakDays || 0
@@ -153,6 +161,7 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     reviewDone,
     planLog,
     trioDone,
+    passed,
     settings: { ...a.settings },
   }
 }

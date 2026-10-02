@@ -14,8 +14,9 @@ import {
   type SessionDetail,
 } from '../lib/api'
 import { getPlanTrack } from '../lib/data'
-import { todayStr, load } from '../lib/storage'
-import { sharePoster } from '../lib/poster'
+import { todayStr, load, weekStartStr } from '../lib/storage'
+import { sharePoster, weekPoster } from '../lib/poster'
+import { calcWeekReport } from '../lib/weekreport'
 import { pullAndMerge } from '../lib/sync'
 
 type Range = 'day' | 'week' | 'month'
@@ -110,6 +111,7 @@ export default function Parent() {
   const [rulesLoaded, setRulesLoaded] = useState(false)
   const [rulesMsg, setRulesMsg] = useState('')
   const [msgText, setMsgText] = useState('')
+  const [examDateText, setExamDateText] = useState('')
 
   /* ── 本周速览（v3.0）：独立于看板档位，始终显示本周大盘 ── */
   const [weekStats, setWeekStats] = useState<StatsResp | null>(null)
@@ -172,6 +174,7 @@ export default function Parent() {
       if (cancel) return
       setRules(r)
       setMsgText(r.parentMessage || '')
+      setExamDateText(r.examDate || '')
       setRulesLoaded(true)
     }).catch(() => { if (!cancel) setRulesLoaded(false) })
     return () => { cancel = true }
@@ -362,6 +365,57 @@ export default function Parent() {
       {/* ══════════ 学习看板 ══════════ */}
       {tab === 'board' && (
         <>
+          {/* 每周报告（v3.4）：本周 vs 上周，只和自己比；一键海报发微信 */}
+          {(() => {
+            const rep = calcWeekReport(progress)
+            const tw = rep.thisWeek
+            return (
+              <div className="card pad" style={{ marginBottom: 14, borderColor: '#d0c4f5', background: 'linear-gradient(180deg,#f8f6ff,#fff)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <div style={{ fontWeight: 800, fontSize: 15 }}>📋 本周报告 · 只和自己比</div>
+                  <div className="sub small">{weekStartStr()} ~ {todayStr()}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 10 }}>
+                  <div style={{ fontSize: 40, fontWeight: 800, color: tw.acc === null ? 'var(--sub)' : tw.acc >= 70 ? 'var(--ok)' : '#e03131' }}>
+                    {tw.acc === null ? '—' : `${tw.acc}%`}
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: rep.accDelta === null ? 'var(--sub)' : rep.accDelta >= 0 ? 'var(--ok)' : 'var(--bad)' }}>
+                    {rep.accDelta === null ? '上周无数据' : `${rep.accDelta >= 0 ? '▲' : '▼'} ${Math.abs(rep.accDelta)}%`}
+                  </div>
+                  <div className="sub small" style={{ marginLeft: 'auto' }}>
+                    练 {tw.days} 天 · {tw.sessions} 卷 · {tw.minutes} 分钟
+                  </div>
+                </div>
+                {rep.passedUnits.length > 0 && (
+                  <div className="sub small" style={{ marginTop: 8, color: 'var(--ok)', fontWeight: 700 }}>
+                    🏅 本周过关：{rep.passedUnits.map(p => `${p.unit.replace('unit', 'Unit ')} ${p.score}分`).join(' · ')}
+                  </div>
+                )}
+                {rep.newWrongs.length > 0 && (
+                  <div style={{ marginTop: 10, fontSize: 13, lineHeight: 1.9 }}>
+                    <span className="sub" style={{ fontWeight: 700 }}>新增错词：</span>
+                    {rep.newWrongs.map(w => `${w.word}(${w.count})`).join('、')}
+                  </div>
+                )}
+                <div className="sub small" style={{ marginTop: 8, lineHeight: 1.7, background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: '8px 12px' }}>
+                  📌 {rep.advice}
+                </div>
+                <button className="btn sm" style={{ marginTop: 10, width: '100%', background: '#5f3dc4' }} onClick={() => void weekPoster({
+                  profile,
+                  dateRange: `${weekStartStr()}~${todayStr()}`,
+                  acc: tw.acc,
+                  accDelta: rep.accDelta,
+                  days: tw.days,
+                  sessions: tw.sessions,
+                  minutes: tw.minutes,
+                  newWrongs: rep.newWrongs,
+                  passedUnits: rep.passedUnits,
+                  advice: rep.advice,
+                })}>🖼️ 生成海报 · 发微信存档</button>
+              </div>
+            )
+          })()}
+
           {/* 本周速览（v3.0）：不跟档位走，打开就能看到本周大盘 */}
           {weekStats && weekStats.summary.sessions > 0 && (() => {
             const w = weekStats.summary
@@ -828,6 +882,31 @@ export default function Parent() {
                   {msgText && (
                     <button className="btn ghost sm" onClick={() => { setMsgText(''); saveRules({ parentMessage: '' }) }}>
                       清空
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 考试日期（v3.4 冲刺包） */}
+              <div className="card pad">
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>🎯 考试日期（考前冲刺）</div>
+                <div className="sub small" style={{ marginBottom: 8, lineHeight: 1.7 }}>
+                  设了日期，孩子首页就会从考前 14 天开始显示倒计时和每日冲刺建议，
+                  并有「一键冲刺卷」（近两周错词）。考完把日期清掉即可。
+                </div>
+                <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                  <input
+                    type="date"
+                    value={examDateText}
+                    onChange={e => setExamDateText(e.target.value)}
+                    style={{ flex: 1, padding: '9px 10px', borderRadius: 10, border: '1px solid #e4e8f0', fontSize: 14 }}
+                  />
+                  <button className="btn sm" disabled={!examDateText} onClick={() => saveRules({ examDate: examDateText })}>
+                    保存
+                  </button>
+                  {examDateText && (
+                    <button className="btn ghost sm" onClick={() => { setExamDateText(''); saveRules({ examDate: '' }) }}>
+                      清除
                     </button>
                   )}
                 </div>

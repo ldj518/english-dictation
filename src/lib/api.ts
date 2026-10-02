@@ -44,7 +44,7 @@ export interface ReportPayload {
   trackId: string
   trackLabel: string
   kind: string
-  mode: 'online' | 'exam' | 'paper' | 'translate' | 'spell' | 'forms'
+  mode: 'online' | 'exam' | 'paper' | 'translate' | 'spell' | 'forms' | 'unittest'
   seconds: number
   records: { no: number; word: string; cn: string; input: string; correct: boolean }[]
   photoKey?: string
@@ -473,6 +473,8 @@ export interface ParentRules {
   syncPaper?: boolean
   prepMode?: 'recommended' | 'force' | 'off'
   parentMessage?: string
+  /** 考试日期（v3.4 冲刺包）：yyyy-mm-dd，空串/缺省 = 未设置 */
+  examDate?: string
 }
 
 /** 拉家长规则（离线/未设置返回 {}，调用方用本地 settings 兜底） */

@@ -24,6 +24,7 @@ import Monster from './pages/Monster'
 import Learn from './pages/Learn'
 import Listen from './pages/Listen'
 import Spell from './pages/Spell'
+import UnitTest from './pages/UnitTest'
 import Mastery from './pages/Mastery'
 import Forms from './pages/Forms'
 import Days from './pages/Days'
@@ -46,6 +47,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/forms/:kind" element={<Forms />} />
           <Route path="/review" element={<Review />} />
           <Route path="/exam/:id" element={<Exam />} />
+          <Route path="/test/:uid" element={<UnitTest />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/words" element={<Words />} />
           <Route path="/settings" element={<Settings />} />

@@ -181,3 +181,199 @@ export async function sharePoster(d: PosterData): Promise<void> {
     w.document.close()
   }
 }
+
+/* ── 每周报告海报（v3.4）────────────────────────────── */
+
+export interface WeekPosterData {
+  profile: { name: string; emoji: string; color: string }
+  dateRange: string
+  acc: number | null
+  accDelta: number | null
+  days: number
+  sessions: number
+  minutes: number
+  newWrongs: { word: string; cn: string; count: number }[]
+  passedUnits: { unit: string; score: number }[]
+  advice: string
+}
+
+/** 生成周报海报并触发下载/预览（结构上复用 sharePoster 的画法） */
+export async function weekPoster(d: WeekPosterData): Promise<void> {
+  const W = 750
+  const pad = 44
+  const rows = d.newWrongs.length
+  const H = 660 + rows * 52 + (d.passedUnits.length ? 96 : 0) + 150
+
+  const cv = document.createElement('canvas')
+  const dpr = 2
+  cv.width = W * dpr
+  cv.height = H * dpr
+  const ctx = cv.getContext('2d')!
+  ctx.scale(dpr, dpr)
+
+  const FONT = '-apple-system, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif'
+
+  const bg = ctx.createLinearGradient(0, 0, 0, H)
+  bg.addColorStop(0, '#f7f9fc')
+  bg.addColorStop(1, '#eef3f9')
+  ctx.fillStyle = bg
+  ctx.fillRect(0, 0, W, H)
+
+  // 顶部品牌条
+  const head = ctx.createLinearGradient(0, 0, W, 180)
+  head.addColorStop(0, '#5f3dc4')
+  head.addColorStop(1, '#1c7ed6')
+  ctx.fillStyle = head
+  ctx.fillRect(0, 0, W, 180)
+
+  ctx.fillStyle = '#ffffff'
+  ctx.font = `700 34px ${FONT}`
+  ctx.textBaseline = 'top'
+  ctx.fillText('英语听写 · 本周报告', pad, 44)
+  ctx.font = `400 24px ${FONT}`
+  ctx.fillStyle = 'rgba(255,255,255,0.92)'
+  ctx.fillText(`${d.profile.emoji} ${d.profile.name} · ${d.dateRange}`, pad, 92)
+
+  // 主卡片：正确率 + 环比
+  const cy = 216
+  ctx.fillStyle = '#ffffff'
+  ctx.shadowColor = 'rgba(20,40,80,0.12)'
+  ctx.shadowBlur = 24
+  ctx.shadowOffsetY = 8
+  roundRect(ctx, pad, cy, W - pad * 2, 250, 24)
+  ctx.fill()
+  ctx.shadowColor = 'transparent'
+
+  ctx.fillStyle = '#868e96'
+  ctx.font = `400 24px ${FONT}`
+  ctx.fillText('本周正确率（只和自己比）', pad + 36, cy + 34)
+
+  const acc = d.acc ?? 0
+  const scoreColor = acc >= 90 ? '#0ca678' : acc >= 70 ? '#1c7ed6' : acc >= 50 ? '#f08c00' : '#e03131'
+  ctx.fillStyle = scoreColor
+  ctx.font = `800 110px ${FONT}`
+  ctx.fillText(String(acc), pad + 36, cy + 78)
+  const sw = ctx.measureText(String(acc)).width
+  ctx.font = `700 38px ${FONT}`
+  ctx.fillText('%', pad + 40 + sw, cy + 148)
+
+  if (d.accDelta !== null) {
+    const up = d.accDelta >= 0
+    ctx.fillStyle = up ? '#0ca678' : '#e03131'
+    ctx.font = `700 30px ${FONT}`
+    ctx.fillText(`${up ? '▲' : '▼'} ${Math.abs(d.accDelta)}%`, pad + 40 + sw + 62, cy + 152)
+  } else {
+    ctx.fillStyle = '#adb5bd'
+    ctx.font = `400 24px ${FONT}`
+    ctx.fillText('上周无数据，本周起就有对比了', pad + 40 + sw + 62, cy + 156)
+  }
+
+  // 三格小指标
+  const gy = cy + 196
+  const cells: [string, string][] = [
+    ['练习天数', `${d.days} 天`],
+    ['完成卷数', `${d.sessions} 卷`],
+    ['学习时长', `${d.minutes} 分钟`],
+  ]
+  cells.forEach(([k, v], i) => {
+    const cx = pad + 36 + i * ((W - pad * 2 - 72) / 3)
+    ctx.fillStyle = '#adb5bd'
+    ctx.font = `400 20px ${FONT}`
+    ctx.fillText(k, cx, gy)
+    ctx.fillStyle = '#343a40'
+    ctx.font = `700 30px ${FONT}`
+    ctx.fillText(v, cx, gy + 28)
+  })
+
+  // 过关条（如有）
+  let y = cy + 296
+  if (d.passedUnits.length) {
+    ctx.fillStyle = '#ffffff'
+    roundRect(ctx, pad, y, W - pad * 2, 72, 20)
+    ctx.fill()
+    ctx.font = `700 26px ${FONT}`
+    ctx.fillStyle = '#0ca678'
+    ctx.fillText('🏅', pad + 26, y + 22)
+    ctx.fillStyle = '#212529'
+    ctx.fillText(
+      `本周过关：${d.passedUnits.map(p => `${p.unit.replace('unit', 'Unit ')} ${p.score}分`).join(' · ')}`,
+      pad + 62, y + 22,
+    )
+    y += 96
+  }
+
+  // 新增错词
+  ctx.fillStyle = '#495057'
+  ctx.font = `800 28px ${FONT}`
+  ctx.fillText(rows ? `本周新增错词 TOP${rows}` : '本周没有新增错词', pad, y)
+  y += 44
+  ctx.fillStyle = '#ffffff'
+  roundRect(ctx, pad, y, W - pad * 2, Math.max(1, rows) * 52 + 24, 20)
+  ctx.fill()
+
+  let ry = y + 34
+  for (const w of d.newWrongs) {
+    ctx.fillStyle = '#e03131'
+    ctx.font = `700 26px ${FONT}`
+    ctx.fillText(w.word, pad + 30, ry)
+    ctx.fillStyle = '#868e96'
+    ctx.font = `400 22px ${FONT}`
+    const ww = ctx.measureText(w.word).width
+    ctx.fillText(w.cn, pad + 44 + ww, ry + 3)
+    ctx.textAlign = 'right'
+    ctx.fillStyle = '#f08c00'
+    ctx.fillText(`错 ${w.count} 次`, W - pad - 30, ry + 3)
+    ctx.textAlign = 'left'
+    ry += 52
+  }
+  if (!rows) {
+    ctx.fillStyle = '#0ca678'
+    ctx.font = `700 26px ${FONT}`
+    ctx.fillText('全都答对了，基础在变扎实 👏', pad + 30, ry)
+  }
+
+  // 下周建议
+  y += Math.max(1, rows) * 52 + 40
+  ctx.fillStyle = '#ffffff'
+  const adviceH = 110
+  roundRect(ctx, pad, y, W - pad * 2, adviceH, 20)
+  ctx.fill()
+  ctx.fillStyle = '#5f3dc4'
+  ctx.font = `700 26px ${FONT}`
+  ctx.fillText('📌 下周建议', pad + 26, y + 20)
+  ctx.fillStyle = '#495057'
+  ctx.font = `400 24px ${FONT}`
+  // 简单换行（每行 ~26 字）
+  const text = d.advice
+  const lineChars = 24
+  for (let i = 0; i * lineChars < text.length && i < 2; i++) {
+    ctx.fillText(text.slice(i * lineChars, (i + 1) * lineChars), pad + 26, y + 58 + i * 34)
+  }
+
+  // 页脚
+  const fy = H - 96
+  ctx.fillStyle = '#adb5bd'
+  ctx.font = `400 22px ${FONT}`
+  ctx.textAlign = 'center'
+  ctx.fillText('在线英语听写 · tingxie.5208090.xyz', W / 2, fy)
+  ctx.textAlign = 'left'
+
+  const url = cv.toDataURL('image/png')
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `本周报告_${d.profile.name}_${d.dateRange.replace('~', '-')}.png`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+
+  const w2 = window.open('', '_blank')
+  if (w2) {
+    w2.document.write(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>本周报告</title>
+<body style="margin:0;background:#222;display:flex;justify-content:center;padding:12px">
+<img src="${url}" style="width:100%;max-width:420px;border-radius:12px">
+<p style="color:#aaa;font:14px/1.6 sans-serif;position:fixed;bottom:8px;width:100%;text-align:center">
+长按图片保存到相册，再发到微信</p></body>`)
+    w2.document.close()
+  }
+}

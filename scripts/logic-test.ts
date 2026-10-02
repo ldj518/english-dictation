@@ -7,6 +7,8 @@ import { ALL_TASKS as TASKS, WORDS, DAILY, UNITS, FINALS, UNIT_WORDS } from '../
 import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../src/lib/shuffle'
 import { buildCnOptions } from '../src/lib/translate'
 import { weekStartStr } from '../src/lib/storage'
+import { calcWeekReport } from '../src/lib/weekreport'
+import { mergeProgress } from '../src/lib/sync'
 import { resolveRate, SLOW_RATE } from '../src/lib/player'
 
 let pass = 0, fail = 0
@@ -252,6 +254,75 @@ log.push('【翻译关选项】')
   // 目标词无释义时不崩
   const bad = [{ word: 'x', cn: '' }, { word: 'y', cn: '有释义' }]
   t('空释义返回空选项', buildCnOptions(bad, 'x', 's').length === 0)
+}
+
+// ── 每周报告（v3.4）──
+log.push('【每周报告】')
+{
+  const p = defaultProgress()
+  const now = new Date()
+  const thisMon = weekStartStr(now)
+  const mon0 = new Date(thisMon + 'T00:00:00').getTime()
+  // 本周两条提交：一条 4/5，一条 5/5 → 加权 9/10=90%
+  p.history.push({ trackId: 'day01', trackLabel: 'a', total: 5, right: 4, score: 80, at: mon0 + 3600e3, records: [] })
+  p.history.push({ trackId: 'day02', trackLabel: 'b', total: 5, right: 5, score: 100, at: mon0 + 2 * 86400e3, records: [] })
+  // 本周新增错词两个（count 2 和 1）+ 上周的旧错词（不应进 TOP）
+  p.wrong['alpha'] = { word: 'alpha', cn: '甲', count: 2, streak: 0, addedAt: mon0 + 3600e3, lastAt: mon0 + 3600e3, dueAt: mon0, stage: 0 }
+  p.wrong['beta'] = { word: 'beta', cn: '乙', count: 1, streak: 0, addedAt: mon0 + 7200e3, lastAt: mon0 + 7200e3, dueAt: mon0, stage: 0 }
+  p.wrong['old'] = { word: 'old', cn: '旧', count: 9, streak: 0, addedAt: mon0 - 10 * 86400e3, lastAt: mon0 - 10 * 86400e3, dueAt: mon0, stage: 0 }
+  // 本周过关 unit01
+  p.passed = { unit01: { at: mon0 + 3 * 86400e3, score: 90 } }
+  // 分钟表：两天各 10 分钟
+  const d1 = todayStrOf(mon0 + 3600e3)
+  const d2 = todayStrOf(mon0 + 2 * 86400e3)
+  p.minutes[d1] = 10
+  p.minutes[d2] = 10
+
+  const rep = calcWeekReport(p, now)
+  t('本周提交数=2', rep.thisWeek.sessions === 2)
+  t('本周加权正确率=90', rep.thisWeek.acc === 90)
+  t('练习天数=2', rep.thisWeek.days === 2)
+  t('学习分钟=20', rep.thisWeek.minutes === 20)
+  t('上周无数据 acc=null', rep.lastWeek.acc === null)
+  t('上周无数据时环比=null', rep.accDelta === null)
+  t('新增错词只含本周两条', rep.newWrongs.length === 2 && rep.newWrongs[0].word === 'alpha')
+  t('旧错词不混入周报', !rep.newWrongs.some(w => w.word === 'old'))
+  t('本周过关含 unit01', rep.passedUnits.length === 1 && rep.passedUnits[0].score === 90)
+  t('有错词时建议提到清错词', rep.advice.length > 0)
+
+  // 环比：给上周也放一条 5/5（100%）→ 本周 90 vs 上周 100 = -10
+  const p2 = { ...p, history: [...p.history, { trackId: 'day00', trackLabel: 'c', total: 5, right: 5, score: 100, at: mon0 - 3 * 86400e3, records: [] }] }
+  const rep2 = calcWeekReport(p2, now)
+  t('环比=上周100-本周90 → -10', rep2.accDelta === -10)
+  t('下降时建议含放缓/清错词语义', rep2.advice.length > 0)
+}
+
+// ── 单元过关合并（v3.4）──
+log.push('【过关记录合并】')
+{
+  const a = defaultProgress()
+  const b = defaultProgress()
+  a.passed = { unit01: { at: 1000, score: 85 } }
+  b.passed = { unit01: { at: 2000, score: 92 }, unit02: { at: 1500, score: 88 } }
+  const m = mergeProgress(a, b)
+  t('同单元取高分 92', m.passed?.unit01.score === 92)
+  t('另一设备过关也并入', m.passed?.unit02.score === 88)
+  // 同分取更早
+  const c = defaultProgress()
+  c.passed = { unit01: { at: 500, score: 92 } }
+  const m2 = mergeProgress(m, c)
+  t('同分取更早过关时间', m2.passed?.unit01.at === 500)
+  // 低分不覆盖高分
+  const d = defaultProgress()
+  d.passed = { unit01: { at: 9999, score: 60 } }
+  const m3 = mergeProgress(m2, d)
+  t('低分不覆盖高分', m3.passed?.unit01.score === 92 && m3.passed?.unit01.at === 500)
+}
+
+function todayStrOf(ts: number): string {
+  const d = new Date(ts)
+  const z = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`
 }
 
 console.log('══ 核心逻辑单测 ══')

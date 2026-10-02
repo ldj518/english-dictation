@@ -25,6 +25,7 @@ import MonsterPage from '../src/pages/Monster'
 import LearnPage from '../src/pages/Learn'
 import ListenPage from '../src/pages/Listen'
 import SpellPage from '../src/pages/Spell'
+import UnitTestPage from '../src/pages/UnitTest'
 import MasteryPage from '../src/pages/Mastery'
 import FormsPage from '../src/pages/Forms'
 import DaysPage from '../src/pages/Days'
@@ -57,6 +58,8 @@ const PARAM_CASES: [string, React.ComponentType][] = [
   ['/listen/day01', ListenPage], // 纯纸听（音频播放器，屏幕零词形）
   ['/spell/day01', SpellPage],   // 首字母填空（中文释义 + 首字母提示）
   ['/exam/unit01', ExamPage],
+  ['/test/unit01', UnitTestPage],  // 单元过关测试（三段混合卷，SSR 渲染卷面说明+开始门）
+  ['/test/unit99', UnitTestPage],  // 不存在的单元 → 空态页
   ['/print/day01', PrintSheetPage],
   ['/print/plan', PrintSheetPage],
   ['/paper/day01', PaperPage],
@@ -110,6 +113,8 @@ const EXPECTED: Record<string, string> = {
   '/learn/plan': '正在准备今天的词单',
   '/listen/day01': '纸听模式',
   '/spell/day01': '首字母填空',
+  '/test/unit01': '卷面说明',
+  '/test/unit99': '没有这个单元',
   '/print/plan': '正在准备今天的词单',
   '/translate/plan': '正在准备今天的词单',
   '/translate/day01': '加载中',

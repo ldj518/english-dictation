@@ -5,7 +5,8 @@ import {
   loadProfiles, saveProfiles, activeProfileId, setActiveProfileId, reset as resetProgress,
 } from './storage'
 import { settle, addMinutes, type AwardCtx } from './gamify'
-import { reportSession, syncStudent, checkBackend, fetchShuffleSalt, pushProgressSnapshot } from './api'
+import { reportSession, syncStudent, checkBackend, fetchShuffleSalt, pushProgressSnapshot, fetchParentRules } from './api'
+import type { ParentRules } from './api'
 import { syncProfiles, pullAndMerge } from './sync'
 import type { Badge } from '../types'
 
@@ -40,6 +41,17 @@ interface Ctx {
 
 const C = createContext<Ctx | null>(null)
 
+/** 管控项：家长规则覆盖本地 settings（体验项如音量倍速不受影响）。
+ *  导出给家长中心用：保存规则后同参数本机即时生效。 */
+export function applyRules(s: ParentRules): Partial<Progress['settings']> {
+  const out: Partial<Progress['settings']> = {}
+  if (s.kbBuiltIn !== undefined) out.kbBuiltIn = s.kbBuiltIn
+  if (s.shuffle !== undefined) out.shuffle = s.shuffle
+  if (s.syncPaper !== undefined) out.syncPaper = s.syncPaper
+  if (s.prepMode !== undefined) out.prepMode = s.prepMode
+  return out
+}
+
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [profiles, setProfiles] = useState<Profile[]>(() => loadProfiles())
   const [activeId, setActiveId] = useState<string>(() => activeProfileId())
@@ -52,6 +64,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [activeId])
 
   // 启动时：探测后端 + 双向同步（身份档案 + 进度快照）+ 拉出题顺序盐
+  // 规则应用与快照合并存在时序竞争：两边都可能 setProgress 覆盖对方，
+  // 所以规则缓存进 ref，任何一侧完成后都补一次规则 patch
+  const rulesRef = React.useRef<Partial<Progress['settings']>>({})
+  const applyRulesPatch = React.useCallback(() => {
+    if (!Object.keys(rulesRef.current).length) return
+    setProgress(p => ({ ...p, settings: { ...p.settings, ...rulesRef.current } }))
+  }, [])
+
   useEffect(() => {
     checkBackend().then(alive => {
       if (!alive) return
@@ -64,10 +84,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       for (const p of loadProfiles()) {
         void pullAndMerge(p.id).then(merged => {
           if (!merged) return
-          if (p.id === activeProfileId()) setProgress(merged)
+          if (p.id === activeProfileId()) {
+            setProgress(merged)
+            applyRulesPatch()
+          }
         })
       }
       fetchShuffleSalt().catch(() => { /* 静默，保持本地缓存 */ })
+      // ③ 家长管控规则：云端为准覆盖本地管控项（家长在自己手机上改，孩子设备生效）
+      void fetchParentRules().then(rules => {
+        rulesRef.current = applyRules(rules)
+        applyRulesPatch()
+      })
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

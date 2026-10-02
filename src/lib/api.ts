@@ -448,3 +448,25 @@ export async function deleteWordbook(id: string): Promise<boolean> {
   if (r) void fetchWordbooks()
   return !!r
 }
+
+/* ── 家长管控规则（v2.8）：云端为准，所有设备生效 ───────────────── */
+
+export interface ParentRules {
+  kbBuiltIn?: boolean
+  shuffle?: boolean
+  syncPaper?: boolean
+  prepMode?: 'recommended' | 'force' | 'off'
+  parentMessage?: string
+}
+
+/** 拉家长规则（离线/未设置返回 {}，调用方用本地 settings 兜底） */
+export async function fetchParentRules(): Promise<ParentRules> {
+  const r = await req<{ rules: ParentRules }>('/rules')
+  return r?.rules || {}
+}
+
+/** 保存家长规则（家长中心 PIN 门禁后调用） */
+export async function pushParentRules(rules: ParentRules): Promise<boolean> {
+  const r = await req('/rules', { method: 'POST', body: JSON.stringify(rules) })
+  return !!r
+}

@@ -4,7 +4,7 @@ import Shell from '../components/Shell'
 import { useStore } from '../lib/store'
 import { levelOf, BADGES } from '../lib/gamify'
 import { DAILY, UNITS, FINALS, getPlanTrack } from '../lib/data'
-import { fetchWordbooks } from '../lib/api'
+import { fetchWordbooks, fetchParentRules } from '../lib/api'
 import { dueWrongWords, todayStr } from '../lib/storage'
 import type { Track } from '../types'
 
@@ -45,6 +45,14 @@ export default function Home() {
 
   const list = tab === 'daily' ? DAILY : tab === 'unit' ? UNITS : FINALS
 
+  // 家长寄语（v2.8）：家长在家长中心写的，云端存储，非空才显示
+  const [pmsg, setPmsg] = useState('')
+  useEffect(() => {
+    let cancel = false
+    fetchParentRules().then(r => { if (!cancel) setPmsg((r.parentMessage || '').trim()) }).catch(() => { /* 静默 */ })
+    return () => { cancel = true }
+  }, [])
+
   return (
     <Shell title="英语听写" right={
       <button className="iconbtn" onClick={() => nav('/settings')} aria-label="设置">⚙️</button>
@@ -66,6 +74,19 @@ export default function Home() {
         </div>
         <button className="iconbtn" onClick={() => nav('/settings')} aria-label="设置">⚙️</button>
       </div>
+
+      {/* 家长寄语（家长中心设置，云端同步） */}
+      {pmsg && (
+        <div className="card pad" style={{ marginBottom: 14, borderColor: '#f0d69a', background: 'linear-gradient(180deg,#fffdf5,#fff)' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <div style={{ fontSize: 20, lineHeight: 1 }}>💌</div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.6 }}>{pmsg}</div>
+              <div className="sub small" style={{ marginTop: 2 }}>—— 家长的话</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 等级总览 */}
       <div className="hero">
@@ -173,8 +194,8 @@ export default function Home() {
         </button>
         <button className="quick" onClick={() => nav('/parent')}>
           <span className="qi">📊</span>
-          <span className="qt">家长看板</span>
-          <span className="qd">日/周/月进度</span>
+          <span className="qt">家长中心</span>
+          <span className="qd">进度·设置管理</span>
         </button>
       </div>
 

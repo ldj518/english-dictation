@@ -5,6 +5,7 @@ import AudioGate from '../components/AudioGate'
 import { useStore } from '../lib/store'
 import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems, wordFileMap } from '../lib/data'
 import { playWord, pauseAll, prefetchAhead, resolveRate } from '../lib/player'
+import { splitSyllables } from '../lib/syllables'
 import type { AudioItem, Track } from '../types'
 
 /**
@@ -168,6 +169,22 @@ export default function Learn() {
           }}>⚠️ 这个词你错过 {wrongCount} 次，多听两遍</div>
         )}
         <div style={{ fontSize: 38, fontWeight: 800, lineHeight: 1.2, wordBreak: 'break-word' }}>{cur.word}</div>
+        {/* 音节色块（v2.8）：只在预习出现，帮孩子把长词切小块记；听写环节绝不显示 */}
+        {(() => {
+          const syls = splitSyllables(cur.word)
+          if (syls.length < 2) return null
+          return (
+            <div style={{ marginTop: 8, display: 'flex', gap: 5, justifyContent: 'center', flexWrap: 'wrap' }}>
+              {syls.map((syl, i) => (
+                <span key={i} style={{
+                  fontSize: 18, fontWeight: 800, padding: '2px 9px', borderRadius: 8, letterSpacing: 0.5,
+                  background: i % 2 ? '#eef3ff' : '#fff3e0',
+                  color: i % 2 ? '#2f5fd0' : '#b06a00',
+                }}>{syl}</span>
+              ))}
+            </div>
+          )
+        })()}
         <button
           className={'bigplay' + (playing ? ' playing' : '')}
           style={{ margin: '16px auto 6px' }}

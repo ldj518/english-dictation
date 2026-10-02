@@ -323,7 +323,9 @@ export default function Dictation() {
   // ── 预备页（v2.7）：先学一遍（可跳过）或直接听写，两个按钮平级、无诱导 ──
   // 「先学一遍」去 /learn/:id（学完回来带 skip-prep 标记）；「直接听写」本身就是手势，
   // 在这里解锁音频通道，不再多显示一次「点我开始」。
-  if (!started && !result && !prepSkipped && !isCustom) {
+  // prepMode（v2.8 家长管控）：recommended 可跳过 / force 强制先学（藏跳过按钮）/ off 不预习
+  const prepMode = progress.settings.prepMode || 'recommended'
+  if (!started && !result && !prepSkipped && !isCustom && prepMode !== 'off') {
     const wrongHits = items.filter(i => progress.wrong[i.word]).length
     const learnedToday = (() => {
       const l = progress.learned[id]
@@ -348,15 +350,19 @@ export default function Dictation() {
               style={{ background: 'var(--blue)', minWidth: 170, minHeight: 50 }}
               onClick={() => nav('/learn/' + track.id)}
             >📖 先学一遍</button>
-            <button
-              className={'btn' + (learnedToday ? '' : ' ghost')}
-              style={learnedToday ? { background: 'var(--ok)', minWidth: 170, minHeight: 50, color: '#fff' } : { minWidth: 170, minHeight: 50 }}
-              onClick={() => { unlockAudio(); start() }}
-            >▶ 我已熟悉，直接听写</button>
+            {prepMode !== 'force' && (
+              <button
+                className={'btn' + (learnedToday ? '' : ' ghost')}
+                style={learnedToday ? { background: 'var(--ok)', minWidth: 170, minHeight: 50, color: '#fff' } : { minWidth: 170, minHeight: 50 }}
+                onClick={() => { unlockAudio(); start() }}
+              >▶ 我已熟悉，直接听写</button>
+            )}
           </div>
           <div className="sub small" style={{ marginTop: 12 }}>
-            预习是可选的——已经掌握的孩子直接听写就行。
-            建议手边放好听写本，边听边把词写在纸上。
+            {prepMode === 'force'
+              ? '家长要求：每天第一次听写前，先把今天的词过一遍。'
+              : '预习是可选的——已经掌握的孩子直接听写就行。'}
+            <br />建议手边放好听写本，边听边把词写在纸上。
           </div>
         </div>
       </Shell>

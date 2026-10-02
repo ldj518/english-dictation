@@ -1,9 +1,11 @@
+import { useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore } from '../lib/store'
 import { load } from '../lib/storage'
 import { speechSupported } from '../lib/player'
 
 export default function Settings() {
+  const nav = useNavigate()
   const { progress, updateSettings, doReset, profiles, profile, switchProfile, updateProfile } = useStore()
   const s = progress.settings
 
@@ -99,41 +101,43 @@ export default function Settings() {
           </div>
         </div>
 
+        {/* v2.8：管控项收归家长中心，孩子端只读显示（防止自己改规则） */}
+        <div className="field">
+          <div>
+            <div className="k">预习环节</div>
+            <div className="d">{s.prepMode === 'off' ? '关闭：进来直接听写' : s.prepMode === 'force' ? '必须先预习才能听写' : '推荐预习，可自己选择跳过'}</div>
+          </div>
+          <span className="pill p-ok">{s.prepMode === 'off' ? '直接听写' : s.prepMode === 'force' ? '必须先学' : '可跳过'}</span>
+        </div>
+
         <div className="field">
           <div>
             <div className="k">随机出题顺序</div>
-            <div className="d">每天、每人的题目顺序都不一样，防止背顺序</div>
+            <div className="d">{s.shuffle ? '每天、每人的题目顺序都不一样' : '顺序固定'}</div>
           </div>
-          <button
-            className={'switch' + (s.shuffle ? ' on' : '')}
-            onClick={() => updateSettings({ shuffle: !s.shuffle })}
-            aria-label="随机出题开关"
-          ><i /></button>
+          <span className="pill p-ok">{s.shuffle ? '开' : '关'}</span>
         </div>
 
         <div className="field">
           <div>
             <div className="k">内置字母键盘</div>
-            <div className="d">只有 26 个字母，不弹输入法联想词（推荐开）</div>
+            <div className="d">只有 26 个字母，不弹输入法联想词</div>
           </div>
-          <button
-            className={'switch' + (s.kbBuiltIn !== false ? ' on' : '')}
-            onClick={() => updateSettings({ kbBuiltIn: s.kbBuiltIn === false })}
-            aria-label="内置键盘开关"
-          ><i /></button>
+          <span className="pill p-ok">{s.kbBuiltIn !== false ? '开' : '关'}</span>
         </div>
 
         <div className="field">
           <div>
             <div className="k">纸质伴写</div>
-            <div className="d">听写时提示「写在听写本第 N 行」，完成后可拍照发给家长</div>
+            <div className="d">听写时提示「写在听写本第 N 行」</div>
           </div>
-          <button
-            className={'switch' + (s.syncPaper !== false ? ' on' : '')}
-            onClick={() => updateSettings({ syncPaper: s.syncPaper === false })}
-            aria-label="纸质伴写开关"
-          ><i /></button>
+          <span className="pill p-ok">{s.syncPaper !== false ? '开' : '关'}</span>
         </div>
+
+        <div className="sub small" style={{ lineHeight: 1.7, margin: '4px 0 10px' }}>
+          这几项由家长统一管理，所有设备同步生效。要改到家长中心。
+        </div>
+        <button className="btn ghost sm" onClick={() => nav('/parent')}>去家长中心修改 →</button>
 
         <div className="field">
           <div>

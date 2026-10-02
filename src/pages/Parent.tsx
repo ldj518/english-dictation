@@ -1,31 +1,60 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
-import { useStore } from '../lib/store'
+import PinGate from '../components/PinGate'
+import { useStore, applyRules } from '../lib/store'
 import {
   fetchStats, checkBackend, fetchPinStatus, setParentPin, fetchPapers, paperFileUrl,
   createShare, rotateShuffleSalt, pushShuffleMode, currentShuffleMode, fetchShuffleSalt,
   fetchRecordings, recordFileUrl,
   fetchWordbooks, currentBooks, pushActiveBook, pushDailyWords, createWordbook, deleteWordbook,
-  type StatsResp, type PhotoItem, type RecItem, type BooksResp,
+  fetchParentRules, pushParentRules,
+  type StatsResp, type PhotoItem, type RecItem, type BooksResp, type ParentRules,
 } from '../lib/api'
 import { getPlanTrack } from '../lib/data'
 import { todayStr } from '../lib/storage'
 import { sharePoster } from '../lib/poster'
-import type { Progress } from '../types'
 
 type Range = 'day' | 'week' | 'month'
+type Tab = 'board' | 'admin'
 type ShuffleModeUi = 'daily' | 'weekly' | 'manual'
 const modeLabel: Record<ShuffleModeUi, string> = { daily: '每天换', weekly: '每周换', manual: '家长手动' }
+const prepLabel: Record<string, string> = { recommended: '推荐 · 可跳过', force: '必须先学', off: '直接听写' }
+const prepDesc: Record<string, string> = {
+  recommended: '听写前先过一遍今天的词（自动发音的卡片），孩子觉得熟了可以自己点「直接听写」跳过。',
+  force: '不学完不放开听写入口，适合新单元第一遍。',
+  off: '不显示预习环节，进来直接听写。',
+}
+
+/** 秒数 → 「3分20秒」 */
+function fmtSec(sec: number): string {
+  if (!sec || sec <= 0) return ''
+  const m = Math.floor(sec / 60)
+  const s = Math.round(sec % 60)
+  if (m >= 1) return s ? `${m}分${s}秒` : `${m}分`
+  return `${s}秒`
+}
+
+/** 毫秒时间戳 → 「今天 14:32」 / 「10/2 08:05」（北京时间按设备本地时区显示） */
+function fmtWhen(ts: number): string {
+  if (!ts) return ''
+  const d = new Date(ts)
+  const t = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  if (todayStr(d) === todayStr(new Date())) return `今天 ${t}`
+  return `${d.getMonth() + 1}/${d.getDate()} ${t}`
+}
 
 /**
- * 家长看板：按 日 / 周 / 月 查看学习进度。
- * 数据来自 Cloudflare D1（后端），跨设备可见。
- * 后端不通时降级为本地数据 + 明确提示。
+ * 家长中心（v2.8 起 Tab 化）：
+ * - 学习看板：进度数据 + 照片 + 跟读 + 分享，进来就能看。
+ * - 管理设置：所有「管控类」设置收归这里（过家长解锁码才能进），
+ *   保存后推到云端，所有设备（孩子的手机/电脑）自动生效。
+ * 数据来自 Cloudflare D1（后端），后端不通时降级为本地数据 + 明确提示。
  */
 export default function Parent() {
   const nav = useNavigate()
-  const { profiles, profile, progress, switchProfile } = useStore()
+  const { profiles, profile, progress, switchProfile, updateSettings } = useStore()
+  const [tab, setTab] = useState<Tab>('board')
   const [range, setRange] = useState<Range>('week')
   const [stats, setStats] = useState<StatsResp | null>(null)
   const [loading, setLoading] = useState(true)
@@ -51,6 +80,12 @@ export default function Parent() {
   const [rotMsg, setRotMsg] = useState('')
   const [shareUrl, setShareUrl] = useState('')
   const [shareMsg, setShareMsg] = useState('')
+
+  /* ── 管控规则（v2.8）：云端拉取 + 全量保存 ── */
+  const [rules, setRules] = useState<ParentRules>({})
+  const [rulesLoaded, setRulesLoaded] = useState(false)
+  const [rulesMsg, setRulesMsg] = useState('')
+  const [msgText, setMsgText] = useState('')
 
   useEffect(() => {
     let cancel = false
@@ -90,6 +125,31 @@ export default function Parent() {
     return () => { cancel = true }
   }, [])
 
+  // 拉管控规则（寄语输入框也等这个回来再初始化，防止空值覆盖）
+  useEffect(() => {
+    let cancel = false
+    fetchParentRules().then(r => {
+      if (cancel) return
+      setRules(r)
+      setMsgText(r.parentMessage || '')
+      setRulesLoaded(true)
+    }).catch(() => { if (!cancel) setRulesLoaded(false) })
+    return () => { cancel = true }
+  }, [])
+
+  /** 保存管控规则：全量推云端（后端是整体替换）+ 本机即时生效 */
+  const saveRules = async (patch: ParentRules) => {
+    if (!rulesLoaded) { setRulesMsg('规则还在加载，等一秒再试'); return }
+    const merged = { ...rules, ...patch }
+    setRules(merged)
+    // 本机先生效（家长自己手机上马上能看到效果）
+    updateSettings(applyRules(merged))
+    const okRes = await pushParentRules(merged)
+    setRulesMsg(okRes
+      ? '已保存：孩子的所有设备会自动生效'
+      : '云端没连上，只在本机生效了；连上后记得回来再存一次')
+  }
+
   /** 切换顺序模式：本地立刻变 + 推到云端（所有设备生效） */
   const switchMode = async (m: ShuffleModeUi) => {
     setMode(m)
@@ -113,7 +173,7 @@ export default function Parent() {
     const r = await setParentPin(pin1, oldPin || undefined)
     if (r.ok) {
       setPin1(''); setPin2(''); setOldPin(''); setPinExists(true)
-      setPinMsg('已保存。以后打开「答案版」和「纸质批改」都要输这个码')
+      setPinMsg('已保存。以后打开「答案版」、「纸质批改」和「管理设置」都要输这个码')
     } else {
       setPinMsg(r.msg)
     }
@@ -205,7 +265,7 @@ export default function Parent() {
   const rangeLabel: Record<Range, string> = { day: '今天', week: '本周', month: '本月' }
 
   return (
-    <Shell title="家长看板" back sub={useLocal ? '本地数据' : '云端同步'}>
+    <Shell title="家长中心" back sub={useLocal ? '本地数据' : '云端同步'}>
       {/* 后端状态提示 */}
       {useLocal && (
         <div className="card pad" style={{ background: 'var(--gold-soft)', borderColor: '#f0d69a' }}>
@@ -216,299 +276,432 @@ export default function Parent() {
         </div>
       )}
 
-      {/* 周期切换 */}
+      {/* 主 Tab：学习看板 / 管理设置 */}
       <div className="seg" style={{ marginBottom: 14, width: '100%' }}>
-        {(['day', 'week', 'month'] as Range[]).map(r => (
-          <button key={r} className={range === r ? 'on' : ''} style={{ flex: 1 }}
-            onClick={() => setRange(r)}>
-            {rangeLabel[r]}
-          </button>
-        ))}
+        <button className={tab === 'board' ? 'on' : ''} style={{ flex: 1 }} onClick={() => setTab('board')}>
+          📱 学习看板
+        </button>
+        <button className={tab === 'admin' ? 'on' : ''} style={{ flex: 1 }} onClick={() => setTab('admin')}>
+          ⚙️ 管理设置
+        </button>
       </div>
 
-      {/* 周期总览 */}
-      <div className="hero">
-        <div className="lv">{profile.emoji} {profile.name} · {rangeLabel[range]}</div>
-        <div className="nm">{S.acc}% 正确率</div>
-        <div className="meta" style={{ marginTop: 10 }}>
-          <div><b>{S.sessions}</b>次听写</div>
-          <div><b>{S.total}</b>道题</div>
-          <div><b>{S.totalDays}</b>总天数</div>
-          <div><b>{S.streak}</b>连续</div>
-        </div>
-      </div>
-
-      {/* 今日三格打卡（v2.7）：预习 / 听写 / 手写照片 */}
-      {!loading && (() => {
-        const today = todayStr()
-        const learnedToday = Object.values(progress.learned || {})
-          .some(l => todayStr(new Date(l.at)) === today)
-        const dictToday = (progress.history || [])
-          .some(h => todayStr(new Date(h.at)) === today)
-        const photoToday = (photos || []).some(p => p.key.includes('/' + today + '/'))
-        const done = [learnedToday, dictToday, photoToday]
-        return (
-          <div className="card pad">
-            <div style={{ fontWeight: 800, marginBottom: 8 }}>
-              ✅ 今天的完成情况
-              {done.every(Boolean) && <span style={{ color: 'var(--ok)', marginLeft: 8 }}>三格全齐 +10 积分 🎉</span>}
-            </div>
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-              <span className={'pill ' + (learnedToday ? 'p-ok' : 'p-bad')} style={{ fontSize: 13, padding: '6px 12px' }}>
-                📖 预习 {learnedToday ? '✓' : '未做'}
-              </span>
-              <span className={'pill ' + (dictToday ? 'p-ok' : 'p-bad')} style={{ fontSize: 13, padding: '6px 12px' }}>
-                🎧 听写 {dictToday ? '✓' : '未做'}
-              </span>
-              <span className={'pill ' + (photoToday ? 'p-ok' : 'p-bad')} style={{ fontSize: 13, padding: '6px 12px' }}>
-                📸 手写照片 {photoToday ? '✓' : '未传'}
-              </span>
-            </div>
-            <div className="sub small" style={{ marginTop: 8, lineHeight: 1.7 }}>
-              预习和听写来自学习记录，照片以云端为准（孩子拍完手写本自动传上来，
-              分享链接里能看到）。预习那格「学过才算」，跳过预习不会亮。
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* 切换孩子 */}
-      {profiles.length > 1 && (
-        <div className="profileBar">
-          <div className="pList">
-            {profiles.map(p => (
-              <button key={p.id}
-                className={'pChip' + (p.id === profile.id ? ' on' : '')}
-                style={p.id === profile.id ? { borderColor: p.color, background: p.color + '14' } : {}}
-                onClick={() => switchProfile(p.id)}>
-                <span className="pe">{p.emoji}</span>
-                <span className="pn">{p.name}</span>
+      {/* ══════════ 学习看板 ══════════ */}
+      {tab === 'board' && (
+        <>
+          {/* 周期切换 */}
+          <div className="seg" style={{ marginBottom: 14, width: '100%' }}>
+            {(['day', 'week', 'month'] as Range[]).map(r => (
+              <button key={r} className={range === r ? 'on' : ''} style={{ flex: 1 }}
+                onClick={() => setRange(r)}>
+                {rangeLabel[r]}
               </button>
             ))}
           </div>
-        </div>
-      )}
 
-      {loading && <div className="card pad center sub">加载中…</div>}
-
-      {/* 趋势图 */}
-      {!loading && !useLocal && stats && stats.trend.length > 0 && (
-        <div className="card pad">
-          <div style={{ fontWeight: 800, marginBottom: 12 }}>📈 正确率趋势（近 {stats.trend.length} 天）</div>
-          <TrendChart data={stats.trend} />
-        </div>
-      )}
-
-      {/* 错词 TOP */}
-      {!loading && !useLocal && stats && stats.topWrong.length > 0 && (
-        <div className="card pad">
-          <div style={{ fontWeight: 800, marginBottom: 4 }}>
-            🎯 高频错词 TOP {stats.topWrong.length}
-            <span className="sub small" style={{ fontWeight: 400, marginLeft: 8 }}>近 60 天</span>
+          {/* 周期总览 */}
+          <div className="hero">
+            <div className="lv">{profile.emoji} {profile.name} · {rangeLabel[range]}</div>
+            <div className="nm">{S.acc}% 正确率</div>
+            <div className="meta" style={{ marginTop: 10 }}>
+              <div><b>{S.sessions}</b>次听写</div>
+              <div><b>{S.total}</b>道题</div>
+              <div><b>{S.totalDays}</b>总天数</div>
+              <div><b>{S.streak}</b>连续</div>
+            </div>
           </div>
-          <div className="reviewlist" style={{ marginTop: 8 }}>
-            {stats.topWrong.map((w, i) => (
-              <div key={w.word} className="rv">
-                <span className="mk" style={{ color: 'var(--bad)' }}>{i + 1}</span>
-                <span className="w">{w.word}</span>
-                <span className="sub small">{w.cn}</span>
-                <span className="pill p-bad" style={{ marginLeft: 'auto' }}>错 {w.times} 次</span>
+
+          {/* 今日三格打卡（v2.7）：预习 / 听写 / 手写照片 */}
+          {!loading && (() => {
+            const today = todayStr()
+            const learnedToday = Object.values(progress.learned || {})
+              .some(l => todayStr(new Date(l.at)) === today)
+            const dictToday = (progress.history || [])
+              .some(h => todayStr(new Date(h.at)) === today)
+            const photoToday = (photos || []).some(p => p.key.includes('/' + today + '/'))
+            const done = [learnedToday, dictToday, photoToday]
+            return (
+              <div className="card pad">
+                <div style={{ fontWeight: 800, marginBottom: 8 }}>
+                  ✅ 今天的完成情况
+                  {done.every(Boolean) && <span style={{ color: 'var(--ok)', marginLeft: 8 }}>三格全齐 +10 积分 🎉</span>}
+                </div>
+                <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                  <span className={'pill ' + (learnedToday ? 'p-ok' : 'p-bad')} style={{ fontSize: 13, padding: '6px 12px' }}>
+                    📖 预习 {learnedToday ? '✓' : '未做'}
+                  </span>
+                  <span className={'pill ' + (dictToday ? 'p-ok' : 'p-bad')} style={{ fontSize: 13, padding: '6px 12px' }}>
+                    🎧 听写 {dictToday ? '✓' : '未做'}
+                  </span>
+                  <span className={'pill ' + (photoToday ? 'p-ok' : 'p-bad')} style={{ fontSize: 13, padding: '6px 12px' }}>
+                    📸 手写照片 {photoToday ? '✓' : '未传'}
+                  </span>
+                </div>
+                <div className="sub small" style={{ marginTop: 8, lineHeight: 1.7 }}>
+                  预习和听写来自学习记录，照片以云端为准（孩子拍完手写本自动传上来，
+                  分享链接里能看到）。预习那格「学过才算」，跳过预习不会亮。
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            )
+          })()}
 
-      {/* 最近记录 */}
-      {!loading && !useLocal && stats && stats.recent.length > 0 && (
-        <div className="card pad">
-          <div style={{ fontWeight: 800, marginBottom: 8 }}>🕐 最近练习</div>
-          <div className="reviewlist">
-            {stats.recent.slice(0, 12).map(r => (
-              <div key={r.id} className="rv">
-                <span className="mk" style={{
-                  color: r.score >= 90 ? 'var(--ok)' : r.score >= 60 ? 'var(--blue)' : 'var(--bad)',
-                }}>{r.score}%</span>
-                <span className="w" style={{ fontSize: 13 }}>{r.track_label}</span>
-                <span className="sub small">
-                  {r.right_count}/{r.total}
-                  {r.mode === 'paper' && ' · 纸质'}
-                  {r.mode === 'exam' && ' · 模考'}
-                </span>
-                <span className="sub small" style={{ marginLeft: 'auto' }}>{r.day_key.slice(5)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 空状态 */}
-      {!loading && !useLocal && stats && stats.summary.total === 0 && (
-        <div className="card pad center">
-          <div style={{ fontSize: 34 }}>📊</div>
-          <div style={{ fontWeight: 700, marginTop: 6 }}>这个周期还没有记录</div>
-          <div className="sub small" style={{ marginTop: 4 }}>让孩子做一次听写，这里就有数据了</div>
-        </div>
-      )}
-
-      {/* 家长解锁码 */}
-      <div className="card pad">
-        <div style={{ fontWeight: 800, marginBottom: 6 }}>🔐 家长解锁码</div>
-        <div className="sub small" style={{ marginBottom: 10, lineHeight: 1.7 }}>
-          「答案版」卷面和「纸质批改」页都要输这个码才能看，防止孩子自己偷看答案。
-          {pinExists === false && ' 还没设置，建议现在设一个。'}
-          {pinExists === true && ' 已设置。修改需先输旧码；连错 3 次锁 10 分钟。'}
-        </div>
-        {pinExists === true && (
-          <input
-            className="pinInput wide"
-            placeholder="旧码（修改才需要）"
-            value={oldPin}
-            onChange={e => setOldPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            inputMode="numeric" autoComplete="off"
-            style={{ marginBottom: 8 }}
-          />
-        )}
-        <div className="row" style={{ gap: 8, marginBottom: 8 }}>
-          <input
-            className="pinInput wide" style={{ flex: 1 }}
-            placeholder="新码（4-6 位数字）"
-            value={pin1}
-            onChange={e => setPin1(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            inputMode="numeric" autoComplete="off"
-          />
-          <input
-            className="pinInput wide" style={{ flex: 1 }}
-            placeholder="再输一遍确认"
-            value={pin2}
-            onChange={e => setPin2(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            inputMode="numeric" autoComplete="off"
-          />
-        </div>
-        <button className="btn sm" onClick={savePin} disabled={pin1.length < 4 || pin1 !== pin2}>保存解锁码</button>
-        {pinMsg && <div className="sub small" style={{ marginTop: 8, color: 'var(--blue)', fontWeight: 600 }}>{pinMsg}</div>}
-      </div>
-
-      {/* 出题顺序控制 */}
-      <div className="card pad">
-        <div style={{ fontWeight: 800, marginBottom: 6 }}>🔀 出题顺序</div>
-        <div className="seg" style={{ marginBottom: 10 }}>
-          {(['daily', 'weekly', 'manual'] as ShuffleModeUi[]).map(m => (
-            <button key={m} className={shuffleMode === m ? 'on' : ''} style={{ flex: 1 }}
-              onClick={() => switchMode(m)}>{modeLabel[m]}</button>
-          ))}
-        </div>
-        <div className="sub small" style={{ lineHeight: 1.7 }}>
-          {shuffleMode === 'daily' && '顺序每天自动换一次，孩子背不住昨天的词序。'}
-          {shuffleMode === 'weekly' && '一周内顺序固定方便对照，每周一自动全部重排。'}
-          {shuffleMode === 'manual' && '顺序长期不变，除非你点下面的「立即重排」。'}
-        </div>
-        <div className="row" style={{ gap: 10, marginTop: 10 }}>
-          <button className="btn ghost sm" onClick={rotate}>🎲 立即重排（全部天）</button>
-        </div>
-        <div className="sub small" style={{ marginTop: 8, lineHeight: 1.7 }}>
-          「立即重排」在三种模式下都有效：点完当天线上卷和纸质卷就换新顺序。
-        </div>
-        {rotMsg && <div className="sub small" style={{ marginTop: 8, color: 'var(--blue)', fontWeight: 600 }}>{rotMsg}</div>}
-      </div>
-
-      {/* 每日计划与词库管理（v2.5） */}
-      <WordbookCard />
-
-      {/* 纸质卷照片 */}
-      <div className="card pad">
-        <div style={{ fontWeight: 800, marginBottom: 6 }}>📷 纸质卷照片</div>
-        {!photos && <div className="sub small">云端未连接，照片看不了（本机拍照批改不受影响）</div>}
-        {photos && photoGroups.length === 0 && (
-          <div className="sub small">还没有照片。在「纸质批改」页拍照后会自动存到这里。</div>
-        )}
-        {photoGroups.map(([day, list]) => {
-          const open = openDay === day
-          return (
-            <div key={day} style={{ marginBottom: 12 }}>
-              <div className="between" style={{ marginBottom: 8 }}>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{day} <span className="sub small">· {list.length} 张</span></div>
-                <button className="btn ghost sm" style={{ fontSize: 12 }} onClick={() => setOpenDay(open ? null : day)}>
-                  {open ? '收起' : (list.length > 4 ? `展开全部 ${list.length} 张` : '展开')}
-                </button>
-              </div>
-              <div className="photoGrid">
-                {(open ? list : list.slice(0, 4)).map(p => (
-                  <a key={p.key} href={paperFileUrl(p.key)} target="_blank" rel="noreferrer">
-                    <img src={paperFileUrl(p.key)} alt={`纸质卷 ${day}`} loading="lazy" />
-                  </a>
+          {/* 切换孩子 */}
+          {profiles.length > 1 && (
+            <div className="profileBar">
+              <div className="pList">
+                {profiles.map(p => (
+                  <button key={p.id}
+                    className={'pChip' + (p.id === profile.id ? ' on' : '')}
+                    style={p.id === profile.id ? { borderColor: p.color, background: p.color + '14' } : {}}
+                    onClick={() => switchProfile(p.id)}>
+                    <span className="pe">{p.emoji}</span>
+                    <span className="pn">{p.name}</span>
+                  </button>
                 ))}
               </div>
             </div>
-          )
-        })}
-      </div>
+          )}
 
-      {/* 跟读录音 */}
-      <div className="card pad">
-        <div style={{ fontWeight: 800, marginBottom: 6 }}>🎙️ 跟读录音</div>
-        {!recs && <div className="sub small">云端未连接，录音看不了</div>}
-        {recs && recGroups.length === 0 && (
-          <div className="sub small">还没有录音。在「跟读录音」页录完并上传后会存到这里，也可以通过分享链接直接听。</div>
-        )}
-        {recGroups.map(([day, list]) => {
-          const open = openRecDay === day
-          return (
-            <div key={day} style={{ marginBottom: 12 }}>
-              <div className="between" style={{ marginBottom: 8 }}>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{day} <span className="sub small">· {list.length} 条</span></div>
-                <button className="btn ghost sm" style={{ fontSize: 12 }} onClick={() => setOpenRecDay(open ? null : day)}>
-                  {open ? '收起' : (list.length > 4 ? `展开全部 ${list.length} 条` : '展开')}
-                </button>
+          {loading && <div className="card pad center sub">加载中…</div>}
+
+          {/* 趋势图 */}
+          {!loading && !useLocal && stats && stats.trend.length > 0 && (
+            <div className="card pad">
+              <div style={{ fontWeight: 800, marginBottom: 12 }}>📈 正确率趋势（近 {stats.trend.length} 天）</div>
+              <TrendChart data={stats.trend} />
+            </div>
+          )}
+
+          {/* 错词 TOP */}
+          {!loading && !useLocal && stats && stats.topWrong.length > 0 && (
+            <div className="card pad">
+              <div style={{ fontWeight: 800, marginBottom: 4 }}>
+                🎯 高频错词 TOP {stats.topWrong.length}
+                <span className="sub small" style={{ fontWeight: 400, marginLeft: 8 }}>近 60 天</span>
               </div>
-              <div className="reviewlist">
-                {(open ? list : list.slice(0, 4)).map(r => (
-                  <div key={r.key} className="rv" style={{ flexWrap: 'wrap' }}>
-                    <span className="w" style={{ minWidth: 72 }}>{r.word}</span>
-                    <audio controls preload="none" src={recordFileUrl(r.key)}
-                      style={{ height: 34, marginLeft: 'auto', maxWidth: '100%' }} />
+              <div className="reviewlist" style={{ marginTop: 8 }}>
+                {stats.topWrong.map((w, i) => (
+                  <div key={w.word} className="rv">
+                    <span className="mk" style={{ color: 'var(--bad)' }}>{i + 1}</span>
+                    <span className="w">{w.word}</span>
+                    <span className="sub small">{w.cn}</span>
+                    <span className="pill p-bad" style={{ marginLeft: 'auto' }}>错 {w.times} 次</span>
                   </div>
                 ))}
               </div>
             </div>
-          )
-        })}
-      </div>
+          )}
 
-      {/* 分享 */}
-      <div className="card pad">
-        <div style={{ fontWeight: 800, marginBottom: 6 }}>🔗 分享给家人（微信直接发链接）</div>
-        <div className="sub small" style={{ marginBottom: 10, lineHeight: 1.7 }}>
-          生成一条只读链接：点开就是 {profile.name} 的对错统计、高频错词和最近的纸质卷照片，不用截图。
-        </div>
-        <button className="btn" style={{ background: '#07c160' }} onClick={makeShare}>生成分享链接</button>
-        {shareMsg && <div className="sub small" style={{ marginTop: 8, color: 'var(--blue)', fontWeight: 600, lineHeight: 1.7 }}>{shareMsg}</div>}
-        {shareUrl && shareMsg.startsWith('链接已生成') && (
-          <div className="tip" style={{ marginTop: 8, wordBreak: 'break-all', userSelect: 'all' }}>{shareUrl}</div>
-        )}
-      </div>
+          {/* 最近听写（v2.8 增强：用时 + 时段，家长能看出每次花了多久、什么时间做的） */}
+          {!loading && !useLocal && stats && stats.recent.length > 0 && (
+            <div className="card pad">
+              <div style={{ fontWeight: 800, marginBottom: 4 }}>🕐 最近听写</div>
+              {fmtSec(stats.summary.seconds) && (
+                <div className="sub small" style={{ marginBottom: 8 }}>
+                  本周期累计用时 {fmtSec(stats.summary.seconds)}
+                </div>
+              )}
+              <div className="reviewlist">
+                {stats.recent.slice(0, 12).map(r => (
+                  <div key={r.id} className="rv" style={{ flexWrap: 'wrap' }}>
+                    <span className="mk" style={{
+                      color: r.score >= 90 ? 'var(--ok)' : r.score >= 60 ? 'var(--blue)' : 'var(--bad)',
+                    }}>{r.score}%</span>
+                    <span className="w" style={{ fontSize: 13 }}>{r.track_label}</span>
+                    <span className="sub small">
+                      {r.right_count}/{r.total}
+                      {r.mode === 'paper' && ' · 纸质'}
+                      {r.mode === 'exam' && ' · 模考'}
+                    </span>
+                    <span className="sub small" style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                      {fmtSec(r.seconds) && <span style={{ marginRight: 8 }}>⏱ {fmtSec(r.seconds)}</span>}
+                      {fmtWhen(r.created_at)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="sub small" style={{ marginTop: 8, lineHeight: 1.7 }}>
+                用时太长（超过 1 分钟 / 10 词）通常是词不熟；总分忽高忽低，多半是状态问题，别急着加量。
+              </div>
+            </div>
+          )}
 
-      <div className="row" style={{ gap: 10 }}>
-        <button className="btn ghost" onClick={() => location.reload()}>🔄 刷新数据</button>
-        <button className="btn" style={{ background: '#07c160' }} onClick={() => {
-          const acc = S.acc
-          sharePoster({
-            profile,
-            trackLabel: `家长看板 · ${rangeLabel[range]}`,
-            date: new Date().toISOString().slice(0, 10),
-            score: acc, right: S.right, total: S.total, seconds: 0,
-            answers: (stats?.topWrong || []).slice(0, 10).map(w => ({
-              word: w.word, cn: w.cn, correct: false, input: '',
-            })),
-          })
-        }}>
-          📤 生成周报图（发微信）
-        </button>
-      </div>
+          {/* 空状态 */}
+          {!loading && !useLocal && stats && stats.summary.total === 0 && (
+            <div className="card pad center">
+              <div style={{ fontSize: 34 }}>📊</div>
+              <div style={{ fontWeight: 700, marginTop: 6 }}>这个周期还没有记录</div>
+              <div className="sub small" style={{ marginTop: 4 }}>让孩子做一次听写，这里就有数据了</div>
+            </div>
+          )}
 
-      <div className="center mt" style={{ paddingBottom: 40 }}>
-        <button className="btn ghost sm" onClick={() => nav('/stats')}>看我的详细统计 →</button>
-      </div>
+          {/* 纸质卷照片 */}
+          <div className="card pad">
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>📷 纸质卷照片</div>
+            {!photos && <div className="sub small">云端未连接，照片看不了（本机拍照批改不受影响）</div>}
+            {photos && photoGroups.length === 0 && (
+              <div className="sub small">还没有照片。在「纸质批改」页拍照后会自动存到这里。</div>
+            )}
+            {photoGroups.map(([day, list]) => {
+              const open = openDay === day
+              return (
+                <div key={day} style={{ marginBottom: 12 }}>
+                  <div className="between" style={{ marginBottom: 8 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{day} <span className="sub small">· {list.length} 张</span></div>
+                    <button className="btn ghost sm" style={{ fontSize: 12 }} onClick={() => setOpenDay(open ? null : day)}>
+                      {open ? '收起' : (list.length > 4 ? `展开全部 ${list.length} 张` : '展开')}
+                    </button>
+                  </div>
+                  <div className="photoGrid">
+                    {(open ? list : list.slice(0, 4)).map(p => (
+                      <a key={p.key} href={paperFileUrl(p.key)} target="_blank" rel="noreferrer">
+                        <img src={paperFileUrl(p.key)} alt={`纸质卷 ${day}`} loading="lazy" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* 跟读录音 */}
+          <div className="card pad">
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>🎙️ 跟读录音</div>
+            {!recs && <div className="sub small">云端未连接，录音看不了</div>}
+            {recs && recGroups.length === 0 && (
+              <div className="sub small">还没有录音。在「跟读录音」页录完并上传后会存到这里，也可以通过分享链接直接听。</div>
+            )}
+            {recGroups.map(([day, list]) => {
+              const open = openRecDay === day
+              return (
+                <div key={day} style={{ marginBottom: 12 }}>
+                  <div className="between" style={{ marginBottom: 8 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{day} <span className="sub small">· {list.length} 条</span></div>
+                    <button className="btn ghost sm" style={{ fontSize: 12 }} onClick={() => setOpenRecDay(open ? null : day)}>
+                      {open ? '收起' : (list.length > 4 ? `展开全部 ${list.length} 条` : '展开')}
+                    </button>
+                  </div>
+                  <div className="reviewlist">
+                    {(open ? list : list.slice(0, 4)).map(r => (
+                      <div key={r.key} className="rv" style={{ flexWrap: 'wrap' }}>
+                        <span className="w" style={{ minWidth: 72 }}>{r.word}</span>
+                        <audio controls preload="none" src={recordFileUrl(r.key)}
+                          style={{ height: 34, marginLeft: 'auto', maxWidth: '100%' }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* 分享 */}
+          <div className="card pad">
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>🔗 分享给家人（微信直接发链接）</div>
+            <div className="sub small" style={{ marginBottom: 10, lineHeight: 1.7 }}>
+              生成一条只读链接：点开就是 {profile.name} 的对错统计、高频错词和最近的纸质卷照片，不用截图。
+            </div>
+            <button className="btn" style={{ background: '#07c160' }} onClick={makeShare}>生成分享链接</button>
+            {shareMsg && <div className="sub small" style={{ marginTop: 8, color: 'var(--blue)', fontWeight: 600, lineHeight: 1.7 }}>{shareMsg}</div>}
+            {shareUrl && shareMsg.startsWith('链接已生成') && (
+              <div className="tip" style={{ marginTop: 8, wordBreak: 'break-all', userSelect: 'all' }}>{shareUrl}</div>
+            )}
+          </div>
+
+          <div className="row" style={{ gap: 10 }}>
+            <button className="btn ghost" onClick={() => location.reload()}>🔄 刷新数据</button>
+            <button className="btn" style={{ background: '#07c160' }} onClick={() => {
+              const acc = S.acc
+              sharePoster({
+                profile,
+                trackLabel: `家长看板 · ${rangeLabel[range]}`,
+                date: new Date().toISOString().slice(0, 10),
+                score: acc, right: S.right, total: S.total, seconds: 0,
+                answers: (stats?.topWrong || []).slice(0, 10).map(w => ({
+                  word: w.word, cn: w.cn, correct: false, input: '',
+                })),
+              })
+            }}>
+              📤 生成周报图（发微信）
+            </button>
+          </div>
+
+          <div className="center mt" style={{ paddingBottom: 40 }}>
+            <button className="btn ghost sm" onClick={() => nav('/stats')}>看我的详细统计 →</button>
+          </div>
+        </>
+      )}
+
+      {/* ══════════ 管理设置 ══════════ */}
+      {tab === 'admin' && (
+        <>
+          {/* 家长解锁码：设码/改码在这张卡，其余设置在码后面 */}
+          <div className="card pad">
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>🔐 家长解锁码</div>
+            <div className="sub small" style={{ marginBottom: 10, lineHeight: 1.7 }}>
+              「答案版」卷面、「纸质批改」页和下面的「管理设置」都要输这个码才能看，
+              防止孩子自己偷看答案或改设置。
+              {pinExists === false && ' 还没设置，建议现在设一个。'}
+              {pinExists === true && ' 已设置。修改需先输旧码；连错 3 次锁 10 分钟。'}
+            </div>
+            {pinExists === true && (
+              <input
+                className="pinInput wide"
+                placeholder="旧码（修改才需要）"
+                value={oldPin}
+                onChange={e => setOldPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                inputMode="numeric" autoComplete="off"
+                style={{ marginBottom: 8 }}
+              />
+            )}
+            <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+              <input
+                className="pinInput wide" style={{ flex: 1 }}
+                placeholder="新码（4-6 位数字）"
+                value={pin1}
+                onChange={e => setPin1(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                inputMode="numeric" autoComplete="off"
+              />
+              <input
+                className="pinInput wide" style={{ flex: 1 }}
+                placeholder="再输一遍确认"
+                value={pin2}
+                onChange={e => setPin2(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                inputMode="numeric" autoComplete="off"
+              />
+            </div>
+            <button className="btn sm" onClick={savePin} disabled={pin1.length < 4 || pin1 !== pin2}>保存解锁码</button>
+            {pinMsg && <div className="sub small" style={{ marginTop: 8, color: 'var(--blue)', fontWeight: 600 }}>{pinMsg}</div>}
+          </div>
+
+          {pinExists === true && (
+            <PinGate title="家长设置">
+              {rulesMsg && (
+                <div className="card pad" style={{ color: 'var(--blue)', fontWeight: 600, fontSize: 13 }}>
+                  {rulesMsg}
+                </div>
+              )}
+
+              {/* 预习环节档位 */}
+              <div className="card pad">
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>📖 预习环节</div>
+                <div className="sub small" style={{ marginBottom: 10, lineHeight: 1.7 }}>
+                  听写前先过一遍今天的词（卡片式、自动发音）。学不学、能不能跳过，由你定：
+                </div>
+                <div className="seg" style={{ marginBottom: 10 }}>
+                  {(['recommended', 'force', 'off'] as const).map(m => (
+                    <button key={m}
+                      className={(rules.prepMode || 'recommended') === m ? 'on' : ''}
+                      style={{ flex: 1 }}
+                      onClick={() => saveRules({ prepMode: m })}>
+                      {prepLabel[m]}
+                    </button>
+                  ))}
+                </div>
+                <div className="sub small" style={{ lineHeight: 1.7 }}>
+                  {prepDesc[rules.prepMode || 'recommended']}
+                </div>
+              </div>
+
+              {/* 出题顺序（从看板迁入） */}
+              <div className="card pad">
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>🔀 出题顺序</div>
+                <div className="seg" style={{ marginBottom: 10 }}>
+                  {(['daily', 'weekly', 'manual'] as ShuffleModeUi[]).map(m => (
+                    <button key={m} className={shuffleMode === m ? 'on' : ''} style={{ flex: 1 }}
+                      onClick={() => switchMode(m)}>{modeLabel[m]}</button>
+                  ))}
+                </div>
+                <div className="sub small" style={{ lineHeight: 1.7 }}>
+                  {shuffleMode === 'daily' && '顺序每天自动换一次，孩子背不住昨天的词序。'}
+                  {shuffleMode === 'weekly' && '一周内顺序固定方便对照，每周一自动全部重排。'}
+                  {shuffleMode === 'manual' && '顺序长期不变，除非你点下面的「立即重排」。'}
+                </div>
+                <div className="row" style={{ gap: 10, marginTop: 10 }}>
+                  <button className="btn ghost sm" onClick={rotate}>🎲 立即重排（全部天）</button>
+                </div>
+                <div className="sub small" style={{ marginTop: 8, lineHeight: 1.7 }}>
+                  「立即重排」在三种模式下都有效：点完当天线上卷和纸质卷就换新顺序。
+                </div>
+                {rotMsg && <div className="sub small" style={{ marginTop: 8, color: 'var(--blue)', fontWeight: 600 }}>{rotMsg}</div>}
+              </div>
+
+              {/* 输入规则（v2.8 从孩子端「设置」收归家长） */}
+              <div className="card pad">
+                <div style={{ fontWeight: 800, marginBottom: 8 }}>⌨️ 输入规则</div>
+                <div className="field">
+                  <div>
+                    <div className="k">内置字母键盘</div>
+                    <div className="d">只有 26 个字母，不弹输入法联想词（推荐开）</div>
+                  </div>
+                  <button
+                    className={'switch' + (rules.kbBuiltIn !== false ? ' on' : '')}
+                    onClick={() => saveRules({ kbBuiltIn: rules.kbBuiltIn === false })}
+                    aria-label="内置键盘开关"
+                  ><i /></button>
+                </div>
+                <div className="field">
+                  <div>
+                    <div className="k">纸质伴写</div>
+                    <div className="d">听写时提示「写在听写本第 N 行」，完成后可拍照发给家长</div>
+                  </div>
+                  <button
+                    className={'switch' + (rules.syncPaper !== false ? ' on' : '')}
+                    onClick={() => saveRules({ syncPaper: rules.syncPaper === false })}
+                    aria-label="纸质伴写开关"
+                  ><i /></button>
+                </div>
+                <div className="sub small" style={{ lineHeight: 1.7 }}>
+                  这两项原来在孩子的「设置」页，现在收归家长：孩子端只读显示，改不了。
+                  保存后所有设备同步生效。
+                </div>
+              </div>
+
+              {/* 家长寄语 */}
+              <div className="card pad">
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>💌 家长寄语</div>
+                <div className="sub small" style={{ marginBottom: 8, lineHeight: 1.7 }}>
+                  写一句话，会显示在孩子的首页顶部。比如「先把昨天的错词订正了再玩」。
+                  说具体的比「加油」管用。
+                </div>
+                <textarea
+                  value={msgText}
+                  onChange={e => setMsgText(e.target.value.slice(0, 100))}
+                  rows={2}
+                  placeholder="给孩子的一句话（最多 100 字）"
+                  style={{
+                    width: '100%', padding: 10, borderRadius: 10, border: '1px solid #e4e8f0',
+                    fontSize: 14, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box',
+                  }}
+                />
+                <div className="row" style={{ gap: 8, marginTop: 8 }}>
+                  <button className="btn sm" onClick={() => saveRules({ parentMessage: msgText.trim() })}>
+                    保存寄语
+                  </button>
+                  {msgText && (
+                    <button className="btn ghost sm" onClick={() => { setMsgText(''); saveRules({ parentMessage: '' }) }}>
+                      清空
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 每日计划与词库管理（v2.5，从看板迁入） */}
+              <WordbookCard />
+            </PinGate>
+          )}
+
+          {pinExists === false && (
+            <div className="card pad sub small" style={{ lineHeight: 1.7 }}>
+              先在上面设好解锁码，这一区才会打开——防止孩子自己进来改设置、看答案。
+            </div>
+          )}
+
+          {pinExists === null && (
+            <div className="card pad center sub">正在连接云端…（连不上就先看看「学习看板」）</div>
+          )}
+        </>
+      )}
     </Shell>
   )
 }

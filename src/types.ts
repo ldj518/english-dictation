@@ -134,5 +134,7 @@ export interface Progress {
     kbBuiltIn: boolean
     /** 纸质伴写（v2.7）：听写时屏幕显示「第 N 题·写在听写本第 N 行」 */
     syncPaper: boolean
+    /** 预习环节档位（v2.8 家长管控）：recommended 可跳过 / force 强制先学 / off 关闭 */
+    prepMode?: 'recommended' | 'force' | 'off'
   }
 }

@@ -84,11 +84,14 @@ export async function fetchProgressSnapshot(studentId: string): Promise<unknown 
   }
 }
 
-/** 推送进度快照（fire-and-forget，失败静默） */
-export async function pushProgressSnapshot(studentId: string, data: unknown): Promise<boolean> {
+/** 推送进度快照（fire-and-forget，失败静默）。
+ *  keepalive：退出页面（pagehide）时的冲刷要带上，否则 fetch 会被浏览器
+ *  随页面终止掐断——快照通常几 KB～几十 KB，低于 keepalive 64KB 上限 */
+export async function pushProgressSnapshot(studentId: string, data: unknown, opts?: { keepalive?: boolean }): Promise<boolean> {
   const r = await req('/progress', {
     method: 'POST',
     body: JSON.stringify({ studentId, data }),
+    ...(opts?.keepalive ? { keepalive: true } : {}),
   })
   return !!r
 }

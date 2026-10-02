@@ -235,3 +235,20 @@ export function judgeWithFirst(input: string, answer: string): boolean {
   if (!input.trim()) return false
   return judge(input, answer) || judge(answer.slice(0, 1) + input, answer)
 }
+
+/**
+ * 进度里是否含任何学习数据（v3.5.1 热修）。
+ * 推送守卫用：刚装/无痕设备的进度是纯默认壳（只有 settings 可能不同），
+ * 这种进度绝不许上云——推上去就把云端快照覆盖成空，别的设备的记录
+ * 就此「消失」（实测踩坑：无痕设备 15s 后空推，云端 p1 被清空）。
+ */
+export function hasLearningData(p: Progress): boolean {
+  const n = (o: unknown) => !!o && typeof o === 'object' && Object.keys(o as object).length > 0
+  return !!(
+    p.totalAnswers > 0 || p.points > 0 || p.streakDays > 0 || p.planDone > 0 ||
+    (p.history && p.history.length > 0) ||
+    n(p.best) || n(p.attempts) || n(p.wrong) || n(p.badges) || n(p.minutes) ||
+    n(p.learned) || n(p.review) || n(p.reviewDone) || n(p.planLog) ||
+    n(p.trioDone) || n(p.passed) || n(p.flow)
+  )
+}

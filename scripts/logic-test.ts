@@ -1,7 +1,7 @@
 /** 核心逻辑单测：判分、遗忘曲线、积分、数据完整性。
  *  这些是「一眼看不出对错」的地方，必须机器验证。
  */
-import { judge, addWrong, advanceWrong, dueWrongWords, defaultProgress, REVIEW_STAGES, judgeWithFirst } from '../src/lib/storage'
+import { judge, addWrong, advanceWrong, dueWrongWords, defaultProgress, REVIEW_STAGES, judgeWithFirst, hasLearningData } from '../src/lib/storage'
 import { settle, levelOf } from '../src/lib/gamify'
 import { ALL_TASKS as TASKS, WORDS, DAILY, UNITS, FINALS, UNIT_WORDS } from '../src/lib/data'
 import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../src/lib/shuffle'
@@ -43,6 +43,16 @@ t('纯空格判错', !judgeWithFirst('   ', 'a'))
 t('单字母词写对', judgeWithFirst('a', 'a'))
 t('大小写无关', judgeWithFirst('OLD ON', 'hold on'))
 t('真错词照常判错', !judgeWithFirst('ole on', 'hold on'))
+
+log.push('【推送守卫 hasLearningData（空进度不上云）】')
+t('纯默认进度 = 无学习数据', !hasLearningData(defaultProgress()))
+t('只有一条历史 = 有', hasLearningData({ ...defaultProgress(), history: [{ trackId: 'day01', at: Date.now(), total: 10, right: 8 }] }))
+t('flow 有记录 = 有', hasLearningData({ ...defaultProgress(), flow: { '2026-10-02': { step: 1 } } }))
+t('答过题 = 有', hasLearningData({ ...defaultProgress(), totalAnswers: 1 }))
+t('有积分 = 有', hasLearningData({ ...defaultProgress(), points: 5 }))
+t('有错词 = 有', hasLearningData({ ...defaultProgress(), wrong: { hello: { word: 'hello', cn: '你好', count: 1, stage: 0, dueAt: 1 } } }))
+t('连过卡 = 有', hasLearningData({ ...defaultProgress(), streakDays: 3 }))
+t('只改设置不算', !hasLearningData({ ...defaultProgress(), settings: { ...defaultProgress().settings, rate: 1.25 } }))
 
 // ── 2. 遗忘曲线 ──
 log.push('【遗忘曲线】')

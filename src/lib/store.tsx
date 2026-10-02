@@ -3,7 +3,7 @@ import type { Progress, SessionResult, AnswerRecord, Track, Profile } from '../t
 import {
   load, save, defaultProgress, addWrong, advanceWrong, checkIn, judge, todayStr,
   loadProfiles, saveProfiles, activeProfileId, setActiveProfileId, reset as resetProgress,
-  setDeviceOwner,
+  setDeviceOwner, hasLearningData,
 } from './storage'
 import { settle, addMinutes, type AwardCtx } from './gamify'
 import { enqueueReview, advanceReview, resetReview, reopenReview, dueReviews } from './reviewQueue'
@@ -133,22 +133,25 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { save(progress, activeId) }, [progress, activeId])
 
   // ── 进度快照推送：节流 15s，离开页面时立即冲刷 ──
-  // 三个推送口都要过 syncReadyRef 门闩（见上）：拉取没结算前，本机进度
-  // 可能还是空的，推上去就是把云端快照清空
+  // 两道守卫（v3.5.1 热修）：
+  // ① syncReadyRef——活跃身份首次拉取结算前不推（无痕设备启动 15s 空推覆盖云端的根因）
+  // ② hasLearningData——纯默认壳进度不推；①只保证拉过一次，若那次云端恰好
+  //    也是空的，守卫②继续兜住，绝不把空数据上云
+  // 冲刷走 keepalive，pagehide 时 fetch 不再被浏览器掐断
   const pushTimer = React.useRef<number | null>(null)
   useEffect(() => {
     if (pushTimer.current) window.clearTimeout(pushTimer.current)
     pushTimer.current = window.setTimeout(() => {
       pushTimer.current = null
-      if (!syncReadyRef.current) return
+      if (!syncReadyRef.current || !hasLearningData(progress)) return
       void pushProgressSnapshot(activeId, progress)
     }, 15000)
     const flush = () => {
       if (!pushTimer.current) return
       window.clearTimeout(pushTimer.current)
       pushTimer.current = null
-      if (!syncReadyRef.current) return
-      void pushProgressSnapshot(activeId, progress)
+      if (!syncReadyRef.current || !hasLearningData(progress)) return
+      void pushProgressSnapshot(activeId, progress, { keepalive: true })
     }
     const onVis = () => { if (document.visibilityState === 'hidden') flush() }
     window.addEventListener('pagehide', flush)
@@ -160,7 +163,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (pushTimer.current) {
         window.clearTimeout(pushTimer.current)
         pushTimer.current = null
-        if (syncReadyRef.current) void pushProgressSnapshot(activeId, progress)
+        if (syncReadyRef.current && hasLearningData(progress)) {
+          void pushProgressSnapshot(activeId, progress, { keepalive: true })
+        }
       }
     }
   }, [progress, activeId])

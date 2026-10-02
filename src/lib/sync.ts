@@ -9,7 +9,7 @@
  */
 import type { Progress, Profile, WrongWord } from '../types'
 import { fetchStudents, fetchProgressSnapshot, pushProgressSnapshot, syncStudent } from './api'
-import { load, save, saveProfiles } from './storage'
+import { load, save, saveProfiles, hasLearningData } from './storage'
 
 /* ── 身份档案：云端为准 ─────────────────────────────────────────── */
 
@@ -181,15 +181,22 @@ export function progressChanged(a: Progress, b: Progress): boolean {
 
 /**
  * 拉云端快照并合并进本地。返回合并后的进度；云端没有/网络不通返回 null（不动本地）。
- * 合并出的结果同时回推云端（让其他设备尽快看到并集）。
+ *
+ * 回推规则（v3.5.1 热修，关键）：只要「云端 ≠ 并集」就立即回推并集——
+ * 设备本地数据比云端全时（云端被空快照/旧状态覆盖过），打开应用几秒内
+ * 就把云端修回来，不再依赖 15s 定时器（要开满 15 秒）或退出冲刷
+ * （pagehide 的 fetch 经常被浏览器掐断）。这是「打开设备 A 恢复云端」
+ * 的唯一可靠路径。
  */
 export async function pullAndMerge(profileId: string): Promise<Progress | null> {
   const snap = await fetchProgressSnapshot(profileId)
   if (!snap || typeof snap !== 'object') return null
   const local = load(profileId)
   const merged = mergeProgress(local, snap as Progress)
-  if (!progressChanged(local, merged)) return null
-  save(merged, profileId)
-  void pushProgressSnapshot(profileId, merged)
+  const localDiffers = progressChanged(local, merged)
+  const cloudDiffers = progressChanged(snap as Progress, merged)
+  if (localDiffers) save(merged, profileId)
+  if (cloudDiffers && hasLearningData(merged)) void pushProgressSnapshot(profileId, merged)
+  if (!localDiffers && !cloudDiffers) return null
   return merged
 }

@@ -33,7 +33,7 @@ interface SettingRow { value: string; updated_at: number }
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   try {
     const row = await env.DB.prepare(
-      `SELECT value FROM app_settings WHERE key = ?`
+      `SELECT value, updated_at FROM app_settings WHERE key = ?`
     ).bind(RULES_KEY).first<SettingRow>()
     const rules: RulePayload = row ? JSON.parse(row.value) : {}
     return ok({ rules, updatedAt: row?.updated_at ?? null })

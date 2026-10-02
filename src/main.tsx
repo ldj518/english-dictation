@@ -22,6 +22,7 @@ import Games from './pages/Games'
 import Match from './pages/Match'
 import Monster from './pages/Monster'
 import Learn from './pages/Learn'
+import Listen from './pages/Listen'
 import AudioFailToast from './components/AudioFailToast'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -32,6 +33,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/" element={<Home />} />
           <Route path="/d/:id" element={<Dictation />} />
           <Route path="/learn/:id" element={<Learn />} />
+          <Route path="/listen/:id" element={<Listen />} />
           <Route path="/review" element={<Review />} />
           <Route path="/exam/:id" element={<Exam />} />
           <Route path="/stats" element={<Stats />} />

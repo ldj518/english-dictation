@@ -23,6 +23,7 @@ import GamesPage from '../src/pages/Games'
 import MatchPage from '../src/pages/Match'
 import MonsterPage from '../src/pages/Monster'
 import LearnPage from '../src/pages/Learn'
+import ListenPage from '../src/pages/Listen'
 
 type Case = [string, string, React.ComponentType]
 
@@ -46,6 +47,7 @@ const PARAM_CASES: [string, React.ComponentType][] = [
   ['/d/mix', DictationPage],    // 智能混合卷（动态任务）
   ['/learn/day01', LearnPage],  // 学习环节（预习卡片流）
   ['/learn/plan', LearnPage],   // 学习环节 · 每日计划（动态任务）
+  ['/listen/day01', ListenPage], // 纯纸听（音频播放器，屏幕零词形）
   ['/exam/unit01', ExamPage],
   ['/print/day01', PrintSheetPage],
   ['/print/plan', PrintSheetPage],
@@ -98,6 +100,7 @@ const EXPECTED: Record<string, string> = {
   '/d/plan': '正在准备今天的词单',
   '/d/mix': '正在准备今天的词单',
   '/learn/plan': '正在准备今天的词单',
+  '/listen/day01': '纸听模式',
   '/print/plan': '正在准备今天的词单',
   '/translate/plan': '正在准备今天的词单',
   '/translate/day01': '加载中',

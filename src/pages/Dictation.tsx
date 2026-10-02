@@ -362,7 +362,17 @@ export default function Dictation() {
             {prepMode === 'force'
               ? '家长要求：每天第一次听写前，先把今天的词过一遍。'
               : '预习是可选的——已经掌握的孩子直接听写就行。'}
-            <br />建议手边放好听写本，边听边把词写在纸上。
+            <br />想写在纸上？手边放好听写本，听到一个写一个，一行一个。
+          </div>
+          {/* 纯纸听（v2.9）：屏幕只放音频不显示任何单词，孩子在纸上写，
+              写完去纸质批改。不用在屏幕上重复打字 */}
+          <div style={{ marginTop: 14 }}>
+            <button className="btn ghost" style={{ width: '100%' }} onClick={() => nav('/listen/' + track.id)}>
+              📄 只放音频，写在纸上（不用打字）
+            </button>
+            <div className="sub small" style={{ marginTop: 4 }}>
+              适合想练手写的时候：屏幕不显示单词，听到哪个写哪个，写完拍照批改。
+            </div>
           </div>
         </div>
       </Shell>
@@ -416,15 +426,12 @@ export default function Dictation() {
       </div>
 
       <div className="playbox">
-        {progress.settings.syncPaper !== false ? (
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.1 }}>第 {cur.no} 题</div>
-            <div style={{ fontSize: 12, color: 'var(--sub)', marginTop: 2 }}>
-              边听边写：把这个单词写在听写本第 {cur.no} 行，再输入到这里
-            </div>
+        {/* 纸质伴写（v2.9 重做）：不显示题号——题号是词单原始编号，跟洗牌后的播放顺序、
+            打印卷的重新编号都对不上，只会误导。只提示「边听边写」，行号由播放顺序天然决定 */}
+        {progress.settings.syncPaper !== false && (
+          <div style={{ fontSize: 12, color: 'var(--sub)', marginBottom: 6 }}>
+            ✍️ 边听边写：听到一个，就在本子上写一个，一行一个
           </div>
-        ) : (
-          <div style={{ fontSize: 13, color: 'var(--sub)' }}>第 {cur.no} 题 · 听音频写单词</div>
         )}
         <button
           className={'bigplay' + (playing ? ' playing' : '')}

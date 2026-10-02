@@ -43,6 +43,7 @@ CHECK_ONLY = "--check" in sys.argv
 # 换版重传场景：只传新代际逐词音频 + manifest，跳过 tracks 与旧格式，省带宽
 ONLY_M4A = "--new-m4a" in sys.argv   # w4：words/*.m4a
 ONLY_WAV = "--wav" in sys.argv       # w5/w6：words/*.wav
+ONLY_MP3 = "--mp3" in sys.argv       # w9：words/*.mp3（帧级裁剪直出）
 
 
 def md5(path):
@@ -58,13 +59,13 @@ def collect():
     words 文件，天然跳过历史代际残留）；全量模式扫目录。"""
     out = []
     man_path = os.path.join(AUD, "manifest.json")
-    if ONLY_WAV or ONLY_M4A:
+    if ONLY_WAV or ONLY_M4A or ONLY_MP3:
         if not os.path.exists(man_path):
             print("✗ 缺 manifest.json，无法按清单上传")
             sys.exit(1)
         out.append(("manifest.json", man_path))
         man = json.load(open(man_path, encoding="utf-8"))
-        want = ".m4a" if ONLY_M4A else ".wav"
+        want = ".m4a" if ONLY_M4A else (".wav" if ONLY_WAV else ".mp3")
         for rel in sorted(set(man.get("words", {}).values())):
             if not rel.endswith(want):
                 continue

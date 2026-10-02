@@ -5,7 +5,8 @@ import PinGate from '../components/PinGate'
 import LetterKeyboard from '../components/LetterKeyboard'
 import FlowNextBar from '../components/FlowNextBar'
 import { isFlowTaskId } from '../lib/flow'
-import { useStore, judge } from '../lib/store'
+import { useStore } from '../lib/store'
+import { judgeWithFirst } from '../lib/storage'
 import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems, wordFileMap, playWordText } from '../lib/data'
 import { seededShuffle, makeSeed, newSalt, orderSalt, orderEpoch } from '../lib/shuffle'
 import { currentSalt, currentShuffleMode, fetchShuffleSalt } from '../lib/api'
@@ -98,7 +99,9 @@ export default function Spell() {
 
   const submit = () => {
     if (!cur) return
-    const ok = judge(input, cur.word)
+    // 补全式判分（v3.5.1）：屏幕已给出首字母，孩子只填后面的几位也算对；
+    // 写全词当然也对。空输入恒错（防单字母词被「首字母+空串」误判）
+    const ok = judgeWithFirst(input, cur.word)
     const rec: AnswerRecord = { no: cur.no, word: cur.word, cn: cur.cn, input, correct: ok }
     recordAnswer(cur.word, cur.cn, input, ok)
     setAnswers(a => [...a, rec])
@@ -182,7 +185,7 @@ export default function Spell() {
       </div>
 
       <div className="playbox" style={{ padding: '26px 18px' }}>
-        <div style={{ fontSize: 13, color: 'var(--sub)' }}>根据意思和首字母，写出这个单词</div>
+        <div style={{ fontSize: 13, color: 'var(--sub)' }}>把单词补全（开头的 {cur.word[0].toUpperCase()} 写不写都算对）</div>
         <div className="cn" style={{ fontSize: 22, fontWeight: 700, margin: '14px 0 18px' }}>{cur.cn}</div>
         <div style={{
           fontFamily: 'ui-monospace, Menlo, Consolas, monospace',

@@ -1,7 +1,7 @@
 /** 核心逻辑单测：判分、遗忘曲线、积分、数据完整性。
  *  这些是「一眼看不出对错」的地方，必须机器验证。
  */
-import { judge, addWrong, advanceWrong, dueWrongWords, defaultProgress, REVIEW_STAGES } from '../src/lib/storage'
+import { judge, addWrong, advanceWrong, dueWrongWords, defaultProgress, REVIEW_STAGES, judgeWithFirst } from '../src/lib/storage'
 import { settle, levelOf } from '../src/lib/gamify'
 import { ALL_TASKS as TASKS, WORDS, DAILY, UNITS, FINALS, UNIT_WORDS } from '../src/lib/data'
 import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../src/lib/shuffle'
@@ -32,6 +32,17 @@ t('错误答案判错', !judge('hold in', 'hold on'))
 t('空答案判错', !judge('', 'hold on'))
 t('纯空格判错', !judge('   ', 'hold on'))
 t('中文不匹配英文', !judge('持有', 'hold'))
+
+log.push('【补全式判分（首字母填空）】')
+t('只填首字母后面的也算对', judgeWithFirst('old on', 'hold on'))
+t('写全词当然也对', judgeWithFirst('hold on', 'hold on'))
+t('写错首字母判错', !judgeWithFirst('xold on', 'hold on'))
+t('只写首字母没写完判错', !judgeWithFirst('h', 'hold on'))
+t('空输入判错（防单字母词误判）', !judgeWithFirst('', 'a'))
+t('纯空格判错', !judgeWithFirst('   ', 'a'))
+t('单字母词写对', judgeWithFirst('a', 'a'))
+t('大小写无关', judgeWithFirst('OLD ON', 'hold on'))
+t('真错词照常判错', !judgeWithFirst('ole on', 'hold on'))
 
 // ── 2. 遗忘曲线 ──
 log.push('【遗忘曲线】')

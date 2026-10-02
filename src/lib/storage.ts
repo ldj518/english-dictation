@@ -224,3 +224,14 @@ export function judge(input: string, answer: string): boolean {
       .replace(/\s+/g, ' ')
   return norm(input) === norm(answer) && norm(input).length > 0
 }
+
+/**
+ * 补全式判分（首字母填空专用，v3.5.1）：屏幕上首字母已经显示在提示里，
+ * 孩子很自然只填「首字母后面的几位」——输入完整单词，或「首字母+输入」
+ * 能拼成完整单词，都算对。
+ * 空输入直接判错：单字母词（如 a）若不防护，空串会被「首字母+空串」误判成对。
+ */
+export function judgeWithFirst(input: string, answer: string): boolean {
+  if (!input.trim()) return false
+  return judge(input, answer) || judge(answer.slice(0, 1) + input, answer)
+}

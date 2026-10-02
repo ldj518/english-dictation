@@ -5,6 +5,7 @@ import PinGate from '../components/PinGate'
 import AudioGate from '../components/AudioGate'
 import LetterKeyboard from '../components/LetterKeyboard'
 import { useStore, judge } from '../lib/store'
+import { judgeWithFirst } from '../lib/storage'
 import { UNIT_WORDS, WORD_MAP, WORDS, playWordText } from '../lib/data'
 import { buildCnOptions } from '../lib/translate'
 import { seededShuffle, makeSeed, newSalt } from '../lib/shuffle'
@@ -102,7 +103,8 @@ export default function UnitTest() {
   const submitSpell = () => {
     const cur = sItems[sIdx]
     if (!cur || !input.trim()) return
-    setAnswers(a => [...a, { no: a.length + 1, word: cur.word, cn: cur.cn, input, correct: judge(input, cur.word) }])
+    // 屏幕已显示首字母，孩子只补后面的字母也算对（补全式判分，与 Spell 页同规）
+    setAnswers(a => [...a, { no: a.length + 1, word: cur.word, cn: cur.cn, input, correct: judgeWithFirst(input, cur.word) }])
     setInput('')
     setSIdx(i => i + 1)
   }

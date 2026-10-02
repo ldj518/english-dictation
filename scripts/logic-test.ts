@@ -9,7 +9,7 @@ import { buildCnOptions } from '../src/lib/translate'
 import { weekStartStr } from '../src/lib/storage'
 import { calcWeekReport } from '../src/lib/weekreport'
 import { mergeProgress } from '../src/lib/sync'
-import { flowAdvance, flowStepOf, flowAllDone, FLOW_STEPS } from '../src/lib/flow'
+import { flowAdvance, flowStepOf, flowAllDone, FLOW_STEPS, isFlowTaskId } from '../src/lib/flow'
 import type { Progress } from '../src/types'
 import { resolveRate, SLOW_RATE } from '../src/lib/player'
 
@@ -365,6 +365,11 @@ log.push('【闯关进度】')
   b2.flow = { [DAY]: { step: 2 } }
   const m2 = mergeProgress(a2, b2)
   t('本地更远也取大者 4', m2.flow?.[DAY].step === 4)
+  // 自由选关重学（v3.5.1）：五关链任务判定
+  t('plan 可走五关链', isFlowTaskId('plan'))
+  t('day05 可走五关链', isFlowTaskId('day05'))
+  t('mix/custom/review 不走链', !isFlowTaskId('mix') && !isFlowTaskId('custom') && !isFlowTaskId('review'))
+  t('unit01/final01 不走链', !isFlowTaskId('unit01') && !isFlowTaskId('final01'))
 }
 
 function todayStrOf(ts: number): string {

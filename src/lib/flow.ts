@@ -67,3 +67,13 @@ export function flowAdvance(
   if (step !== cur + 1) return null
   return { ...flow, [day]: { step } }
 }
+
+/**
+ * 可走「五关链」的任务 id（v3.5.1 自由选关重学）：
+ * - 'plan' ：今日主线，完成后记账（flowAdvance）
+ * - dayXX  ：考场重学某一天，走同一条链但不记账，做完即散
+ * - 其他（mix/custom/review/unit/final）：不走五关链，页面只给普通按钮
+ */
+export function isFlowTaskId(id: string): boolean {
+  return id === 'plan' || /^day\d+$/.test(id)
+}

@@ -9,6 +9,7 @@ import { todayStr, weekStartStr } from '../lib/storage'
 import { currentSalt, currentShuffleMode, fetchShuffleSalt, uploadRecording, createShare } from '../lib/api'
 import AudioGate from '../components/AudioGate'
 import FlowNextBar from '../components/FlowNextBar'
+import { isFlowTaskId } from '../lib/flow'
 import type { AudioItem } from '../types'
 
 /**
@@ -300,8 +301,8 @@ export default function Read() {
           <div className="tip" style={{ wordBreak: 'break-all', userSelect: 'all' }}>{shareUrl}</div>
         )}
 
-        {/* 闯关第 3 关（v3.5）：完成后引导去第 4 关；普通任务这里不渲染 */}
-        <FlowNextBar doneStep={3} active={id === 'plan'} />
+        {/* 闯关第 3 关（v3.5.1）：完成后引导下一关；plan 记账、dayXX 重学链；其他任务不显示 */}
+        <FlowNextBar doneStep={3} taskId={isFlowTaskId(id) ? id : undefined} />
 
         <div className="sub small center" style={{ marginTop: 8, lineHeight: 1.7 }}>
           上传后：家长看板「🎙️ 跟读录音」和分享链接里都能直接听。<br />
@@ -322,8 +323,8 @@ export default function Read() {
           title="准备好跟读了吗？"
           tip="每个词：听标准音 → 你跟着读一遍 → 录下来发给家长听。"
         />
-        {/* 闯关第 3 关（v3.5）：本关可跳过，不想开口的直接过（推进到下一关） */}
-        {id === 'plan' && (
+        {/* 闯关第 3 关（v3.5.1）：本关可跳过，不想开口的直接过；plan 记账、dayXX 只跳不记 */}
+        {isFlowTaskId(id) && (
           <div className="center" style={{ marginTop: 4 }}>
             <button className="btn ghost" onClick={() => setPhase('finish')}>⏭ 不想读，跳过本关 →</button>
           </div>
@@ -380,7 +381,7 @@ export default function Read() {
       <div className="controls">
         <button className="btn ghost" onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0}>‹ 上一词</button>
         <button className="btn ghost" onClick={next}>{curTake ? '跳过 →' : '下一个 →'}</button>
-        <button className="btn ghost" onClick={() => setPhase('finish')}>{id === 'plan' ? '⏭ 结束跟读' : '结束上传'}</button>
+        <button className="btn ghost" onClick={() => setPhase('finish')}>{isFlowTaskId(id) ? '⏭ 结束跟读' : '结束上传'}</button>
       </div>
     </Shell>
   )

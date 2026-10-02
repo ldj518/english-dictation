@@ -4,6 +4,7 @@ import Shell from '../components/Shell'
 import PinGate from '../components/PinGate'
 import LetterKeyboard from '../components/LetterKeyboard'
 import FlowNextBar from '../components/FlowNextBar'
+import { isFlowTaskId } from '../lib/flow'
 import { useStore, judge } from '../lib/store'
 import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems, wordFileMap, playWordText } from '../lib/data'
 import { seededShuffle, makeSeed, newSalt, orderSalt, orderEpoch } from '../lib/shuffle'
@@ -280,8 +281,8 @@ function SpellResult({ track, result, answers, onHome, onRetrain }: {
         </div>
       </div>
 
-      {/* 闯关第 4 关（v3.5）：完成后引导去第 5 关（听写大关）；普通任务这里不渲染 */}
-      <FlowNextBar doneStep={4} active={track.id === 'plan'} />
+      {/* 闯关第 4 关（v3.5.1）：完成后引导去第 5 关；plan 记账、dayXX 重学链；其他任务不显示 */}
+      <FlowNextBar doneStep={4} taskId={isFlowTaskId(track.id) ? track.id : undefined} />
 
       {wrongs.length > 0 && (
         <button className="btn gold" style={{ width: '100%' }} onClick={onRetrain}>

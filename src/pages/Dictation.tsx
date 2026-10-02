@@ -12,6 +12,7 @@ import PinGate from '../components/PinGate'
 import AudioGate from '../components/AudioGate'
 import LetterKeyboard from '../components/LetterKeyboard'
 import FlowNextBar from '../components/FlowNextBar'
+import { isFlowTaskId } from '../lib/flow'
 import { todayStr } from '../lib/storage'
 import type { AnswerRecord, AudioItem, Track } from '../types'
 
@@ -644,8 +645,8 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
         </div>
       </div>
 
-      {/* 闯关第 5 关（v3.5）：通关引导紧贴分数卡；普通任务这里不渲染 */}
-      <FlowNextBar doneStep={5} active={track?.id === 'plan'} />
+      {/* 闯关第 5 关（v3.5.1）：plan=今日通关卡（记账）；dayXX=重学完成卡（不记账）；其他任务不显示 */}
+      <FlowNextBar doneStep={5} taskId={track && isFlowTaskId(track.id) ? track.id : undefined} />
 
       {/* 纸质伴写（v2.7）：拍听写本给家长看「手写痕迹」，分享链接里带原图 */}
       {progress.settings.syncPaper !== false && track && (

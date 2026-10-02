@@ -12,6 +12,7 @@ import { WORD_MAP } from '../lib/data'
 import AudioGate from '../components/AudioGate'
 import LetterKeyboard from '../components/LetterKeyboard'
 import FlowNextBar from '../components/FlowNextBar'
+import { isFlowTaskId } from '../lib/flow'
 import type { AnswerRecord, AudioItem, Track } from '../types'
 
 /**
@@ -223,8 +224,8 @@ export default function Translate() {
         </div>
         {shareHint && <div className="tip" style={{ background: '#e7f5ee', color: '#0b7285', wordBreak: 'break-all' }}>{shareHint}</div>}
 
-        {/* 闯关第 2 关（v3.5）：plan 任务完成后引导去下一关；普通任务这里不渲染 */}
-        <FlowNextBar doneStep={2} active={track.id === 'plan'} />
+        {/* 闯关第 2 关（v3.5.1）：plan 走今日主线记账；dayXX 重学链不记账；其他任务不显示 */}
+        <FlowNextBar doneStep={2} taskId={isFlowTaskId(track.id) ? track.id : undefined} />
 
         {wrongs.length > 0 ? (
           <div className="card pad">

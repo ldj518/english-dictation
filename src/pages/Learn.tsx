@@ -98,16 +98,29 @@ export default function Learn() {
   }
 
   // 闯关态（v3.5）：今天的第 1 关还没过、且做的是 plan 任务 → 完成后推进并直进第 2 关。
-  // 已经过了第 1 关再来复习的，走原逻辑去听写。
   const inFlow = id === 'plan' && flowStepOf(progress) === 1
+  // 重学态（v3.5.1）：dayXX 是考场选来重学的一天 → 完成后走同一条五关链（不记账）
+  const isRelearn = /^day\d+$/.test(id)
 
-  const goDictation = () => {
+  /** 主按钮：链内前进。plan 记账进第 2 关；dayXX 直接进第 2 关；其他任务直达听写（原逻辑） */
+  const goNextFlow = () => {
     recordOnce()
     if (inFlow) {
       advanceFlow(1)
       nav('/translate/plan')
       return
     }
+    if (isRelearn) {
+      nav('/translate/' + id)
+      return
+    }
+    try { sessionStorage.setItem('skip-prep-' + id, '1') } catch { /* ignore */ }
+    nav('/d/' + id)
+  }
+
+  /** 副按钮：跳过学习，直接听写这一天 */
+  const goDictation = () => {
+    recordOnce()
     try { sessionStorage.setItem('skip-prep-' + id, '1') } catch { /* ignore */ }
     nav('/d/' + id)
   }
@@ -207,16 +220,20 @@ export default function Learn() {
 
       <div className="controls" style={{ flexDirection: 'column', gap: 10 }}>
         {isLast ? (
-          <button className="btn" style={{ background: 'var(--blue)', minHeight: 50, width: '100%' }} onClick={goDictation}>
-            {inFlow ? '✓ 第 1 关完成，进入下一关 →' : '🎧 都过完了，开始听写'}
+          <button className="btn" style={{ background: 'var(--blue)', minHeight: 50, width: '100%' }} onClick={goNextFlow}>
+            {inFlow ? '✓ 第 1 关完成，进入下一关 →'
+              : isRelearn ? '✓ 这天的词过完了，进入下一关 →'
+                : '🎧 都过完了，开始听写'}
           </button>
         ) : (
           <button className="btn" style={{ background: 'var(--blue)', minHeight: 50, width: '100%' }} onClick={next}>
             认识了，下一个 →
           </button>
         )}
-        <button className="btn ghost" style={{ width: '100%' }} onClick={goDictation}>
-          {inFlow ? '⏭ 跳过本关，直接下一关' : '⏭ 跳过剩下的，直接听写'}
+        <button className="btn ghost" style={{ width: '100%' }} onClick={inFlow ? goNextFlow : goDictation}>
+          {inFlow ? '⏭ 跳过本关，直接下一关'
+            : isRelearn ? '⏭ 跳过学习，直接听写这天'
+              : '⏭ 跳过剩下的，直接听写'}
         </button>
       </div>
 

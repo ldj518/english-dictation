@@ -238,6 +238,40 @@ export default function Parent() {
         </div>
       </div>
 
+      {/* 今日三格打卡（v2.7）：预习 / 听写 / 手写照片 */}
+      {!loading && (() => {
+        const today = todayStr()
+        const learnedToday = Object.values(progress.learned || {})
+          .some(l => todayStr(new Date(l.at)) === today)
+        const dictToday = (progress.history || [])
+          .some(h => todayStr(new Date(h.at)) === today)
+        const photoToday = (photos || []).some(p => p.key.includes('/' + today + '/'))
+        const done = [learnedToday, dictToday, photoToday]
+        return (
+          <div className="card pad">
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>
+              ✅ 今天的完成情况
+              {done.every(Boolean) && <span style={{ color: 'var(--ok)', marginLeft: 8 }}>三格全齐 +10 积分 🎉</span>}
+            </div>
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              <span className={'pill ' + (learnedToday ? 'p-ok' : 'p-bad')} style={{ fontSize: 13, padding: '6px 12px' }}>
+                📖 预习 {learnedToday ? '✓' : '未做'}
+              </span>
+              <span className={'pill ' + (dictToday ? 'p-ok' : 'p-bad')} style={{ fontSize: 13, padding: '6px 12px' }}>
+                🎧 听写 {dictToday ? '✓' : '未做'}
+              </span>
+              <span className={'pill ' + (photoToday ? 'p-ok' : 'p-bad')} style={{ fontSize: 13, padding: '6px 12px' }}>
+                📸 手写照片 {photoToday ? '✓' : '未传'}
+              </span>
+            </div>
+            <div className="sub small" style={{ marginTop: 8, lineHeight: 1.7 }}>
+              预习和听写来自学习记录，照片以云端为准（孩子拍完手写本自动传上来，
+              分享链接里能看到）。预习那格「学过才算」，跳过预习不会亮。
+            </div>
+          </div>
+        )
+      })()}
+
       {/* 切换孩子 */}
       {profiles.length > 1 && (
         <div className="profileBar">

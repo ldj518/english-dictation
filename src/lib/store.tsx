@@ -32,6 +32,10 @@ interface Ctx {
   addPoints: (n: number) => void
   /** 每日计划完成到第几天（/d/plan 交卷后调） */
   markPlanDone: (day: number) => void
+  /** 学习环节记账（v2.7）：记学习时间并计入当天分钟数 */
+  markLearned: (taskId: string, seconds: number) => void
+  /** 三格全齐奖励（v2.7）：预习+听写+照片当天同任务只加一次，加了返回 true */
+  awardDailyBonus: (taskId: string) => boolean
 }
 
 const C = createContext<Ctx | null>(null)
@@ -242,6 +246,34 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setProgress(p => ({ ...p, planDone: Math.max(p.planDone || 0, day) }))
   }, [])
 
+  /** 学习环节记账（v2.7）：时间戳 + 次数，时长折算进当天学习分钟数 */
+  const markLearned = useCallback((taskId: string, seconds: number) => {
+    setProgress(p => {
+      const np = JSON.parse(JSON.stringify(p)) as Progress
+      const cur = np.learned[taskId] || { at: 0, count: 0 }
+      np.learned[taskId] = { at: Date.now(), count: cur.count + 1, bonusDay: cur.bonusDay }
+      addMinutes(np, Math.max(1, Math.round(seconds / 60)))
+      return np
+    })
+  }, [])
+
+  /** 三格奖励：当天（同任务）预习过才发，一次 10 分 */
+  const awardDailyBonus = useCallback((taskId: string) => {
+    const today = todayStr()
+    let awarded = false
+    setProgress(p => {
+      const cur = p.learned[taskId]
+      if (!cur || cur.bonusDay === today) return p
+      awarded = true
+      return {
+        ...p,
+        points: p.points + 10,
+        learned: { ...p.learned, [taskId]: { ...cur, bonusDay: today } },
+      }
+    })
+    return awarded
+  }, [])
+
   const doReset = useCallback(() => {
     const np = defaultProgress()
     resetProgress(activeId)
@@ -251,8 +283,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(() => ({
     progress, profiles, profile, switchProfile, updateProfile,
     recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone,
+    markLearned, awardDailyBonus,
   }), [progress, profiles, profile, switchProfile, updateProfile,
-       recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone])
+       recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone,
+       markLearned, awardDailyBonus])
 
   return (
     <C.Provider value={value}>

@@ -125,6 +125,18 @@ export default function Settings() {
 
         <div className="field">
           <div>
+            <div className="k">纸质伴写</div>
+            <div className="d">听写时提示「写在听写本第 N 行」，完成后可拍照发给家长</div>
+          </div>
+          <button
+            className={'switch' + (s.syncPaper !== false ? ' on' : '')}
+            onClick={() => updateSettings({ syncPaper: s.syncPaper === false })}
+            aria-label="纸质伴写开关"
+          ><i /></button>
+        </div>
+
+        <div className="field">
+          <div>
             <div className="k">音质</div>
             <div className="d">当前 96kbps 高保真（无杂音）</div>
           </div>

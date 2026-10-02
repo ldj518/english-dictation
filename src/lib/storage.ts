@@ -80,7 +80,8 @@ export const defaultProgress = (): Progress => ({
   history: [],
   minutes: {},
   planDone: 0,
-  settings: { rate: 1, repeat: 2, gap: 4, voiceMode: 'normal', shuffle: true, shuffleMode: 'daily', kbBuiltIn: true },
+  learned: {},
+  settings: { rate: 1, repeat: 2, gap: 4, voiceMode: 'normal', shuffle: true, shuffleMode: 'daily', kbBuiltIn: true, syncPaper: true },
 })
 
 export function load(profileId = activeProfileId()): Progress {

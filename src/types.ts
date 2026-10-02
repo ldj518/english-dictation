@@ -118,6 +118,8 @@ export interface Progress {
   minutes: Record<string, number>
   /** 每日计划已完成到第几天（动态任务 /d/plan 用） */
   planDone: number
+  /** 学习环节记账（v2.7）：trackId -> 最近一次学习时间/次数/奖励日 */
+  learned: Record<string, { at: number; count: number; bonusDay?: string }>
   /** 设置 */
   settings: {
     rate: number
@@ -130,5 +132,7 @@ export interface Progress {
     shuffleMode?: 'daily' | 'weekly' | 'manual'
     /** 内置 26 键字母键盘（杜绝输入法联想作弊）；false 时用系统键盘 */
     kbBuiltIn: boolean
+    /** 纸质伴写（v2.7）：听写时屏幕显示「第 N 题·写在听写本第 N 行」 */
+    syncPaper: boolean
   }
 }

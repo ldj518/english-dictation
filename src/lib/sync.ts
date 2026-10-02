@@ -92,6 +92,18 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     .sort((x, y) => y.at - x.at)
     .slice(0, 200)
 
+  // 学习环节（v2.7）：次数取多、时间取新、奖励日取非空（同天奖励两边都记了值相同）
+  const learned: Progress['learned'] = { ...b.learned }
+  for (const [k, v] of Object.entries(a.learned || {})) {
+    const r = learned[k]
+    if (!r) { learned[k] = v; continue }
+    learned[k] = {
+      count: max(r.count || 0, v.count || 0),
+      at: Math.max(r.at || 0, v.at || 0),
+      bonusDay: v.bonusDay || r.bonusDay,
+    }
+  }
+
   // streakDays/lastDay 跟连续天数大的一方走
   const streakLocal = a.streakDays || 0
   const streakRemote = b.streakDays || 0
@@ -109,6 +121,7 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     history,
     minutes,
     planDone: max(a.planDone, b.planDone),
+    learned,
     settings: { ...a.settings },
   }
 }

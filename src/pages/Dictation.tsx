@@ -3,10 +3,10 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
 import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems, wordFileMap, playWordText } from '../lib/data'
-import { playWord, stopAll, prefetchAhead, pauseAll, resolveRate } from '../lib/player'
+import { playWord, stopAll, prefetchAhead, pauseAll, resolveRate, unlockAudio } from '../lib/player'
 import { seededShuffle, makeSeed, newSalt, orderSalt, orderEpoch } from '../lib/shuffle'
 import { weekStartStr } from '../lib/storage'
-import { currentSalt, currentShuffleMode, fetchShuffleSalt, createShare } from '../lib/api'
+import { currentSalt, currentShuffleMode, fetchShuffleSalt, createShare, uploadPhoto, paperFileUrl } from '../lib/api'
 import { sharePoster } from '../lib/poster'
 import PinGate from '../components/PinGate'
 import AudioGate from '../components/AudioGate'
@@ -25,6 +25,25 @@ function fmtSec(s: number): string {
   const m = Math.floor(s / 60)
   const ss = s % 60
   return m ? `${m}分${ss}秒` : `${ss}秒`
+}
+
+/** 拍照压缩：最长边 1280 / jpeg 0.8（手机原图动辄 4-8MB，直接传容易被 5MB 上限拒） */
+async function compressImage(file: File): Promise<File> {
+  try {
+    const img = await createImageBitmap(file)
+    const max = 1280
+    const scale = Math.min(1, max / Math.max(img.width, img.height))
+    if (scale >= 1 && file.size < 2 * 1024 * 1024) return file
+    const w = Math.round(img.width * scale)
+    const h = Math.round(img.height * scale)
+    const cv = document.createElement('canvas')
+    cv.width = w
+    cv.height = h
+    cv.getContext('2d')!.drawImage(img, 0, 0, w, h)
+    const blob = await new Promise<Blob | null>(r => cv.toBlob(r, 'image/jpeg', 0.8))
+    if (!blob) return file
+    return new File([blob], 'photo.jpg', { type: 'image/jpeg' })
+  } catch { return file }
 }
 
 export default function Dictation() {
@@ -65,6 +84,10 @@ export default function Dictation() {
   const [ready, setReady] = useState(false)
   // 音频开始门：微信会拦截无手势的自动播放，第一题必须由「点我开始」触发
   const [started, setStarted] = useState(false)
+  // 预备页（v2.7）：learn 页学完回来会带 skip-prep 标记；错词加练卷不设预备页
+  const [prepSkipped] = useState(() => {
+    try { return sessionStorage.getItem('skip-prep-' + id) === '1' } catch { return false }
+  })
 
   /** 点开始：解锁音频通道 + 计时从这一刻起算（门上等待的时间不算用时） */
   const start = () => {
@@ -297,6 +320,49 @@ export default function Dictation() {
     window.scrollTo({ top: 0 })
   }
 
+  // ── 预备页（v2.7）：先学一遍（可跳过）或直接听写，两个按钮平级、无诱导 ──
+  // 「先学一遍」去 /learn/:id（学完回来带 skip-prep 标记）；「直接听写」本身就是手势，
+  // 在这里解锁音频通道，不再多显示一次「点我开始」。
+  if (!started && !result && !prepSkipped && !isCustom) {
+    const wrongHits = items.filter(i => progress.wrong[i.word]).length
+    const learnedToday = (() => {
+      const l = progress.learned[id]
+      return l && todayStr(new Date(l.at)) === todayStr()
+    })()
+    return (
+      <Shell title={track.label || `第 ${track.order} 天`} back noNav>
+        <div className="card pad center" style={{ maxWidth: 440, margin: '24px auto' }}>
+          <div style={{ fontSize: 40 }}>📝</div>
+          <div style={{ fontWeight: 800, fontSize: 18, marginTop: 8 }}>
+            {items.length ? `今天要听写 ${items.length} 个词` : '词单准备中…'}
+          </div>
+          <div className="sub small" style={{ marginTop: 6, lineHeight: 1.8 }}>
+            {wrongHits > 0
+              ? <>其中有 <b style={{ color: 'var(--bad)' }}>{wrongHits}</b> 个词你之前错过，建议先学一遍</>
+              : '第一次见这些词？先花两分钟过一遍，听写时更有底。'}
+            {learnedToday && <div style={{ marginTop: 4, color: 'var(--ok)' }}>✓ 今天已经学过一遍了</div>}
+          </div>
+          <div className="row" style={{ gap: 10, marginTop: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              className="btn"
+              style={{ background: 'var(--blue)', minWidth: 170, minHeight: 50 }}
+              onClick={() => nav('/learn/' + track.id)}
+            >📖 先学一遍</button>
+            <button
+              className={'btn' + (learnedToday ? '' : ' ghost')}
+              style={learnedToday ? { background: 'var(--ok)', minWidth: 170, minHeight: 50, color: '#fff' } : { minWidth: 170, minHeight: 50 }}
+              onClick={() => { unlockAudio(); start() }}
+            >▶ 我已熟悉，直接听写</button>
+          </div>
+          <div className="sub small" style={{ marginTop: 12 }}>
+            预习是可选的——已经掌握的孩子直接听写就行。
+            建议手边放好听写本，边听边把词写在纸上。
+          </div>
+        </div>
+      </Shell>
+    )
+  }
+
   // ── 音频开始门：微信内置浏览器会拦截无手势的自动播放（表现为「没声音」），
   //    第一题必须在真实点按之后才开始读 ──
   if (!started && !result) {
@@ -344,7 +410,16 @@ export default function Dictation() {
       </div>
 
       <div className="playbox">
-        <div style={{ fontSize: 13, color: 'var(--sub)' }}>第 {cur.no} 题 · 听音频写单词</div>
+        {progress.settings.syncPaper !== false ? (
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.1 }}>第 {cur.no} 题</div>
+            <div style={{ fontSize: 12, color: 'var(--sub)', marginTop: 2 }}>
+              边听边写：把这个单词写在听写本第 {cur.no} 行，再输入到这里
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontSize: 13, color: 'var(--sub)' }}>第 {cur.no} 题 · 听音频写单词</div>
+        )}
         <button
           className={'bigplay' + (playing ? ' playing' : '')}
           onClick={() => replay(false)}
@@ -440,12 +515,46 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
   onRetrain: () => void
 }) {
   const nav = useNavigate()
+  const { progress, awardDailyBonus } = useStore()
   const wrongs = answers.filter(a => !a.correct)
   const [shareHint, setShareHint] = useState('')
+  // 纸质伴写照片（v2.7）：拍听写本 → 传 R2 → 分享链接里带给孩子家长的「手写痕迹」
+  const [photos, setPhotos] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [uploadMsg, setUploadMsg] = useState('')
+  const [bonusMsg, setBonusMsg] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
   const emoji = result.score === 100 ? '🏆' : result.score >= 90 ? '🎉' : result.score >= 70 ? '👍' : result.score >= 50 ? '💪' : '📖'
   const word = result.score === 100 ? '完美通关！' : result.score >= 90 ? '太棒了！' : result.score >= 70 ? '不错，继续加油' : result.score >= 50 ? '还差一点' : '多练几遍就熟了'
 
-  /** 生成只读分享链接（微信里直接发链接，点开看对错，不用截图） */
+  /** 选了照片：逐张压缩上传到 R2（papers/{sid}/{dayKey}/），成功后判「三格全齐」加分 */
+  const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (!files.length || !track) return
+    setUploading(true)
+    setUploadMsg(`上传中…（0/${files.length}）`)
+    const keys: string[] = []
+    for (let i = 0; i < files.length && i < 3; i++) {
+      const small = await compressImage(files[i])
+      const k = await uploadPhoto(small, profile.id)
+      if (k) keys.push(k)
+      setUploadMsg(`上传中…（${i + 1}/${files.length}）`)
+    }
+    setUploading(false)
+    if (keys.length) {
+      setPhotos(p => [...p, ...keys])
+      setUploadMsg(`已附上 ${keys.length} 张手写照片，分享链接里家长能看到`)
+      // 三格奖励：今天这个任务预习过 + 已听写（进到本页即已提交）+ 有照片 → +10
+      if (awardDailyBonus(track.id)) {
+        setBonusMsg('🎉 预习 + 听写 + 手写照片三格全齐，积分 +10')
+      }
+    } else {
+      setUploadMsg('上传没成功（网络不通？），可以稍后再拍——不影响成绩')
+    }
+  }
+
+  /** 生成只读分享链接（微信里直接发链接，点开看对错 + 手写照片，不用截图） */
   const makeShare = async () => {
     setShareHint('生成中…')
     const url = await createShare({
@@ -459,7 +568,7 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
       total: result.total,
       right: result.right,
       wrongs: wrongs.map(w => ({ word: w.word, cn: w.cn })),
-      photoKeys: [],
+      photoKeys: photos,
       attemptNo: result.attemptNo,
     })
     if (!url) { setShareHint('生成失败：网络不通，可改用「生成成绩海报」'); return }
@@ -493,6 +602,41 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
           </div>
         </div>
       </div>
+
+      {/* 纸质伴写（v2.7）：拍听写本给家长看「手写痕迹」，分享链接里带原图 */}
+      {progress.settings.syncPaper !== false && track && (
+        <div className="card pad">
+          <div style={{ fontWeight: 800, marginBottom: 4 }}>📸 拍一下你的听写本</div>
+          <div className="sub small" style={{ lineHeight: 1.7 }}>
+            把今天写在听写本上的这几行拍给我，和成绩一起发给家长——
+            屏幕的分数说明水平，纸上的字迹说明过程。
+          </div>
+          {photos.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+              {photos.map(k => (
+                <img key={k} src={paperFileUrl(k)} alt="手写照片"
+                  style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 8 }} />
+              ))}
+            </div>
+          )}
+          {uploadMsg && <div className="sub small" style={{ marginTop: 8, color: 'var(--ok)' }}>{uploadMsg}</div>}
+          {bonusMsg && (
+            <div style={{ marginTop: 8, fontSize: 13, fontWeight: 700, color: 'var(--ok)' }}>{bonusMsg}</div>
+          )}
+          <input
+            ref={fileRef} type="file" accept="image/*" capture="environment" multiple
+            style={{ display: 'none' }} onChange={e => void onPick(e)}
+          />
+          <div className="row" style={{ gap: 10, marginTop: 12 }}>
+            <button className="btn ghost" disabled={uploading} onClick={() => fileRef.current?.click()}>
+              {photos.length ? '📷 再拍一张' : '📷 选照片 / 拍照'}
+            </button>
+            {photos.length > 0 && (
+              <button className="btn" style={{ background: '#07c160' }} onClick={makeShare}>🔗 生成分享链接（带照片）</button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 巩固闭环：翻译关 + 跟读 + 错词加练（自定义错词卷没有对应任务，隐藏这两个入口） */}
       <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>

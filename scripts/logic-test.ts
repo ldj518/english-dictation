@@ -228,17 +228,26 @@ log.push('【翻译关选项】')
     { word: 'fish', cn: '鱼' },
   ]
   const o1 = buildCnOptions(items, 'apple', 'seed-a')
-  t('返回 4 个选项', o1.length === 4)
+  t('返回 6 个选项（1 正确 + 5 干扰，v3.3）', o1.length === 6)
   t('有且仅有 1 个正确项', o1.filter(o => o.correct).length === 1)
   t('正确项是目标词释义', o1.find(o => o.correct)?.cn === '苹果')
-  t('无重复释义', new Set(o1.map(o => o.cn)).size === 4)
+  t('无重复释义', new Set(o1.map(o => o.cn)).size === 6)
   t('同种子可复现', JSON.stringify(o1) === JSON.stringify(buildCnOptions(items, 'apple', 'seed-a')))
-  t('不同种子顺序可不同', JSON.stringify(o1) !== JSON.stringify(buildCnOptions(items, 'apple', 'seed-b')) || o1.length === 4)
+  t('不同种子顺序可不同', JSON.stringify(o1) !== JSON.stringify(buildCnOptions(items, 'apple', 'seed-b')) || o1.length === 6)
 
-  // 词卷太小（只有 2 个词）时不崩、不掺重复
+  // 词卷太小（只有 2 个词）时不崩、不掺重复；带全册兜底池时干扰项补足
   const tiny = [{ word: 'hot', cn: '热' }, { word: 'cold', cn: '冷' }]
   const o2 = buildCnOptions(tiny, 'hot', 's')
   t('小词卷降级到 2 选项', o2.length === 2 && new Set(o2.map(o => o.cn)).size === 2)
+  const pool = [
+    { word: 'warm', cn: '温暖的' }, { word: 'cool', cn: '凉爽的' },
+    { word: 'big', cn: '大的' }, { word: 'small', cn: '小的' },
+    { word: 'tall', cn: '高的' }, { word: 'short', cn: '矮的' },
+    { word: 'dup', cn: '冷' },
+  ]
+  const o3 = buildCnOptions(tiny, 'hot', 's', pool)
+  t('全册兜底补足到 6 选项', o3.length === 6)
+  t('兜底不掺重复释义（含与卷内冲突的）', new Set(o3.map(o => o.cn)).size === 6)
 
   // 目标词无释义时不崩
   const bad = [{ word: 'x', cn: '' }, { word: 'y', cn: '有释义' }]

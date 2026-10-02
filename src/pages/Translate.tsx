@@ -4,10 +4,11 @@ import Shell from '../components/Shell'
 import { useStore, judge } from '../lib/store'
 import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems, wordFileMap } from '../lib/data'
 import { playWord, pauseAll, resolveRate } from '../lib/player'
-import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
-import { todayStr, weekStartStr } from '../lib/storage'
-import { currentSalt, currentShuffleMode, fetchShuffleSalt, createShare } from '../lib/api'
+import { seededShuffle, makeSeed } from '../lib/shuffle'
+import { todayStr } from '../lib/storage'
+import { createShare } from '../lib/api'
 import { buildCnOptions } from '../lib/translate'
+import { WORD_MAP } from '../lib/data'
 import AudioGate from '../components/AudioGate'
 import LetterKeyboard from '../components/LetterKeyboard'
 import type { AnswerRecord, AudioItem, Track } from '../types'
@@ -52,43 +53,44 @@ export default function Translate() {
   const inputRef = useRef<HTMLInputElement>(null)
   // 音频开始门：微信拦截无手势自动播放，第一题必须点「开始」后才能读
   const [started, setStarted] = useState(false)
+  // v3.3：会话级随机种子——每次进入翻译关题目与选项顺序全变（防背位置），
+  // 单次会话内稳定（切方向/回上一题不乱跳）。翻译关无纸质对应物，不走全局盐体系
+  const [sessionSeed] = useState(() => Math.random().toString(36).slice(2, 10))
+  // 全册词库兜底池：小卷干扰项不足 5 个时从这补
+  const extraPool = useMemo(
+    () => Object.values(WORD_MAP).map(w => ({ word: w.word, cn: w.cn })),
+    [],
+  )
   const start = () => {
     setStarted(true)
     startedAt.current = Date.now()
   }
 
-  // 加载词单（与听写卷同源词库），按时间成分+盐+方向种子洗牌
+  // 加载词单（与听写卷同源词库），按会话种子洗牌
   useEffect(() => {
     if (!track) return
     let cancel = false
-    fetchShuffleSalt().finally(() => {
+    Promise.all([loadAudioIndex(), wordFileMap()]).then(([idxMap, fmap]) => {
       if (cancel) return
-      Promise.all([loadAudioIndex(), wordFileMap()]).then(([idxMap, fmap]) => {
-        if (cancel) return
-        const fromAudio = idxMap[track.id]
-        let list: AudioItem[]
-        if (fromAudio && fromAudio.length) {
-          list = fromAudio.map((a, i) => ({
-            no: a.no ?? i + 1,
-            word: a.word,
-            cn: a.cn || track.items[i]?.[2] || '',
-            file: a.file,
-          }))
-        } else {
-          // 动态任务（每日计划/智能混合卷）：任务自带词单 + 全词库音频映射
-          list = tuplesToItems(track.items).map(it => ({
-            ...it, file: fmap.get(it.word) || null,
-          }))
-        }
-        if (list.length > 1) {
-          const mode = currentShuffleMode()
-          const epoch = orderEpoch(mode, todayStr(), weekStartStr())
-          const s = orderSalt(mode, weekStartStr(), currentSalt())
-          const extra = s ? `${s}|${dir}` : dir
-          list = seededShuffle(list, makeSeed(epoch, profile.id, track.id + '-t', extra))
-        }
-        setItems(list)
-      })
+      const fromAudio = idxMap[track.id]
+      let list: AudioItem[]
+      if (fromAudio && fromAudio.length) {
+        list = fromAudio.map((a, i) => ({
+          no: a.no ?? i + 1,
+          word: a.word,
+          cn: a.cn || track.items[i]?.[2] || '',
+          file: a.file,
+        }))
+      } else {
+        // 动态任务（每日计划/智能混合卷）：任务自带词单 + 全词库音频映射
+        list = tuplesToItems(track.items).map(it => ({
+          ...it, file: fmap.get(it.word) || null,
+        }))
+      }
+      if (list.length > 1) {
+        list = seededShuffle(list, makeSeed(sessionSeed, profile.id, track.id + '-t', dir))
+      }
+      setItems(list)
     })
     return () => { cancel = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,9 +119,9 @@ export default function Translate() {
 
   const opts = useMemo(
     () => (dir === 'e2c' && cur && track
-      ? buildCnOptions(items, cur.word, `${todayStr()}|${profile.id}|${track.id}-t|${dir}|${cur.no}`)
+      ? buildCnOptions(items, cur.word, `${sessionSeed}|${profile.id}|${track.id}-t|${dir}|${cur.no}`, extraPool)
       : []),
-    [dir, cur, items, profile.id, track]
+    [dir, cur, items, profile.id, track, sessionSeed, extraPool]
   )
 
   if (!track) {

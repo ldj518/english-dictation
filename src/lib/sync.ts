@@ -118,6 +118,19 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     reviewDone[k] = Math.min(reviewDone[k] ?? Infinity, v)
   }
 
+  // 每日计划账本（v3.3）：并集，同一天取更早的完成日期（首次完成语义）
+  const planLog: NonNullable<Progress['planLog']> = { ...(a.planLog || {}) }
+  for (const [k, v] of Object.entries(b.planLog || {})) {
+    const key = Number(k)
+    planLog[key] = planLog[key] && planLog[key] < v ? planLog[key] : v
+  }
+
+  // 完美一天奖励（v3.3）：并集（true 即发过）
+  const trioDone: NonNullable<Progress['trioDone']> = { ...(a.trioDone || {}) }
+  for (const [k, v] of Object.entries(b.trioDone || {})) {
+    trioDone[k] = trioDone[k] || v
+  }
+
   // streakDays/lastDay 跟连续天数大的一方走
   const streakLocal = a.streakDays || 0
   const streakRemote = b.streakDays || 0
@@ -138,6 +151,8 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     learned,
     review,
     reviewDone,
+    planLog,
+    trioDone,
     settings: { ...a.settings },
   }
 }

@@ -26,14 +26,18 @@ import Listen from './pages/Listen'
 import Spell from './pages/Spell'
 import Mastery from './pages/Mastery'
 import Forms from './pages/Forms'
+import Days from './pages/Days'
 import AudioFailToast from './components/AudioFailToast'
+import ProfileGate from './components/ProfileGate'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <StoreProvider>
-      <BrowserRouter basename="/">
+      <ProfileGate>
+        <BrowserRouter basename="/">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/days" element={<Days />} />
           <Route path="/d/:id" element={<Dictation />} />
           <Route path="/learn/:id" element={<Learn />} />
           <Route path="/listen/:id" element={<Listen />} />
@@ -58,7 +62,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <AudioFailToast />
-      </BrowserRouter>
+        </BrowserRouter>
+      </ProfileGate>
     </StoreProvider>
   </React.StrictMode>
 )

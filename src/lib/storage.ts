@@ -83,6 +83,8 @@ export const defaultProgress = (): Progress => ({
   learned: {},
   review: {},
   reviewDone: {},
+  planLog: {},
+  trioDone: {},
   settings: { rate: 1, repeat: 2, gap: 4, voiceMode: 'normal', shuffle: true, shuffleMode: 'daily', kbBuiltIn: true, syncPaper: true },
 })
 
@@ -105,6 +107,17 @@ export function save(p: Progress, profileId = activeProfileId()) {
 
 export function reset(profileId = activeProfileId()) {
   localStorage.removeItem(progressKey(profileId))
+}
+
+/* ── 设备主人标记（v3.3）：这台设备「今天谁学」选的人 ── */
+const OWNER_KEY = 'eng-dict-device-owner'
+
+export function deviceOwner(): string | null {
+  try { return localStorage.getItem(OWNER_KEY) } catch { return null }
+}
+
+export function setDeviceOwner(id: string) {
+  try { localStorage.setItem(OWNER_KEY, id) } catch { /* ignore */ }
 }
 
 export function todayStr(d = new Date()): string {

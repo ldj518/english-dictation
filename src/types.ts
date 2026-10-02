@@ -124,6 +124,10 @@ export interface Progress {
   review: Record<string, { stage: number; dueAt: number; addedAt: number }>
   /** 已毕业词（v3.2）：word -> 毕业时间。防止毕业词在日常听写答对后被重新入队，队列永不收敛 */
   reviewDone?: Record<string, number>
+  /** 每日计划账本（v3.3）：dayNo -> 首次完成日期。算断档/引导态用 */
+  planLog?: Record<number, string>
+  /** 完美一天奖励（v3.3）：日期 -> 已发放。听写+复习清零+翻译关全齐 +30 分，每天一次 */
+  trioDone?: Record<string, boolean>
   /** 设置 */
   settings: {
     rate: number

@@ -3,9 +3,10 @@ import type { Progress, SessionResult, AnswerRecord, Track, Profile } from '../t
 import {
   load, save, defaultProgress, addWrong, advanceWrong, checkIn, judge, todayStr,
   loadProfiles, saveProfiles, activeProfileId, setActiveProfileId, reset as resetProgress,
+  setDeviceOwner,
 } from './storage'
 import { settle, addMinutes, type AwardCtx } from './gamify'
-import { enqueueReview, advanceReview, resetReview, reopenReview } from './reviewQueue'
+import { enqueueReview, advanceReview, resetReview, reopenReview, dueReviews } from './reviewQueue'
 import { reportSession, syncStudent, checkBackend, fetchShuffleSalt, pushProgressSnapshot, fetchParentRules } from './api'
 import type { ParentRules } from './api'
 import { syncProfiles, pullAndMerge } from './sync'
@@ -151,6 +152,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const switchProfile = useCallback((id: string) => {
     setActiveProfileId(id)
     setActiveId(id)
+    // v3.3：任何入口切人都同步设备主人标记（启动选人页据此决定是否再问一次）
+    setDeviceOwner(id)
   }, [])
 
   const updateProfile = useCallback((id: string, patch: Partial<Profile>) => {
@@ -240,6 +243,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           }
         }
       }
+      // 完美一天（v3.3）：今天做过练习 + 复习队列清零 + 今天做过翻译关 → +30 分，每天最多一次
+      const t0 = todayStr()
+      if (!np.trioDone?.[t0]) {
+        const th = np.history.filter(h => todayStr(new Date(h.at)) === t0)
+        const didDict = th.some(h => !h.trackId.endsWith('-t'))
+        const didTrans = th.some(h => h.trackId.endsWith('-t'))
+        const reviewClear = dueReviews(np).length === 0
+        if (didDict && didTrans && reviewClear) {
+          np.points += 30
+          np.trioDone = { ...(np.trioDone || {}), [t0]: true }
+        }
+      }
       const ctx: AwardCtx = {
         perfect: score === 100 && total > 0,
         maxStreak: b.maxStreak,
@@ -294,9 +309,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setProgress(p => ({ ...p, points: Math.max(0, p.points + n) }))
   }, [])
 
-  /** 每日计划完成记账：planDone 只进不退（重做旧的一遍不回退天数） */
+  /** 每日计划完成记账：planDone 只进不退（重做旧的一遍不回退天数）；v3.3 起记完成日期账本 */
   const markPlanDone = useCallback((day: number) => {
-    setProgress(p => ({ ...p, planDone: Math.max(p.planDone || 0, day) }))
+    setProgress(p => ({
+      ...p,
+      planDone: Math.max(p.planDone || 0, day),
+      planLog: { ...(p.planLog || {}), [day]: p.planLog?.[day] || todayStr() },
+    }))
   }, [])
 
   /** 学习环节记账（v2.7）：时间戳 + 次数，时长折算进当天学习分钟数 */

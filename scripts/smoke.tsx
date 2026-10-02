@@ -27,6 +27,7 @@ import ListenPage from '../src/pages/Listen'
 import SpellPage from '../src/pages/Spell'
 import MasteryPage from '../src/pages/Mastery'
 import FormsPage from '../src/pages/Forms'
+import DaysPage from '../src/pages/Days'
 
 type Case = [string, string, React.ComponentType]
 
@@ -39,6 +40,7 @@ const CASES: Case[] = [
   ['家长看板', '/parent', ParentPage],
   ['掌握地图', '/map', MasteryPage],
   ['词形变换', '/forms/all', FormsPage],
+  ['选日子', '/days', DaysPage],
   ['训练场', '/train', TrainPage],
   ['游戏中心', '/games', GamesPage],
   ['连连看', '/games/match', MatchPage],

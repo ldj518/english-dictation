@@ -32,6 +32,24 @@ export default function Home() {
   const wrongCount = Object.keys(progress.wrong).length
   const acc = progress.totalAnswers ? Math.round((progress.totalRight / progress.totalAnswers) * 100) : 0
 
+  // 断档天数（v3.3）：lastDay 距今天几天。0=今天学过 1=昨天学的 2+=断档
+  const gapDays = useMemo(() => {
+    if (!progress.lastDay) return 0
+    const [y1, m1, d1] = progress.lastDay.split('-').map(Number)
+    const [y2, m2, d2] = todayStr().split('-').map(Number)
+    return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86400000)
+  }, [progress.lastDay])
+
+  // 今日三件事（v3.3）：听写练习 / 到期复习清零 / 翻译关，从记录现算不新增存储
+  const trio = useMemo(() => {
+    const t = todayStr()
+    const th = progress.history.filter(h => todayStr(new Date(h.at)) === t)
+    const didDict = th.some(h => !h.trackId.endsWith('-t'))
+    const didTrans = th.some(h => h.trackId.endsWith('-t'))
+    const reviewClear = dueReviews(progress).length === 0
+    return { didDict, reviewClear, didTrans, got: !!progress.trioDone?.[t], n: [didDict, reviewClear, didTrans].filter(Boolean).length }
+  }, [progress])
+
   // 每日计划（家长自定义：每天 N 个新词，总天数自动算）
   const [plan, setPlan] = useState<{ day: number; total: number; bookName: string; count: number } | null>(null)
   useEffect(() => {
@@ -102,43 +120,89 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 每日计划：家长定的每天 N 词，做完自动进入下一天 */}
-      {plan && (
-        <div className="card pad" style={{ marginBottom: 14, borderColor: '#b2c7f5', background: 'linear-gradient(180deg,#f3f7ff,#fff)' }}>
-          <div className="between" style={{ marginBottom: 12 }}>
-            <div>
-              <div className="sub">每日计划 · {plan.bookName}</div>
-              <div style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>
-                第 {plan.day} / {plan.total} 天
-                <span className="sub" style={{ fontWeight: 400, marginLeft: 8, fontSize: 13 }}>
-                  每天 {plan.count} 个新词
-                </span>
-              </div>
+      {/* 今日三件事（v3.3）：集齐 = 完美一天 +30 分（submitSession 自动发） */}
+      <div className="card pad" style={{ marginBottom: 14 }}>
+        <div className="between" style={{ marginBottom: 10 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>✅ 今日三件事</div>
+            <div className="sub small" style={{ marginTop: 3 }}>
+              {trio.n === 3 ? (trio.got ? '完美一天！+30 分已到账' : '完美一天！+30 分马上到账') : `集齐三件 = 完美一天 +30 分（已齐 ${trio.n}/3）`}
             </div>
-            <div style={{ fontSize: 30 }}>📅</div>
           </div>
-          <button className="btn" style={{ background: 'var(--blue)' }} onClick={() => nav('/d/plan')}>
-            ▶ 今日听写
-          </button>
-          <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-            <Link className="btn ghost sm" to="/print/plan" style={{ flex: '1 1 40%', textAlign: 'center' }}>
-              🖨️ 打今日卷
-            </Link>
-            <Link className="btn ghost sm" to="/translate/plan" style={{ flex: '1 1 40%', textAlign: 'center' }}>
-              🔤 翻译巩固
-            </Link>
-            <Link className="btn ghost sm" to="/spell/plan" style={{ flex: '1 1 40%', textAlign: 'center' }}>
-              ✏️ 首字母填空
-            </Link>
-            <Link className="btn ghost sm" to="/forms/all" style={{ flex: '1 1 40%', textAlign: 'center' }}>
-              📝 词形变换
-            </Link>
-            <Link className="btn ghost sm" to="/listen/plan" style={{ flex: '1 1 40%', textAlign: 'center' }}>
-              📄 纸听一遍
-            </Link>
-          </div>
+          <TrioRing n={trio.n} />
         </div>
-      )}
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <button className={'btn sm' + (trio.didDict ? ' ok-dim' : '')} style={{ flex: '1 1 30%', background: trio.didDict ? 'var(--ok-soft)' : undefined }}
+            onClick={() => nav('/d/plan')}>
+            {trio.didDict ? '✓' : '①'} 听写练习
+          </button>
+          <button className={'btn sm' + (trio.reviewClear ? ' ok-dim' : '')} style={{ flex: '1 1 30%', background: trio.reviewClear ? 'var(--ok-soft)' : undefined }}
+            onClick={() => nav('/d/review')}>
+            {trio.reviewClear ? '✓' : '②'} 到期复习
+          </button>
+          <button className={'btn sm' + (trio.didTrans ? ' ok-dim' : '')} style={{ flex: '1 1 30%', background: trio.didTrans ? 'var(--ok-soft)' : undefined }}
+            onClick={() => nav('/translate/plan')}>
+            {trio.didTrans ? '✓' : '③'} 翻译关
+          </button>
+        </div>
+      </div>
+
+      {/* 每日计划：三态引导（v3.3）——正常 / 断 1 天橙 / 断 2 天+ 红 */}
+      {plan && (() => {
+        const miss = gapDays - 1
+        const missed = miss >= 1 && progress.lastDay !== undefined && progress.lastDay !== ''
+        const serious = miss >= 2
+        const borderColor = serious ? '#f09595' : missed ? '#fac775' : '#b2c7f5'
+        const bg = serious ? 'linear-gradient(180deg,#fdf3f2,#fff)' : missed ? 'linear-gradient(180deg,#fffaf0,#fff)' : 'linear-gradient(180deg,#f3f7ff,#fff)'
+        return (
+          <div className="card pad" style={{ marginBottom: 14, borderColor, background: bg }}>
+            <div className="between" style={{ marginBottom: 12 }}>
+              <div>
+                <div className="sub">每日计划 · {plan.bookName}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, marginTop: 2 }}>
+                  {serious
+                    ? <>停了 {miss} 天，词汇在往回漏</>
+                    : missed
+                      ? <>昨天没练，计划还在等你</>
+                      : <>第 {plan.day} / {plan.total} 天</>}
+                  <span className="sub" style={{ fontWeight: 400, marginLeft: 8, fontSize: 13 }}>
+                    {missed ? `从第 ${plan.day} 天继续` : `每天 ${plan.count} 个新词`}
+                  </span>
+                </div>
+                {serious && (
+                  <div className="sub small" style={{ marginTop: 3, lineHeight: 1.6 }}>
+                    漏掉的词复习队列会自动安排回炉。不用内疚，今天从第 {plan.day} 天接着走就行。
+                  </div>
+                )}
+              </div>
+              <div style={{ fontSize: 30 }}>{serious ? '📢' : missed ? '⏰' : '📅'}</div>
+            </div>
+            <button className="btn" style={{ background: serious ? '#a32d2d' : 'var(--blue)' }} onClick={() => nav('/d/plan')}>
+              {serious ? '⚡ 补上 · 第' : missed ? '▶ 继续 · 第' : '▶ 今日听写 · 第'} {plan.day} 天
+            </button>
+            <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+              <Link className="btn ghost sm" to="/print/plan" style={{ flex: '1 1 30%', textAlign: 'center' }}>
+                🖨️ 打今日卷
+              </Link>
+              <Link className="btn ghost sm" to="/translate/plan" style={{ flex: '1 1 30%', textAlign: 'center' }}>
+                🔤 翻译巩固
+              </Link>
+              <Link className="btn ghost sm" to="/spell/plan" style={{ flex: '1 1 30%', textAlign: 'center' }}>
+                ✏️ 首字母填空
+              </Link>
+              <Link className="btn ghost sm" to="/forms/all" style={{ flex: '1 1 30%', textAlign: 'center' }}>
+                📝 词形变换
+              </Link>
+              <Link className="btn ghost sm" to="/listen/plan" style={{ flex: '1 1 30%', textAlign: 'center' }}>
+                📄 纸听一遍
+              </Link>
+              <Link className="btn ghost sm" to="/days" style={{ flex: '1 1 30%', textAlign: 'center' }}>
+                🗓️ 选日子
+              </Link>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* 智能混合卷：只抽学过/错过的词，没学过的绝不出现 */}
       <div className="card pad" style={{ marginBottom: 14, borderColor: '#f0d69a', background: 'linear-gradient(180deg,#fffdf5,#fff)' }}>
@@ -289,6 +353,24 @@ export default function Home() {
         </div>
       </div>
     </Shell>
+  )
+}
+
+/** 三段进度环：n = 已完成件数（0-3） */
+function TrioRing({ n }: { n: number }) {
+  const R = 26
+  const C = 2 * Math.PI * R
+  const seg = C / 3
+  return (
+    <svg width="66" height="66" viewBox="0 0 70 70" role="img" aria-label={`三件事完成 ${n} / 3`}>
+      <circle cx="35" cy="35" r={R} fill="none" stroke="#e8e6df" strokeWidth="7" />
+      {Array.from({ length: n }, (_, i) => (
+        <circle key={i} cx="35" cy="35" r={R} fill="none" stroke="#3b6d11" strokeWidth="7"
+          strokeDasharray={`${seg - 5} ${C - seg + 5}`} strokeDashoffset={-i * seg}
+          transform="rotate(-90 35 35)" strokeLinecap="round" />
+      ))}
+      <text x="35" y="40" textAnchor="middle" fontSize="14" fontWeight="700" fill="#27500a">{n}/3</text>
+    </svg>
   )
 }
 

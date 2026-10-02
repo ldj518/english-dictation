@@ -70,6 +70,9 @@ const PARAM_CASES: [string, React.ComponentType][] = [
   ['/translate/day01', TranslatePage],
   ['/translate/plan', TranslatePage],
   ['/read/day01', ReadPage],
+  ['/read/plan', ReadPage],     // v3.5.1 回归：闯关第 3 关入口，之前不支持 plan 显示「没有这个任务」
+  ['/listen/plan', ListenPage], // 考场「纸听一遍」直达 plan
+  ['/paper/plan', PaperPage],   // 考场「纸质批改」直达 plan，之前同样不支持
   ['/s/sh_test123', SharePage],
 ]
 
@@ -136,6 +139,9 @@ const EXPECTED: Record<string, string> = {
   '/translate/plan': '正在准备今天的词单',
   '/translate/day01': '加载中',
   '/read/day01': '加载中',
+  '/read/plan': '正在准备今天的词单',
+  '/listen/plan': '正在准备今天的词单',
+  '/paper/plan': '正在准备今天的词单',
 }
 
 for (const [path, C] of PARAM_CASES) {

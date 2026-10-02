@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import PinGate from '../components/PinGate'
-import { getTrack, loadAudioIndex, tuplesToItems, DAILY } from '../lib/data'
+import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems, DAILY } from '../lib/data'
 import { useStore } from '../lib/store'
 import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
 import { todayStr, weekStartStr } from '../lib/storage'
@@ -22,7 +22,14 @@ export default function Paper() {
   const { id = '' } = useParams()
   const nav = useNavigate()
   const { submitSession, profile, progress } = useStore()
-  const track = getTrack(id)
+  // plan 是动态合成的（v3.5.1 修复：考场「纸质批改」按钮指向 /paper/plan，之前查不到 →「没有这个任务」）
+  const [track, setTrack] = useState<Track | undefined>(() => getTrack(id))
+  useEffect(() => {
+    if (getTrack(id)) return
+    let cancel = false
+    void getTrackAny(id).then(t => { if (!cancel && t) setTrack(t) })
+    return () => { cancel = true }
+  }, [id])
 
   const [items, setItems] = useState<AudioItem[]>([])
   const [photo, setPhoto] = useState<string>('')
@@ -112,7 +119,16 @@ export default function Paper() {
     })().catch(() => { /* 静默 */ })
   }
 
-  if (!track) return <Shell title="未找到" back><div className="empty"><div className="i">🤔</div><div>没有这个任务</div></div></Shell>
+  if (!track) {
+    return (
+      <Shell title={id === 'plan' ? '准备词单' : '未找到'} back>
+        <div className="empty">
+          <div className="i">{id === 'plan' ? '⏳' : '🤔'}</div>
+          <div>{id === 'plan' ? '正在准备今天的词单…' : '没有这个任务'}</div>
+        </div>
+      </Shell>
+    )
+  }
 
   return (
     <Shell title="纸质卷批改" back sub={`${doneCount}/${items.length}`} noNav>

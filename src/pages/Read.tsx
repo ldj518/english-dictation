@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore } from '../lib/store'
-import { getTrack, loadAudioIndex, tuplesToItems } from '../lib/data'
+import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems } from '../lib/data'
 import { playWord, pauseAll, resolveRate } from '../lib/player'
 import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
 import { todayStr, weekStartStr } from '../lib/storage'
@@ -10,7 +10,7 @@ import { currentSalt, currentShuffleMode, fetchShuffleSalt, uploadRecording, cre
 import AudioGate from '../components/AudioGate'
 import FlowNextBar from '../components/FlowNextBar'
 import { isFlowTaskId } from '../lib/flow'
-import type { AudioItem } from '../types'
+import type { AudioItem, Track } from '../types'
 
 /**
  * 跟读录音：每个单词放标准音 → 孩子自己读一遍录下来 → 可回放对比 → 上传。
@@ -51,7 +51,14 @@ export default function Read() {
   const { id = '' } = useParams()
   const nav = useNavigate()
   const { profile, progress, advanceFlow } = useStore()
-  const track = getTrack(id)
+  // plan/mix 是动态合成的（v3.5.1 修复：闯关第 3 关 /read/plan 之前 getTrack 查不到 →「没有这个任务」）
+  const [track, setTrack] = useState<Track | undefined>(() => getTrack(id))
+  useEffect(() => {
+    if (getTrack(id)) return
+    let cancel = false
+    void getTrackAny(id).then(t => { if (!cancel && t) setTrack(t) })
+    return () => { cancel = true }
+  }, [id])
 
   const [items, setItems] = useState<AudioItem[]>([])
   const [idx, setIdx] = useState(0)
@@ -253,7 +260,16 @@ export default function Read() {
     catch { setShareHint('长按复制下面这段地址发到微信：') }
   }
 
-  if (!track) return <Shell title="未找到" back><div className="empty"><div className="i">🤔</div><div>没有这个任务</div></div></Shell>
+  if (!track) {
+    return (
+      <Shell title={id === 'plan' ? '准备词单' : '未找到'} back noNav>
+        <div className="empty">
+          <div className="i">{id === 'plan' ? '⏳' : '🤔'}</div>
+          <div>{id === 'plan' ? '正在准备今天的词单…' : '没有这个任务'}</div>
+        </div>
+      </Shell>
+    )
+  }
 
   /* ── 完成页 ── */
   if (phase === 'finish') {

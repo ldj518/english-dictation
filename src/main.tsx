@@ -28,6 +28,8 @@ import UnitTest from './pages/UnitTest'
 import Mastery from './pages/Mastery'
 import Forms from './pages/Forms'
 import Days from './pages/Days'
+import Hall from './pages/Hall'
+import Extra from './pages/Extra'
 import AudioFailToast from './components/AudioFailToast'
 import ProfileGate from './components/ProfileGate'
 
@@ -38,6 +40,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <BrowserRouter basename="/">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/hall" element={<Hall />} />
+          <Route path="/extra" element={<Extra />} />
           <Route path="/days" element={<Days />} />
           <Route path="/d/:id" element={<Dictation />} />
           <Route path="/learn/:id" element={<Learn />} />

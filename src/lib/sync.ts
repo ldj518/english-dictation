@@ -139,6 +139,13 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     passed[k] = v.score > cur.score ? v : (v.score === cur.score && v.at < cur.at ? v : cur)
   }
 
+  // 闯关进度（v3.5）：同一天取 step 大者（只进不退）
+  const flow: NonNullable<Progress['flow']> = { ...(a.flow || {}) }
+  for (const [k, v] of Object.entries(b.flow || {})) {
+    const cur = flow[k]
+    flow[k] = !cur || v.step > cur.step ? v : cur
+  }
+
   // streakDays/lastDay 跟连续天数大的一方走
   const streakLocal = a.streakDays || 0
   const streakRemote = b.streakDays || 0
@@ -162,6 +169,7 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     planLog,
     trioDone,
     passed,
+    flow,
     settings: { ...a.settings },
   }
 }

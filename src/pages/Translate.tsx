@@ -11,6 +11,7 @@ import { buildCnOptions } from '../lib/translate'
 import { WORD_MAP } from '../lib/data'
 import AudioGate from '../components/AudioGate'
 import LetterKeyboard from '../components/LetterKeyboard'
+import FlowNextBar from '../components/FlowNextBar'
 import type { AnswerRecord, AudioItem, Track } from '../types'
 
 /**
@@ -27,7 +28,7 @@ import type { AnswerRecord, AudioItem, Track } from '../types'
 export default function Translate() {
   const { id = '' } = useParams()
   const nav = useNavigate()
-  const { recordAnswer, submitSession, profile, progress } = useStore()
+  const { recordAnswer, submitSession, profile, progress, advanceFlow } = useStore()
   /** 内置 26 键键盘（默认开）：杜绝输入法联想把整词弹出来 */
   const kb = progress.settings.kbBuiltIn !== false
   // 静态任务同步可得；plan/mix 异步合成
@@ -174,6 +175,8 @@ export default function Translate() {
     // 独立记一笔：trackId 加 -t 后缀，不覆盖原听写任务成绩
     const t: Track = { ...track, id: track.id + '-t', label: (track.label || track.id) + ' · 翻译关' }
     submitSession(t, recs, sec, 'translate')
+    // 闯关第 2 关（v3.5）：plan 任务做完即记账（幂等，乱序不动账）
+    if (track.id === 'plan') advanceFlow(2)
     setResult({ score, right, total, seconds: sec })
   }
 
@@ -219,6 +222,9 @@ export default function Translate() {
           <button className="btn ghost" onClick={() => location.reload()}>🔁 再练一遍</button>
         </div>
         {shareHint && <div className="tip" style={{ background: '#e7f5ee', color: '#0b7285', wordBreak: 'break-all' }}>{shareHint}</div>}
+
+        {/* 闯关第 2 关（v3.5）：plan 任务完成后引导去下一关；普通任务这里不渲染 */}
+        <FlowNextBar doneStep={2} active={track.id === 'plan'} />
 
         {wrongs.length > 0 ? (
           <div className="card pad">

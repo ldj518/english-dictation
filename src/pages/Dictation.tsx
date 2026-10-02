@@ -11,6 +11,7 @@ import { sharePoster } from '../lib/poster'
 import PinGate from '../components/PinGate'
 import AudioGate from '../components/AudioGate'
 import LetterKeyboard from '../components/LetterKeyboard'
+import FlowNextBar from '../components/FlowNextBar'
 import { todayStr } from '../lib/storage'
 import type { AnswerRecord, AudioItem, Track } from '../types'
 
@@ -49,7 +50,7 @@ async function compressImage(file: File): Promise<File> {
 export default function Dictation() {
   const { id = '' } = useParams()
   const nav = useNavigate()
-  const { progress, recordAnswer, submitSession, updateSettings, profile, markPlanDone } = useStore()
+  const { progress, recordAnswer, submitSession, updateSettings, profile, markPlanDone, advanceFlow } = useStore()
   /** 内置 26 键键盘（默认开）：杜绝输入法联想把整词弹出来 */
   const kb = progress.settings.kbBuiltIn !== false
   // /d/custom：错词本勾选的自定义词单（sessionStorage 传入）
@@ -296,6 +297,10 @@ export default function Dictation() {
     // 每日计划：整卷做完才推进到这一天（中途交卷/跳题不算完成，不跳词）
     if (track.id === 'plan' && recs.length >= track.items.length) {
       markPlanDone(track.order)
+    }
+    // 闯关第 5 关（v3.5）：plan 整卷做完即记通关（幂等；中途交卷不算）
+    if (track.id === 'plan' && recs.length >= track.items.length) {
+      advanceFlow(5)
     }
     setResult({ score, right, total, newly, seconds: sec, attemptNo })
     setPhase('done')
@@ -638,6 +643,9 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
           </div>
         </div>
       </div>
+
+      {/* 闯关第 5 关（v3.5）：通关引导紧贴分数卡；普通任务这里不渲染 */}
+      <FlowNextBar doneStep={5} active={track?.id === 'plan'} />
 
       {/* 纸质伴写（v2.7）：拍听写本给家长看「手写痕迹」，分享链接里带原图 */}
       {progress.settings.syncPaper !== false && track && (

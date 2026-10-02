@@ -9,6 +9,8 @@ import { buildCnOptions } from '../src/lib/translate'
 import { weekStartStr } from '../src/lib/storage'
 import { calcWeekReport } from '../src/lib/weekreport'
 import { mergeProgress } from '../src/lib/sync'
+import { flowAdvance, flowStepOf, flowAllDone, FLOW_STEPS } from '../src/lib/flow'
+import type { Progress } from '../src/types'
 import { resolveRate, SLOW_RATE } from '../src/lib/player'
 
 let pass = 0, fail = 0
@@ -317,6 +319,52 @@ log.push('【过关记录合并】')
   d.passed = { unit01: { at: 9999, score: 60 } }
   const m3 = mergeProgress(m2, d)
   t('低分不覆盖高分', m3.passed?.unit01.score === 92 && m3.passed?.unit01.at === 500)
+}
+
+// ── 五关闯关（v3.5）──
+log.push('【闯关进度】')
+{
+  const DAY = '2026-10-02'
+  t('五关定义齐全（1-5 各一个）', FLOW_STEPS.length === 5 && FLOW_STEPS.map(s => s.step).join(',') === '1,2,3,4,5')
+  t('五关路由都是 plan 任务', FLOW_STEPS.every(s => s.route.endsWith('/plan')))
+  const p0 = defaultProgress()
+  t('初始下一步是第 1 关', flowStepOf(p0, DAY) === 1)
+  t('初始未通关', !flowAllDone(p0, DAY))
+  // 逐关推进
+  let flow: NonNullable<Progress['flow']> = {}
+  let p = p0
+  for (let s = 1; s <= 5; s++) {
+    const next = flowAdvance(flow, s, DAY)
+    if (!next) { t(`推进第 ${s} 关失败`, false); break }
+    flow = next
+    p = { ...p, flow }
+    if (s < 5) t(`过完 ${s} 关 → 下一步第 ${s + 1} 关`, flowStepOf(p, DAY) === s + 1)
+  }
+  t('五关全过 → 下一步 6（已通关）', flowStepOf(p, DAY) === 6)
+  t('五关全过 → flowAllDone', flowAllDone(p, DAY))
+  // 幂等：重复提交第 5 关不动账
+  const replay = flowAdvance(flow, 5, DAY)
+  t('重复提交第 5 关 → null 不动账', replay === null)
+  // 乱序：只过了 1 关就想记第 3 关
+  const flow1: NonNullable<Progress['flow']> = { [DAY]: { step: 1 } }
+  t('乱序提交（cur=1 记第 3 关）→ null', flowAdvance(flow1, 3, DAY) === null)
+  // 跨天互不影响
+  t('昨天关数不影响今天', flowStepOf(p, '2026-10-03') === 1)
+  // 合并：同日取 step 大者
+  const a = defaultProgress()
+  a.flow = { [DAY]: { step: 3 } }
+  const b = defaultProgress()
+  b.flow = { [DAY]: { step: 5 }, '2026-10-01': { step: 5 } }
+  const m = mergeProgress(a, b)
+  t('合并同日取 step 大者 5', m.flow?.[DAY].step === 5)
+  t('另一设备的另一天也并入', m.flow?.['2026-10-01'].step === 5)
+  // 反向：a 更远也取大者
+  const a2 = defaultProgress()
+  a2.flow = { [DAY]: { step: 4 } }
+  const b2 = defaultProgress()
+  b2.flow = { [DAY]: { step: 2 } }
+  const m2 = mergeProgress(a2, b2)
+  t('本地更远也取大者 4', m2.flow?.[DAY].step === 4)
 }
 
 function todayStrOf(ts: number): string {

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import PinGate from '../components/PinGate'
 import LetterKeyboard from '../components/LetterKeyboard'
+import FlowNextBar from '../components/FlowNextBar'
 import { useStore, judge } from '../lib/store'
 import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems, wordFileMap, playWordText } from '../lib/data'
 import { seededShuffle, makeSeed, newSalt, orderSalt, orderEpoch } from '../lib/shuffle'
@@ -23,7 +24,7 @@ import type { AnswerRecord, AudioItem, Track } from '../types'
 export default function Spell() {
   const { id = '' } = useParams()
   const nav = useNavigate()
-  const { progress, recordAnswer, submitSession, profile } = useStore()
+  const { progress, recordAnswer, submitSession, profile, advanceFlow } = useStore()
   const kb = progress.settings.kbBuiltIn !== false
 
   const [track, setTrack] = useState<Track | undefined>(() => getTrack(id))
@@ -124,6 +125,8 @@ export default function Spell() {
       h => h.trackId === track.id && todayStr(new Date(h.at)) === today
     ).length + 1
     submitSession(track, recs, sec, 'spell', { skipBest: true })
+    // 闯关第 4 关（v3.5）：plan 任务做完即记账（幂等）
+    if (track.id === 'plan') advanceFlow(4)
     setResult({ score, right, total, seconds: sec, attemptNo })
   }
 
@@ -276,6 +279,9 @@ function SpellResult({ track, result, answers, onHome, onRetrain }: {
           </div>
         </div>
       </div>
+
+      {/* 闯关第 4 关（v3.5）：完成后引导去第 5 关（听写大关）；普通任务这里不渲染 */}
+      <FlowNextBar doneStep={4} active={track.id === 'plan'} />
 
       {wrongs.length > 0 && (
         <button className="btn gold" style={{ width: '100%' }} onClick={onRetrain}>

@@ -8,6 +8,7 @@ import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../lib/shuffle'
 import { todayStr, weekStartStr } from '../lib/storage'
 import { currentSalt, currentShuffleMode, fetchShuffleSalt, uploadRecording, createShare } from '../lib/api'
 import AudioGate from '../components/AudioGate'
+import FlowNextBar from '../components/FlowNextBar'
 import type { AudioItem } from '../types'
 
 /**
@@ -48,7 +49,7 @@ const MAX_SEC = 8 // 单词跟读 8 秒足够，自动停
 export default function Read() {
   const { id = '' } = useParams()
   const nav = useNavigate()
-  const { profile, progress } = useStore()
+  const { profile, progress, advanceFlow } = useStore()
   const track = getTrack(id)
 
   const [items, setItems] = useState<AudioItem[]>([])
@@ -128,6 +129,12 @@ export default function Read() {
     streamRef.current?.getTracks().forEach(t => t.stop())
     mrRef.current?.state === 'recording' && mrRef.current.stop()
   }, [])
+
+  // 闯关第 3 关（v3.5）：进完成页即记账（不管录没录——本关可跳过，开了口就算过）
+  useEffect(() => {
+    if (phase === 'finish' && id === 'plan') advanceFlow(3)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, id])
 
   function stopTimers() {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
@@ -292,6 +299,10 @@ export default function Read() {
         {shareUrl && shareHint.startsWith('长按') && (
           <div className="tip" style={{ wordBreak: 'break-all', userSelect: 'all' }}>{shareUrl}</div>
         )}
+
+        {/* 闯关第 3 关（v3.5）：完成后引导去第 4 关；普通任务这里不渲染 */}
+        <FlowNextBar doneStep={3} active={id === 'plan'} />
+
         <div className="sub small center" style={{ marginTop: 8, lineHeight: 1.7 }}>
           上传后：家长看板「🎙️ 跟读录音」和分享链接里都能直接听。<br />
           跟读不计对错分数，按录音条数算完成度。
@@ -311,6 +322,12 @@ export default function Read() {
           title="准备好跟读了吗？"
           tip="每个词：听标准音 → 你跟着读一遍 → 录下来发给家长听。"
         />
+        {/* 闯关第 3 关（v3.5）：本关可跳过，不想开口的直接过（推进到下一关） */}
+        {id === 'plan' && (
+          <div className="center" style={{ marginTop: 4 }}>
+            <button className="btn ghost" onClick={() => setPhase('finish')}>⏭ 不想读，跳过本关 →</button>
+          </div>
+        )}
       </Shell>
     )
   }
@@ -363,7 +380,7 @@ export default function Read() {
       <div className="controls">
         <button className="btn ghost" onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0}>‹ 上一词</button>
         <button className="btn ghost" onClick={next}>{curTake ? '跳过 →' : '下一个 →'}</button>
-        <button className="btn ghost" onClick={() => setPhase('finish')}>结束上传</button>
+        <button className="btn ghost" onClick={() => setPhase('finish')}>{id === 'plan' ? '⏭ 结束跟读' : '结束上传'}</button>
       </div>
     </Shell>
   )

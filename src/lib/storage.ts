@@ -86,6 +86,7 @@ export const defaultProgress = (): Progress => ({
   planLog: {},
   trioDone: {},
   passed: {},
+  flow: {},
   settings: { rate: 1, repeat: 2, gap: 4, voiceMode: 'normal', shuffle: true, shuffleMode: 'daily', kbBuiltIn: true, syncPaper: true },
 })
 

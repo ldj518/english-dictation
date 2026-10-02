@@ -29,11 +29,15 @@ import UnitTestPage from '../src/pages/UnitTest'
 import MasteryPage from '../src/pages/Mastery'
 import FormsPage from '../src/pages/Forms'
 import DaysPage from '../src/pages/Days'
+import HallPage from '../src/pages/Hall'
+import ExtraPage from '../src/pages/Extra'
 
 type Case = [string, string, React.ComponentType]
 
 const CASES: Case[] = [
   ['首页', '/', Home],
+  ['考场', '/hall', HallPage],     // v3.5：单元/期末/每日任务墙 + 纸质工具
+  ['专项', '/extra', ExtraPage],   // v3.5：混合卷/短语/词形/地图
   ['错词本', '/review', ReviewPage],
   ['词库', '/words', WordsPage],
   ['统计', '/stats', StatsPage],
@@ -90,6 +94,19 @@ for (const [name, path, C] of CASES) {
     results.push(`  ✗ ${name.padEnd(8)} 渲染异常: ${(e as Error).message}`)
     fail++
   }
+}
+
+// 首页 v3.5 特征断言：三区结构（闯关主区 + 状态行 + 四宫格），旧卡必须删干净
+{
+  const html = render('/', Home)
+  // 空进度 SSR 状态：step=1 → 显示「Today · 第 1 关」+「开始今天的闯关」
+  const must = ['Today · 第', '开始今天的闯关', '三件事', '今日纸质卷', '考场', '专项', '游戏', '家长']
+  const mustNot = ['智能混合卷', '短语专项', '成就墙', '今日任务']  // 已迁去 /hall /extra /stats
+  const miss = must.filter(k => !html.includes(k))
+  const leak = mustNot.filter(k => html.includes(k))
+  const ok = miss.length === 0 && leak.length === 0
+  results.push(`  ${ok ? '✓' : '✗'} 首页三区特征${miss.length ? ` 缺:${miss.join(',')}` : ''}${leak.length ? ` 残留:${leak.join(',')}` : ''}`)
+  ok ? pass++ : fail++
 }
 
 // 带参数页面：必须套一层匹配的 <Route>，否则 useParams() 拿不到 id，

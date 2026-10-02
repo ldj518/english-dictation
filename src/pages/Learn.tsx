@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import AudioGate from '../components/AudioGate'
 import { useStore } from '../lib/store'
+import { flowStepOf } from '../lib/flow'
 import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems, wordFileMap } from '../lib/data'
 import { playWord, pauseAll, prefetchAhead, resolveRate } from '../lib/player'
 import { splitSyllables } from '../lib/syllables'
@@ -20,7 +21,7 @@ import type { AudioItem, Track } from '../types'
 export default function Learn() {
   const { id = '' } = useParams()
   const nav = useNavigate()
-  const { progress, markLearned } = useStore()
+  const { progress, markLearned, advanceFlow } = useStore()
 
   const [track, setTrack] = useState<Track | undefined>(() => getTrack(id))
   const [items, setItems] = useState<AudioItem[]>([])
@@ -96,8 +97,17 @@ export default function Learn() {
     markLearned(id, Math.round((Date.now() - startedAt.current) / 1000))
   }
 
+  // 闯关态（v3.5）：今天的第 1 关还没过、且做的是 plan 任务 → 完成后推进并直进第 2 关。
+  // 已经过了第 1 关再来复习的，走原逻辑去听写。
+  const inFlow = id === 'plan' && flowStepOf(progress) === 1
+
   const goDictation = () => {
     recordOnce()
+    if (inFlow) {
+      advanceFlow(1)
+      nav('/translate/plan')
+      return
+    }
     try { sessionStorage.setItem('skip-prep-' + id, '1') } catch { /* ignore */ }
     nav('/d/' + id)
   }
@@ -198,7 +208,7 @@ export default function Learn() {
       <div className="controls" style={{ flexDirection: 'column', gap: 10 }}>
         {isLast ? (
           <button className="btn" style={{ background: 'var(--blue)', minHeight: 50, width: '100%' }} onClick={goDictation}>
-            🎧 都过完了，开始听写
+            {inFlow ? '✓ 第 1 关完成，进入下一关 →' : '🎧 都过完了，开始听写'}
           </button>
         ) : (
           <button className="btn" style={{ background: 'var(--blue)', minHeight: 50, width: '100%' }} onClick={next}>
@@ -206,7 +216,7 @@ export default function Learn() {
           </button>
         )}
         <button className="btn ghost" style={{ width: '100%' }} onClick={goDictation}>
-          ⏭ 跳过剩下的，直接听写
+          {inFlow ? '⏭ 跳过本关，直接下一关' : '⏭ 跳过剩下的，直接听写'}
         </button>
       </div>
 

@@ -128,6 +128,7 @@ export function unitOfDay(dayOrder: number): number {
 /* ═══════════ 词库册子 + 动态任务（v2.5）═══════════ */
 
 import { load, activeProfileId } from './storage'
+import { dueReviews } from './reviewQueue'
 import { seededShuffle, makeSeed, orderSalt, orderEpoch } from './shuffle'
 import { currentShuffleMode, currentSalt, currentBooks } from './api'
 
@@ -256,8 +257,23 @@ function weekStartOf(): string {
 }
 
 /**
+ * 今日到期复习词卷（v3.1 全词复习队列）：/d/review
+ * 在线听写、纸质卷、纸听三条线都吃这个 id，词单天然一致。
+ */
+export async function getReviewTrack(): Promise<Track | undefined> {
+  const p = load(activeProfileId())
+  const due = dueReviews(p)
+  const items: ItemTuple[] = due.map((d, i) => [i + 1, d.word, WORD_MAP[d.word]?.cn || '', 0, 0])
+  return {
+    id: 'review', kind: 'daily', group: 'daily', order: 0,
+    label: `今日复习（${items.length} 词）`, file: '', seconds: Math.max(30, items.length * 8),
+    wordCount: items.length, sections: [], items,
+  }
+}
+
+/**
  * 扩展版 getTrack：内置静态任务之外，还支持动态任务
- *   /d/plan  今日计划   /d/mix  智能混合卷
+ *   /d/plan  今日计划   /d/mix  智能混合卷   /d/review  今日复习
  * 打印卷/翻译关/听写页统一走这个入口。
  */
 export async function getTrackAny(id: string): Promise<Track | undefined> {
@@ -265,5 +281,6 @@ export async function getTrackAny(id: string): Promise<Track | undefined> {
   if (t) return t
   if (id === 'plan') return (await getPlanTrack()).track
   if (id === 'mix') return (await getMixTrack()).track
+  if (id === 'review') return await getReviewTrack()
   return undefined
 }

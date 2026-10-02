@@ -25,6 +25,8 @@ import MonsterPage from '../src/pages/Monster'
 import LearnPage from '../src/pages/Learn'
 import ListenPage from '../src/pages/Listen'
 import SpellPage from '../src/pages/Spell'
+import MasteryPage from '../src/pages/Mastery'
+import FormsPage from '../src/pages/Forms'
 
 type Case = [string, string, React.ComponentType]
 
@@ -35,6 +37,8 @@ const CASES: Case[] = [
   ['统计', '/stats', StatsPage],
   ['设置', '/settings', SettingsPage],
   ['家长看板', '/parent', ParentPage],
+  ['掌握地图', '/map', MasteryPage],
+  ['词形变换', '/forms/all', FormsPage],
   ['训练场', '/train', TrainPage],
   ['游戏中心', '/games', GamesPage],
   ['连连看', '/games/match', MatchPage],

@@ -44,7 +44,7 @@ export interface ReportPayload {
   trackId: string
   trackLabel: string
   kind: string
-  mode: 'online' | 'exam' | 'paper' | 'translate' | 'spell'
+  mode: 'online' | 'exam' | 'paper' | 'translate' | 'spell' | 'forms'
   seconds: number
   records: { no: number; word: string; cn: string; input: string; correct: boolean }[]
   photoKey?: string

@@ -24,6 +24,8 @@ import Monster from './pages/Monster'
 import Learn from './pages/Learn'
 import Listen from './pages/Listen'
 import Spell from './pages/Spell'
+import Mastery from './pages/Mastery'
+import Forms from './pages/Forms'
 import AudioFailToast from './components/AudioFailToast'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -36,6 +38,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/learn/:id" element={<Learn />} />
           <Route path="/listen/:id" element={<Listen />} />
           <Route path="/spell/:id" element={<Spell />} />
+          <Route path="/map" element={<Mastery />} />
+          <Route path="/forms/:kind" element={<Forms />} />
           <Route path="/review" element={<Review />} />
           <Route path="/exam/:id" element={<Exam />} />
           <Route path="/stats" element={<Stats />} />

@@ -81,6 +81,7 @@ export const defaultProgress = (): Progress => ({
   minutes: {},
   planDone: 0,
   learned: {},
+  review: {},
   settings: { rate: 1, repeat: 2, gap: 4, voiceMode: 'normal', shuffle: true, shuffleMode: 'daily', kbBuiltIn: true, syncPaper: true },
 })
 

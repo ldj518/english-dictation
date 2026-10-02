@@ -104,6 +104,14 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     }
   }
 
+  // 复习队列（v3.1）：每词保留进度更远的一档；同档取到期更早的（更保守，宁可多复习）
+  const review: Progress['review'] = { ...(a.review || {}) }
+  for (const [k, v] of Object.entries(b.review || {})) {
+    const r = review[k]
+    if (!r) { review[k] = v; continue }
+    if (v.stage > r.stage || (v.stage === r.stage && v.dueAt < r.dueAt)) review[k] = v
+  }
+
   // streakDays/lastDay 跟连续天数大的一方走
   const streakLocal = a.streakDays || 0
   const streakRemote = b.streakDays || 0
@@ -122,6 +130,7 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     minutes,
     planDone: max(a.planDone, b.planDone),
     learned,
+    review,
     settings: { ...a.settings },
   }
 }

@@ -120,6 +120,8 @@ export interface Progress {
   planDone: number
   /** 学习环节记账（v2.7）：trackId -> 最近一次学习时间/次数/奖励日 */
   learned: Record<string, { at: number; count: number; bonusDay?: string }>
+  /** 全词复习队列（v3.1 艾宾浩斯）：word -> 复习档位与下次到期时间 */
+  review: Record<string, { stage: number; dueAt: number; addedAt: number }>
   /** 设置 */
   settings: {
     rate: number

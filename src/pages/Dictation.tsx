@@ -663,6 +663,9 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
             ✏️ 首字母填空
           </button>
         )}
+        <button className="btn" style={{ background: '#7048e8' }} onClick={() => nav('/forms/all')}>
+          📝 词形变换
+        </button>
         {track && getTrack(track.id) && (
           <button className="btn" style={{ background: '#7048e8' }} onClick={() => nav(`/read/${track.id}`)}>
             🎙️ 跟读录音

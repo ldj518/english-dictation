@@ -6,6 +6,7 @@ import { levelOf, BADGES } from '../lib/gamify'
 import { DAILY, UNITS, FINALS, getPlanTrack } from '../lib/data'
 import { fetchWordbooks, fetchParentRules } from '../lib/api'
 import { dueWrongWords, todayStr } from '../lib/storage'
+import { dueReviews } from '../lib/reviewQueue'
 import type { Track } from '../types'
 
 type Tab = 'daily' | 'unit' | 'final'
@@ -18,6 +19,7 @@ export default function Home() {
   const lv = levelOf(progress.points)
   const pct = Math.min(100, Math.round(((progress.points - lv.cur) / Math.max(1, lv.next - lv.cur)) * 100))
   const due = dueWrongWords(progress)
+  const rvDue = dueReviews(progress).length
 
   // 下一个该做的
   const nextTask = useMemo(() => {
@@ -128,6 +130,9 @@ export default function Home() {
             <Link className="btn ghost sm" to="/spell/plan" style={{ flex: '1 1 40%', textAlign: 'center' }}>
               ✏️ 首字母填空
             </Link>
+            <Link className="btn ghost sm" to="/forms/all" style={{ flex: '1 1 40%', textAlign: 'center' }}>
+              📝 词形变换
+            </Link>
             <Link className="btn ghost sm" to="/listen/plan" style={{ flex: '1 1 40%', textAlign: 'center' }}>
               📄 纸听一遍
             </Link>
@@ -189,7 +194,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* 快捷入口：训练场 + 游戏中心 + 家长看板 */}
+      {/* 快捷入口：训练场 + 游戏中心 + 掌握地图 + 家长看板 */}
       <div className="quickRow">
         <button className="quick" onClick={() => nav('/train')}>
           <span className="qi">🎯</span>
@@ -201,12 +206,34 @@ export default function Home() {
           <span className="qt">游戏中心</span>
           <span className="qd">连连看·打怪兽</span>
         </button>
+        <button className="quick" onClick={() => nav('/map')}>
+          <span className="qi">🗺️</span>
+          <span className="qt">掌握地图</span>
+          <span className="qd">每个词的真实状态</span>
+        </button>
         <button className="quick" onClick={() => nav('/parent')}>
           <span className="qi">📊</span>
           <span className="qt">家长中心</span>
           <span className="qd">进度·设置管理</span>
         </button>
       </div>
+
+      {/* 今日复习（v3.1 全词复习队列：以前学对的词按遗忘曲线回炉） */}
+      {rvDue > 0 && (
+        <div className="card pad" style={{ marginBottom: 14, borderColor: '#c9dbf5', background: 'linear-gradient(180deg,#f4f8ff,#fff)' }}>
+          <div className="between">
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 15 }}>
+                📋 今日到期复习 {rvDue} 词
+              </div>
+              <div className="sub small" style={{ marginTop: 3, lineHeight: 1.7 }}>
+                以前学对的词今天该回炉了，趁还记得多，复习最快
+              </div>
+            </div>
+            <button className="btn sm" onClick={() => nav('/d/review')}>开始复习</button>
+          </div>
+        </div>
+      )}
 
       {/* 待复习提示 */}
       {due.length > 0 && (

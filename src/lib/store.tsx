@@ -5,6 +5,7 @@ import {
   loadProfiles, saveProfiles, activeProfileId, setActiveProfileId, reset as resetProgress,
 } from './storage'
 import { settle, addMinutes, type AwardCtx } from './gamify'
+import { enqueueReview, advanceReview, resetReview } from './reviewQueue'
 import { reportSession, syncStudent, checkBackend, fetchShuffleSalt, pushProgressSnapshot, fetchParentRules } from './api'
 import type { ParentRules } from './api'
 import { syncProfiles, pullAndMerge } from './sync'
@@ -25,7 +26,7 @@ interface Ctx {
   /** 提交一次会话（mode 可指定上报形态：翻译关等，默认按任务类型推断；
    *  opts.skipBest：拼写类练习不占任务的「最好成绩」，避免污染听写分数显示） */
   submitSession: (track: Track, records: AnswerRecord[], seconds: number,
-    mode?: 'online' | 'exam' | 'paper' | 'translate' | 'spell', opts?: { skipBest?: boolean }) => { newly: Badge[]; result: SessionResult }
+    mode?: 'online' | 'exam' | 'paper' | 'translate' | 'spell' | 'forms', opts?: { skipBest?: boolean }) => { newly: Badge[]; result: SessionResult }
   /** 复习模式：答对推进，答错重置 */
   recordReview: (word: string, cn: string, correct: boolean) => void
   updateSettings: (s: Partial<Progress['settings']>) => void
@@ -196,7 +197,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const submitSession = useCallback((track: Track, records: AnswerRecord[], seconds: number,
-    mode?: 'online' | 'exam' | 'paper' | 'translate' | 'spell', opts?: { skipBest?: boolean }) => {
+    mode?: 'online' | 'exam' | 'paper' | 'translate' | 'spell' | 'forms', opts?: { skipBest?: boolean }) => {
     const total = records.length
     const right = records.filter(r => r.correct).length
     const score = total ? Math.round((right / total) * 100) : 0
@@ -220,6 +221,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       np.attempts[track.id] = (np.attempts[track.id] || 0) + 1
       np.history = [result, ...np.history].slice(0, 200)
       addMinutes(np, Math.max(1, Math.round(seconds / 60)))
+      // 全词复习队列（v3.1）：答对入队/推进，答错退档；毕业 +10 分
+      if (mode !== 'paper') {
+        for (const r of records) {
+          if (r.correct) {
+            if (np.review[r.word]) {
+              const grad = advanceReview(np, r.word)
+              if (grad) np.points += 10
+            } else {
+              enqueueReview(np, r.word)
+            }
+          } else {
+            resetReview(np, r.word)
+          }
+        }
+      }
       const ctx: AwardCtx = {
         perfect: score === 100 && total > 0,
         maxStreak: b.maxStreak,

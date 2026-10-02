@@ -40,6 +40,8 @@ s3 = boto3.client(
 )
 
 CHECK_ONLY = "--check" in sys.argv
+# 换版重传场景（如 w4）：只传 words/*.m4a + manifest，跳过 tracks 与旧 mp3，省 200MB+ 带宽
+ONLY_NEW = "--new-m4a" in sys.argv
 
 
 def md5(path):
@@ -58,11 +60,15 @@ def collect():
         if os.path.exists(p):
             out.append((rel, p))
     for sub in ("tracks", "words"):
+        if ONLY_NEW and sub == "tracks":
+            continue
         d = os.path.join(AUD, sub)
         if not os.path.isdir(d):
             continue
         for fn in sorted(os.listdir(d)):
             if fn.endswith(".mp3") or fn.endswith(".m4a"):
+                if ONLY_NEW and not fn.endswith(".m4a"):
+                    continue
                 out.append((f"{sub}/{fn}", os.path.join(d, fn)))
     return out
 

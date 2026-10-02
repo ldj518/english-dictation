@@ -6,10 +6,11 @@ import { useStore, applyRules } from '../lib/store'
 import {
   fetchStats, checkBackend, fetchPinStatus, setParentPin, fetchPapers, paperFileUrl,
   createShare, rotateShuffleSalt, pushShuffleMode, currentShuffleMode, fetchShuffleSalt,
-  fetchRecordings, recordFileUrl,
+  fetchRecordings, recordFileUrl, fetchSessionDetail,
   fetchWordbooks, currentBooks, pushActiveBook, pushDailyWords, createWordbook, deleteWordbook,
   fetchParentRules, pushParentRules,
   type StatsResp, type PhotoItem, type RecItem, type BooksResp, type ParentRules,
+  type SessionDetail,
 } from '../lib/api'
 import { getPlanTrack } from '../lib/data'
 import { todayStr, load } from '../lib/storage'
@@ -70,7 +71,13 @@ export default function Parent() {
 
   /* ── 纸质卷照片 ── */
   const [photos, setPhotos] = useState<PhotoItem[] | null>(null)
-  const [openDay, setOpenDay] = useState<string | null>(null)
+  // v3.2：默认展开「今天」的组（家长最关心的就是当天的卷子）；点其他天时覆盖
+  const [openDay, setOpenDay] = useState<string | null>(() => todayStr())
+
+  /* ── 会话逐题明细（v3.2：最近听写点开看对错） ── */
+  const [detailId, setDetailId] = useState<string | null>(null)
+  const [detail, setDetail] = useState<SessionDetail | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
 
   /* ── 跟读录音 ── */
   const [recs, setRecs] = useState<RecItem[] | null>(null)
@@ -229,7 +236,10 @@ export default function Parent() {
       total: S.total,
       right: S.right,
       wrongs: (stats?.topWrong || []).slice(0, 12).map(w => ({ word: w.word, cn: w.cn })),
-      photoKeys: (photos || []).slice(0, 6).map(p => p.key),
+      // v3.2：分享页照片只带「今天」拍的（key 第三段是 dayKey）。
+      // 之前不筛日期，当天没拍照就拿几天前的旧照片顶数，家人看到的卷子和成绩对不上。
+      // 当天没照片就空着——宁可没有，不能用旧的冒充。
+      photoKeys: (photos || []).filter(p => (p.key.split('/')[2] || '') === todayStr()).slice(0, 6).map(p => p.key),
       recordKeys: (recs || []).slice(0, 12).map(r => {
         // key: records/{sid}/{dayKey}/{trackId}/{no}-{word}-{uid}.{ext}
         const seg = r.key.split('/')
@@ -245,6 +255,17 @@ export default function Parent() {
     } catch {
       setShareMsg('链接已生成，长按复制下面这段地址发到微信：')
     }
+  }
+
+  /** 展开/收起某次听写的逐题明细（v3.2）。同一条再点一次收起 */
+  const toggleDetail = async (id: string) => {
+    if (detailId === id) { setDetailId(null); setDetail(null); return }
+    setDetailId(id)
+    setDetail(null)
+    setDetailLoading(true)
+    const d = await fetchSessionDetail(id)
+    setDetail(d)
+    setDetailLoading(false)
   }
 
   // 照片按天分组（key 格式 papers/{sid}/{dayKey}/{uid}.ext）
@@ -465,23 +486,53 @@ export default function Parent() {
                 </div>
               )}
               <div className="reviewlist">
-                {stats.recent.slice(0, 12).map(r => (
-                  <div key={r.id} className="rv" style={{ flexWrap: 'wrap' }}>
-                    <span className="mk" style={{
-                      color: r.score >= 90 ? 'var(--ok)' : r.score >= 60 ? 'var(--blue)' : 'var(--bad)',
-                    }}>{r.score}%</span>
-                    <span className="w" style={{ fontSize: 13 }}>{r.track_label}</span>
-                    <span className="sub small">
-                      {r.right_count}/{r.total}
-                      {r.mode === 'paper' && ' · 纸质'}
-                      {r.mode === 'exam' && ' · 模考'}
-                    </span>
-                    <span className="sub small" style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                      {fmtSec(r.seconds) && <span style={{ marginRight: 8 }}>⏱ {fmtSec(r.seconds)}</span>}
-                      {fmtWhen(r.created_at)}
-                    </span>
-                  </div>
-                ))}
+                {stats.recent.slice(0, 12).map(r => {
+                  const open = detailId === r.id
+                  return (
+                    <div key={r.id}>
+                      <div className="rv" style={{ flexWrap: 'wrap', cursor: 'pointer' }}
+                        onClick={() => void toggleDetail(r.id)}
+                        title="点开看每道题的对错">
+                        <span className="mk" style={{
+                          color: r.score >= 90 ? 'var(--ok)' : r.score >= 60 ? 'var(--blue)' : 'var(--bad)',
+                        }}>{r.score}%</span>
+                        <span className="w" style={{ fontSize: 13 }}>{r.track_label}</span>
+                        <span className="sub small">
+                          {r.right_count}/{r.total}
+                          {r.mode === 'paper' && ' · 纸质'}
+                          {r.mode === 'exam' && ' · 模考'}
+                        </span>
+                        <span className="sub small" style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                          {fmtSec(r.seconds) && <span style={{ marginRight: 8 }}>⏱ {fmtSec(r.seconds)}</span>}
+                          {fmtWhen(r.created_at)}
+                        </span>
+                        <span className="sub small" style={{ marginLeft: 4, flexShrink: 0 }}>{open ? '▲' : '▼'}</span>
+                      </div>
+                      {open && (
+                        <div style={{ padding: '4px 0 10px 12px' }}>
+                          {detailLoading ? (
+                            <div className="sub small">加载明细…</div>
+                          ) : detail && detail.session.id === r.id ? (
+                            <div className="reviewlist">
+                              {detail.records.map(rec => (
+                                <div key={rec.seq} className="rv">
+                                  <span className="mk" style={{ color: rec.correct ? 'var(--ok)' : 'var(--bad)' }}>
+                                    {rec.correct ? '✓' : '✗'}
+                                  </span>
+                                  <span className="w">{rec.word}</span>
+                                  {!rec.correct && rec.input && <span className="mine">{rec.input}</span>}
+                                  <span className="sub small" style={{ marginLeft: 'auto', textAlign: 'right' }}>{rec.cn}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="sub small">明细加载失败（云端不通），稍后再点。</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
               <div className="sub small" style={{ marginTop: 8, lineHeight: 1.7 }}>
                 用时太长（超过 1 分钟 / 10 词）通常是词不熟；总分忽高忽低，多半是状态问题，别急着加量。
@@ -510,7 +561,10 @@ export default function Parent() {
               return (
                 <div key={day} style={{ marginBottom: 12 }}>
                   <div className="between" style={{ marginBottom: 8 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{day} <span className="sub small">· {list.length} 张</span></div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>
+                      {day}{day === todayStr() && <span className="pill p-ok" style={{ marginLeft: 6, fontSize: 11 }}>今天</span>}
+                      <span className="sub small" style={{ marginLeft: 6 }}>· {list.length} 张</span>
+                    </div>
                     <button className="btn ghost sm" style={{ fontSize: 12 }} onClick={() => setOpenDay(open ? null : day)}>
                       {open ? '收起' : (list.length > 4 ? `展开全部 ${list.length} 张` : '展开')}
                     </button>

@@ -10,18 +10,21 @@ import type { Progress } from '../types'
 export const REVIEW_STAGES = [1, 2, 4, 7, 15, 30]
 const DAY = 86400000
 
-/** 词首次答对入队：明天复习第一次 */
+/** 词首次答对入队：明天复习第一次。已毕业的词不再入队（v3.2 修复：否则队列永不收敛） */
 export function enqueueReview(np: Progress, word: string): void {
   if (np.review[word]) return
+  if (np.reviewDone?.[word]) return
   np.review[word] = { stage: 0, dueAt: Date.now() + REVIEW_STAGES[0] * DAY, addedAt: Date.now() }
 }
 
-/** 到期复习答对：推进一档；走完最后一档毕业（出队），返回是否毕业 */
+/** 到期复习答对：推进一档；走完最后一档毕业（出队并记入 reviewDone），返回是否毕业 */
 export function advanceReview(np: Progress, word: string): boolean {
   const r = np.review[word]
   if (!r) return false
   if (r.stage >= REVIEW_STAGES.length - 1) {
     delete np.review[word]
+    if (!np.reviewDone) np.reviewDone = {}
+    np.reviewDone[word] = Date.now()
     return true
   }
   r.stage += 1
@@ -35,6 +38,16 @@ export function resetReview(np: Progress, word: string): void {
   if (!r) return
   r.stage = 0
   r.dueAt = Date.now() + REVIEW_STAGES[0] * DAY
+}
+
+/**
+ * 毕业词答错：重新走一遍曲线（v3.2）。
+ * 毕业只说明「以前记住过」，日常听写再错说明忘了——清掉毕业标记，明天重新开始。
+ */
+export function reopenReview(np: Progress, word: string): void {
+  if (np.reviewDone) delete np.reviewDone[word]
+  if (np.review[word]) return
+  np.review[word] = { stage: 0, dueAt: Date.now() + REVIEW_STAGES[0] * DAY, addedAt: Date.now() }
 }
 
 export interface DueReview { word: string; stage: number; dueAt: number }

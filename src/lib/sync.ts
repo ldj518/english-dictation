@@ -112,6 +112,12 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     if (v.stage > r.stage || (v.stage === r.stage && v.dueAt < r.dueAt)) review[k] = v
   }
 
+  // 已毕业词（v3.2）：并集，毕业时间取更早的（无损合并）
+  const reviewDone: NonNullable<Progress['reviewDone']> = { ...(a.reviewDone || {}) }
+  for (const [k, v] of Object.entries(b.reviewDone || {})) {
+    reviewDone[k] = Math.min(reviewDone[k] ?? Infinity, v)
+  }
+
   // streakDays/lastDay 跟连续天数大的一方走
   const streakLocal = a.streakDays || 0
   const streakRemote = b.streakDays || 0
@@ -131,6 +137,7 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     planDone: max(a.planDone, b.planDone),
     learned,
     review,
+    reviewDone,
     settings: { ...a.settings },
   }
 }

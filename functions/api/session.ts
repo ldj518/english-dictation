@@ -87,4 +87,34 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   }
 }
 
+/**
+ * GET /api/session?id=s_xxx —— 查一次听写的逐题明细（v3.2）。
+ *
+ * 家长看板「最近听写」点开某条记录后，用它拉 answers 表里的逐题对错。
+ * 权限说明：session id 是随机串（uid 生成），不可枚举，与分享链接同级的暴露面；
+ * 不含任何身份信息以外的内容，孩子端也无从用它刷分（只读）。
+ */
+export const onRequestGet: PagesFunction<Env> = async (ctx) => {
+  const { request, env } = ctx
+  try {
+    const id = (new URL(request.url).searchParams.get('id') || '').trim()
+    if (!id) return fail('缺少 id')
+
+    const sess = await env.DB.prepare(
+      `SELECT id, student_id, track_id, track_label, kind, mode, total, right_count,
+              score, seconds, created_at, day_key, photo_key
+       FROM sessions WHERE id = ?`
+    ).bind(id).first()
+    if (!sess) return fail('没有这条记录', 404)
+
+    const { results } = await env.DB.prepare(
+      `SELECT word, cn, input, correct, seq FROM answers WHERE session_id = ? ORDER BY seq`
+    ).bind(id).all()
+
+    return ok({ session: sess, records: results || [] })
+  } catch (e) {
+    return fail('查询失败: ' + (e as Error).message, 500)
+  }
+}
+
 export const onRequestOptions: PagesFunction = async () => preflight()

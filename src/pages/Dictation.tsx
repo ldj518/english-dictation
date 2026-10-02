@@ -308,6 +308,23 @@ export default function Dictation() {
     )
   }
 
+  // ── 空词单（v3.2）：如 /d/review 在队列清空后再点进来——
+  //    不能卡「词单准备中…」死循环，更不能走完流程上报一张 0 词空卷污染统计 ──
+  if (track && items.length === 0 && !isCustom) {
+    return (
+      <Shell title={track.label || '没有题目'} back>
+        <div className="empty">
+          <div className="i">🍃</div>
+          <div>现在没有要做的词</div>
+          <div className="sub small" style={{ marginTop: 6 }}>
+            复习队列清空了。明天学新词、听写答题后会自动排进新的复习。
+          </div>
+          <button className="btn" style={{ marginTop: 14 }} onClick={() => nav('/')}>回首页</button>
+        </div>
+      </Shell>
+    )
+  }
+
   // ── 错词加练：只重练本次答错的词（换盐触发重载 → 读取 retrain-words 过滤）──
   const onRetrain = () => {
     if (!track) return
@@ -709,6 +726,39 @@ function ResultView({ track, result, answers, profile, onHome, onRetrain }: {
               </span>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* 孩子版错词卡（v3.2）：只给序号 + 中文释义 + 发音，绝不显示英文拼写——
+          否则孩子截图答案再重做就是刷分（完整拼写明细在下面 PinGate 里，家长解锁才可见）。
+          重听按钮复用 onRetrain（retrain-words 过滤重载） */}
+      {wrongs.length > 0 ? (
+        <div className="card pad" style={{ borderColor: '#f0b7b7' }}>
+          <div style={{ fontWeight: 800, marginBottom: 4 }}>
+            ❌ 这次错了 {wrongs.length} 个
+            <span className="sub small" style={{ fontWeight: 400, marginLeft: 8 }}>已自动进错词本</span>
+          </div>
+          <div className="sub small" style={{ marginBottom: 8 }}>
+            先点 🔊 听发音，看能不能想起来这个词怎么写。
+          </div>
+          <div className="reviewlist">
+            {wrongs.map(a => (
+              <div key={a.no} className="rv">
+                <span className="mk" style={{ color: 'var(--bad)' }}>{a.no}</span>
+                <span className="w">{a.cn}</span>
+                <button className="btn ghost sm" style={{ marginLeft: 'auto', fontSize: 12, flexShrink: 0 }}
+                  onClick={() => playWordText(a.word)} aria-label="听发音">🔊</button>
+              </div>
+            ))}
+          </div>
+          <button className="btn gold" style={{ marginTop: 10, width: '100%' }} onClick={onRetrain}>
+            ⚡ 只重听错词（{wrongs.length} 词）
+          </button>
+        </div>
+      ) : (
+        <div className="card pad center" style={{ background: 'var(--ok-soft)' }}>
+          <div style={{ fontSize: 30 }}>🎉</div>
+          <div style={{ fontWeight: 800, color: 'var(--ok)' }}>全部答对，太棒了！</div>
         </div>
       )}
 

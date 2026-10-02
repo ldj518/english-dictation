@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v2.6 音频重制（w3）：逐词音频直接从 edge-tts 合成第一代源 → AAC 编码。
+"""v3.2 音频重制（w4）：逐词音频直接从 edge-tts 合成第一代源 → AAC 编码。
 
 滋滋声根因（客观）：
   现有逐词 mp3 是「第三代 mp3」——edge-tts(96k) → lame 整轨 → 解码切片 → lame 再编码。
@@ -11,7 +11,7 @@
   2. 裁静音（-44dB 阈值）+ 去直流 + 淡入淡出；
   3. 编 AAC-LC 96k（.m4a 容器）——AAC 同码率高频伪影远小于 mp3，且只此一代。
 
-文件名换版 md5("w3:"+word)[:12]，破 immutable 边缘缓存。
+文件名换版 md5("w4:"+word)[:12]——w4 降峰值 + 全量换 key，破设备/CDN 全部旧缓存。
 整轨 tracks/*.mp3 不动（听写/翻译/打印全部走逐词音频）。
 """
 import json, os, sys, io, hashlib
@@ -29,7 +29,7 @@ import audiogen  # noqa: E402  （96k 源格式 + 缓存 + 并发都在里面）
 
 RATE = 24000
 BITRATE = 96000
-NORM_PEAK = 0.85
+NORM_PEAK = 0.6    # w4：从 0.85 降到 0.6（-4.4dBFS），给小扬声器/慢速重采样留余量，防「滋滋」破音
 TRIM_THRESH = 0.006   # ~-44 dBFS
 TRIM_PAD_MS = 60
 FADE_MS = 10
@@ -37,7 +37,7 @@ FADE_MS = 10
 
 def key_of(word: str) -> str:
     # w3：第一代源 + AAC 编码，内容变了文件名必须变（immutable 缓存一年）
-    return hashlib.md5(("w3:" + word).encode("utf-8")).hexdigest()[:12]
+    return hashlib.md5(("w4:" + word).encode("utf-8")).hexdigest()[:12]
 
 
 def decode_mono_bytes(mp3_bytes: bytes) -> np.ndarray:
@@ -155,7 +155,7 @@ if todo:
     print(f"合成完成：成功 {ok} / 失败 {bad}")
 
 # ── 重生成 manifest：file 全部指向 w3 m4a；整轨保持 tracks/<id>.mp3 ──
-manifest = {"tracks": [], "words": {}, "bitrate": BITRATE, "rate": RATE, "gen": "w3-aac"}
+manifest = {"tracks": [], "words": {}, "bitrate": BITRATE, "rate": RATE, "gen": "w4-aac"}
 missing = []
 for t in tasks:
     items = []
@@ -182,7 +182,7 @@ json.dump(manifest, open(os.path.join(PUB, "manifest.json"), "w", encoding="utf-
 m4 = [f for f in os.listdir(os.path.join(PUB, "words")) if f.endswith(".m4a")]
 sz = sum(os.path.getsize(os.path.join(PUB, "words", f)) for f in m4)
 print(f"manifest 已重写：{len(manifest['words'])} 词指向 m4a；缺音频 {len(set(missing))} 词")
-print(f"w3 文件 {len(m4)} 个，共 {sz/1024/1024:.1f} MB（平均 {sz/max(1,len(m4))/1024:.1f} KB/词）")
+print(f"w4 文件 {len(m4)} 个，共 {sz/1024/1024:.1f} MB（平均 {sz/max(1,len(m4))/1024:.1f} KB/词）")
 if missing:
     print("缺音频词样例:", sorted(set(missing))[:10])
     sys.exit(1)

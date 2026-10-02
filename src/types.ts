@@ -122,6 +122,8 @@ export interface Progress {
   learned: Record<string, { at: number; count: number; bonusDay?: string }>
   /** 全词复习队列（v3.1 艾宾浩斯）：word -> 复习档位与下次到期时间 */
   review: Record<string, { stage: number; dueAt: number; addedAt: number }>
+  /** 已毕业词（v3.2）：word -> 毕业时间。防止毕业词在日常听写答对后被重新入队，队列永不收敛 */
+  reviewDone?: Record<string, number>
   /** 设置 */
   settings: {
     rate: number

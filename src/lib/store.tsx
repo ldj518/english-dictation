@@ -5,7 +5,7 @@ import {
   loadProfiles, saveProfiles, activeProfileId, setActiveProfileId, reset as resetProgress,
 } from './storage'
 import { settle, addMinutes, type AwardCtx } from './gamify'
-import { enqueueReview, advanceReview, resetReview } from './reviewQueue'
+import { enqueueReview, advanceReview, resetReview, reopenReview } from './reviewQueue'
 import { reportSession, syncStudent, checkBackend, fetchShuffleSalt, pushProgressSnapshot, fetchParentRules } from './api'
 import type { ParentRules } from './api'
 import { syncProfiles, pullAndMerge } from './sync'
@@ -222,6 +222,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       np.history = [result, ...np.history].slice(0, 200)
       addMinutes(np, Math.max(1, Math.round(seconds / 60)))
       // 全词复习队列（v3.1）：答对入队/推进，答错退档；毕业 +10 分
+      // v3.2 修复：毕业词记入 reviewDone，日常听写答对不再重新入队（队列永不收敛的 bug）；
+      // 毕业词答错 → reopenReview 重新走曲线
       if (mode !== 'paper') {
         for (const r of records) {
           if (r.correct) {
@@ -231,6 +233,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             } else {
               enqueueReview(np, r.word)
             }
+          } else if (np.reviewDone?.[r.word]) {
+            reopenReview(np, r.word)
           } else {
             resetReview(np, r.word)
           }

@@ -115,6 +115,22 @@ export async function fetchStats(studentId: string, range: 'day' | 'week' | 'mon
   return req<StatsResp>(`/stats?studentId=${encodeURIComponent(studentId)}&range=${range}&days=${days}`)
 }
 
+/* ── 会话逐题明细（v3.2）────────────────────────── */
+
+export interface SessionDetail {
+  session: {
+    id: string; student_id: string; track_id: string; track_label: string
+    kind: string; mode: string; total: number; right_count: number; score: number
+    seconds: number; created_at: number; day_key: string; photo_key: string | null
+  }
+  records: { word: string; cn: string; input: string; correct: number; seq: number }[]
+}
+
+/** 拉某次听写的逐题对错（家长看板「最近听写」点开时用；失败返回 null） */
+export async function fetchSessionDetail(id: string): Promise<SessionDetail | null> {
+  return req<SessionDetail>(`/session?id=${encodeURIComponent(id)}`)
+}
+
 export interface OverviewResp {
   today: string
   weekStart: string

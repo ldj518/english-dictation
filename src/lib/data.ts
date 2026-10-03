@@ -127,7 +127,7 @@ export function unitOfDay(dayOrder: number): number {
 
 /* ═══════════ 词库册子 + 动态任务（v2.5）═══════════ */
 
-import { load, activeProfileId } from './storage'
+import { load, activeProfileId, dueWrongWords } from './storage'
 import { dueReviews } from './reviewQueue'
 import { seededShuffle, makeSeed, orderSalt, orderEpoch } from './shuffle'
 import { currentShuffleMode, currentSalt, currentBooks } from './api'
@@ -259,11 +259,26 @@ function weekStartOf(): string {
 /**
  * 今日到期复习词卷（v3.1 全词复习队列）：/d/review
  * 在线听写、纸质卷、纸听三条线都吃这个 id，词单天然一致。
+ * v3.8：合并错词本到期词（错词优先排前）——以前两条复习线各走各的，
+ * 错词本到期的词只在错词本页躺着，点「去复习巩固」听写碰不到它们。
+ * 一张卷交卷后 submitSession 同时推进两条线（队列 advance + 错词 advanceWrong）。
  */
 export async function getReviewTrack(): Promise<Track | undefined> {
   const p = load(activeProfileId())
-  const due = dueReviews(p)
-  const items: ItemTuple[] = due.map((d, i) => [i + 1, d.word, WORD_MAP[d.word]?.cn || '', 0, 0])
+  const wrongDue = dueWrongWords(p)
+  const queueDue = dueReviews(p)
+  const seen = new Set<string>()
+  const items: ItemTuple[] = []
+  for (const w of wrongDue) {
+    if (seen.has(w.word)) continue
+    seen.add(w.word)
+    items.push([items.length + 1, w.word, w.cn || WORD_MAP[w.word]?.cn || '', 0, 0])
+  }
+  for (const d of queueDue) {
+    if (seen.has(d.word)) continue
+    seen.add(d.word)
+    items.push([items.length + 1, d.word, WORD_MAP[d.word]?.cn || '', 0, 0])
+  }
   return {
     id: 'review', kind: 'daily', group: 'daily', order: 0,
     label: `今日复习（${items.length} 词）`, file: '', seconds: Math.max(30, items.length * 8),

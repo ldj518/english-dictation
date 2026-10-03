@@ -15,6 +15,7 @@ import {
 } from '../lib/api'
 import { getPlanTrack } from '../lib/data'
 import { todayStr, load, weekStartStr } from '../lib/storage'
+import { reviewSummary } from '../lib/reviewQueue'
 import { sharePoster, weekPoster } from '../lib/poster'
 import { calcWeekReport } from '../lib/weekreport'
 import { pullAndMerge } from '../lib/sync'
@@ -494,6 +495,36 @@ export default function Parent() {
                 <div className="sub small" style={{ marginTop: 8, lineHeight: 1.7 }}>
                   预习和听写来自学习记录，照片以云端为准（孩子拍完手写本自动传上来，
                   分享链接里能看到）。预习那格「学过才算」，跳过预习不会亮。
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* 复习巩固维度（v3.8）：队列 / 到期 / 毕业，一眼看出复习有没有在做 */}
+          {!loading && (() => {
+            const rv = reviewSummary(progress)
+            const gradN = Object.keys(progress.reviewDone || {}).length
+            const wrongN = Object.keys(progress.wrong || {}).length
+            return (
+              <div className="card pad">
+                <div style={{ fontWeight: 800, marginBottom: 8 }}>🔁 复习巩固</div>
+                <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                  <span className={'pill ' + (rv.due > 0 ? 'p-bad' : 'p-ok')} style={{ fontSize: 13, padding: '6px 12px' }}>
+                    今日该复习 {rv.due} 词
+                  </span>
+                  <span className="pill" style={{ fontSize: 13, padding: '6px 12px', background: 'var(--soft)', border: '1px solid var(--line)' }}>
+                    队列中 {rv.inQueue} 词
+                  </span>
+                  <span className="pill" style={{ fontSize: 13, padding: '6px 12px', background: 'var(--soft)', border: '1px solid var(--line)' }}>
+                    🎓 已毕业 {gradN} 词
+                  </span>
+                  <span className="pill" style={{ fontSize: 13, padding: '6px 12px', background: 'var(--soft)', border: '1px solid var(--line)' }}>
+                    错词本 {wrongN} 词
+                  </span>
+                </div>
+                <div className="sub small" style={{ marginTop: 8, lineHeight: 1.7 }}>
+                  答对的词次日进复习队列，按 1/2/4/7/15/30 天各滚一轮，全部通过即毕业。
+                  「今日该复习」长期大于 0 说明复习在积压，催孩子点首页的「该复习」灯进去清掉。
                 </div>
               </div>
             )

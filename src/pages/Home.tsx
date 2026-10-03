@@ -259,7 +259,7 @@ export default function Home() {
           <button className="chip warn" onClick={() => nav('/review')}>🔔 错词复习 {due.length}</button>
         )}
         {rvDue > 0 && (
-          <button className="chip" onClick={() => nav('/d/review')}>📋 到期回炉 {rvDue}</button>
+          <button className="chip warn" onClick={() => nav('/d/review')}>📖 该复习 {rvDue} 词</button>
         )}
         <button className="chip" onClick={() => nav('/print/plan')}>🖨️ 今日纸质卷</button>
         {examDays !== null && (

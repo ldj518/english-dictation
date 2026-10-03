@@ -1,4 +1,5 @@
 import type { Progress, WrongWord, Profile } from '../types'
+import { isDueByDay } from './reviewQueue'
 
 /** 遗忘曲线间隔（天）：1 / 2 / 4 / 7 / 15 / 30 */
 export const REVIEW_STAGES = [1, 2, 4, 7, 15, 30]
@@ -217,11 +218,10 @@ export function advanceWrong(p: Progress, word: string): { p: Progress; graduate
   return { p, graduated: false }
 }
 
-/** 取今天该复习的错词 */
+/** 取今天该复习的错词（按天判到期，与复习队列同规——见 reviewQueue.isDueByDay） */
 export function dueWrongWords(p: Progress): WrongWord[] {
-  const now = Date.now()
   return Object.values(p.wrong)
-    .filter(w => w.dueAt <= now)
+    .filter(w => isDueByDay(w.dueAt))
     .sort((a, b) => a.dueAt - b.dueAt)
 }
 

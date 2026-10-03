@@ -52,11 +52,23 @@ export function reopenReview(np: Progress, word: string): void {
 
 export interface DueReview { word: string; stage: number; dueAt: number }
 
+/**
+ * 按天判到期（v3.8）：dueAt 的「日历日」≤ 今天即算到期。
+ * 以前用精确时刻比较（dueAt <= now），晚上 8 点答对的词次日晚 8 点才到期，
+ * 孩子早上复习点进去是空的——家长以为功能坏了（实测踩坑）。
+ * 改按天后，旧数据里的精确时刻 dueAt 也自动被「日历日」语义覆盖，无需迁移。
+ */
+export function isDueByDay(dueAt: number): boolean {
+  const a = new Date(dueAt)
+  const b = new Date()
+  const key = (d: Date) => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()
+  return key(a) <= key(b)
+}
+
 /** 今天到期的复习词（按到期先后排）。中文释义由调用方查 WORD_MAP（防循环 import） */
 export function dueReviews(p: Progress): DueReview[] {
-  const now = Date.now()
   return Object.entries(p.review || {})
-    .filter(([, r]) => r.dueAt <= now)
+    .filter(([, r]) => isDueByDay(r.dueAt))
     .sort((a, b) => a[1].dueAt - b[1].dueAt)
     .map(([word, r]) => ({ word, stage: r.stage, dueAt: r.dueAt }))
 }

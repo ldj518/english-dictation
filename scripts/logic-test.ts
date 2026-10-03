@@ -9,6 +9,7 @@ import { buildCnOptions } from '../src/lib/translate'
 import { weekStartStr } from '../src/lib/storage'
 import { calcWeekReport } from '../src/lib/weekreport'
 import { mergeProgress } from '../src/lib/sync'
+import { isDueByDay, dueReviews } from '../src/lib/reviewQueue'
 import { flowAdvance, flowStepOf, flowAllDone, FLOW_STEPS, isFlowTaskId, skipGate, flowRecordStep, flowStepResult, flowDayForTaskId } from '../src/lib/flow'
 import type { Progress } from '../src/types'
 import { resolveRate, SLOW_RATE } from '../src/lib/player'
@@ -85,6 +86,33 @@ log.push('【遗忘曲线】')
   p.wrong['b'].dueAt = Date.now() + 86400000
   const due = dueWrongWords(p)
   t('只取已到期的', due.length === 1 && due[0].word === 'a', `取到 ${due.length} 个`)
+}
+
+// ── 2b. 按天判到期（v3.8：根治「晚上答对次日早上没词」的时差坑）──
+log.push('【按天判到期】')
+{
+  const now = Date.now()
+  const DAY = 86400000
+  t('明天任何时刻都算未到期（今天）', !isDueByDay(now + DAY))
+  t('昨天任何时刻都算到期', isDueByDay(now - DAY))
+  t('刚才算到期', isDueByDay(now - 1000))
+  // 关键场景：昨晚 20:00 答对入队（dueAt=明晚 20:00），今早 08:00 复习——按天语义应算到期
+  const yesterday8pm = (() => { const d = new Date(); d.setDate(d.getDate() - 1); d.setHours(20, 0, 0, 0); return d.getTime() })()
+  t('昨晚答对的词今早就该到期', isDueByDay(yesterday8pm + DAY))
+  // 复习队列同样按天判
+  const p = defaultProgress()
+  p.review = { word1: { stage: 0, dueAt: yesterday8pm + DAY, addedAt: yesterday8pm } }
+  t('队列：昨晚入队今早到期', dueReviews(p).length === 1)
+  p.review['word2'] = { stage: 0, dueAt: now + DAY, addedAt: now }
+  t('队列：明天的词不出现', dueReviews(p).length === 1)
+  // 错词本到期同规
+  const q = defaultProgress()
+  addWrong(q, 'w1', '词1')
+  q.wrong['w1'].dueAt = yesterday8pm + DAY
+  addWrong(q, 'w2', '词2')
+  q.wrong['w2'].dueAt = now + DAY
+  const dw = dueWrongWords(q)
+  t('错词本：昨晚到期的今早出现', dw.length === 1 && dw[0].word === 'w1')
 }
 
 // ── 3. 积分与等级 ──

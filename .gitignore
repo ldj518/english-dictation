@@ -38,3 +38,7 @@ vite.config.ts.timestamp-*
 .wrangler/
 .dev.vars
 scripts/_zz_probe/
+
+p1_snap.json
+p2_snap.json
+*_snap.json

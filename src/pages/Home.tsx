@@ -4,7 +4,7 @@ import Shell from '../components/Shell'
 import ProfileSwitcher from '../components/ProfileSwitcher'
 import { useStore } from '../lib/store'
 import { levelOf } from '../lib/gamify'
-import { getPlanTrack } from '../lib/data'
+import { getPlanTrack, DAILY } from '../lib/data'
 import { fetchWordbooks, fetchParentRules } from '../lib/api'
 import { dueWrongWords, todayStr } from '../lib/storage'
 import { dueReviews } from '../lib/reviewQueue'
@@ -55,6 +55,34 @@ export default function Home() {
     })
     return () => { cancel = true }
   }, [profile.id, progress.planDone])
+
+  // ── 计划卡选中天（v3.9 合并卡）：null = 今天；N = 计划第 N 天（卡片原地切换）──
+  const [selDay, setSelDay] = useState<number | null>(null)
+  /** 今天对应计划第几天：planLog 里反查今天（今天交过卷），否则 = planDone+1（今天在学/没学） */
+  const todayNo = useMemo(() => {
+    const hit = Object.entries(progress.planLog || {}).find(([, d]) => d === today)
+    if (hit) return Number(hit[0])
+    return Math.min((progress.planDone || 0) + 1, plan?.total || 9999)
+  }, [progress.planLog, progress.planDone, plan?.total, today])
+  /** 选中天的展示数据（selDay=null 时取今天） */
+  const sel = useMemo(() => {
+    if (selDay === null) {
+      return {
+        isToday: true, no: todayNo, date: progress.planLog?.[todayNo],
+        fe: progress.flow?.[today], id: 'day' + String(todayNo).padStart(2, '0'),
+        doneCount: flowDoneCount, learned: true,
+      }
+    }
+    const date = progress.planLog?.[selDay]
+    const fe = date ? progress.flow?.[date] : undefined
+    return {
+      isToday: false, no: selDay, date,
+      fe, id: 'day' + String(selDay).padStart(2, '0'),
+      doneCount: fe?.step || 0, learned: !!date,
+    }
+  }, [selDay, todayNo, progress.planLog, progress.flow, progress.planDone, flowDoneCount, today])
+  /** 选中天每天的词数（末天可能不足 10，按任务实词数算） */
+  const selCount = DAILY.find(t => t.id === sel.id)?.wordCount || plan?.count || 0
 
   // 断档（v3.3 语义保留）：断 2 天+ 红色警告，1 天橙提示
   const gapDays = useMemo(() => {
@@ -142,92 +170,36 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── 主区：今日闯关卡（v3.5）── */}
-      <div className={'card pad todayCard' + (serious ? ' serious' : '')}>
-        <div className="between" style={{ marginBottom: 12 }}>
+      {/* ── 主区：每日计划合并卡（v3.9）——闯关卡与日期条合一，点哪天卡片原地切换哪天 ── */}
+      <div className={'card pad todayCard' + (sel.isToday && serious ? ' serious' : '')}>
+        <div className="between" style={{ marginBottom: 10 }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: 16 }}>
-              {flowDone ? '🎉 今日五关已通关' : `Today · 第 ${flowDoneCount + 1} 关`}
+              {sel.isToday
+                ? (flowDone ? '🎉 今日五关已通关' : `Today · 第 ${flowDoneCount + 1} 关`)
+                : `第 ${sel.no} 天 · ${sel.date ? shortDate(sel.date) : '未学'}`}
             </div>
             <div className="sub small" style={{ marginTop: 3 }}>
               {plan
-                ? `每日计划 · 第 ${plan.day}/${plan.total} 天 · ${plan.count} 个新词`
+                ? `每日计划 · 已学 ${progress.planDone || 0}/${plan.total} 天 · ${selCount} 个新词`
                 : '每日计划 · 词单准备中…'}
             </div>
           </div>
-          <div className="tcStep">第 {flowDoneCount}/5 关</div>
+          <div className="tcStep">第 {sel.doneCount}/5 关</div>
         </div>
 
-        {/* 五关进度条（v3.7）：全部可点——已过关=重做，当前关=继续，未到的关确认后可跳（不计今日账）；
-            有成绩的关显示对错：绿✓ 全对 / 橙⚠ 错一半内 / 红✗ 错一半以上 */}
-        <div className="flowGrid">
-          {FLOW_STEPS.map(s => {
-            const done = flowDoneCount >= s.step
-            const cur = !done && s.step === step
-            const res = progress.flow?.[today]?.steps?.[s.step]
-            const bad = res && FLOW_SCORED[s.step] ? res.t - res.r : 0
-            const badHalf = bad > 0 && bad * 2 > (res?.t || 1)
-            const cls = 'fg' + (bad > 0 ? (badHalf ? ' bad' : ' warn') : done ? ' done' : cur ? ' cur' : '')
-            const icon = done || bad > 0 ? (badHalf ? '✗' : bad > 0 ? '⚠' : '✓') : s.icon
-            const locked = s.step > step
-            return (
-              <button key={s.step} className={cls}
-                onClick={() => {
-                  if (locked && !window.confirm(`「${s.label}」还没轮到（现在该做第 ${step} 关）。可以先做这一关，但不会计入今日闯关进度，确定去吗？`)) return
-                  nav(s.route)
-                }}>
-                <div className="fgi">{icon}</div>
-                <div className="fgn">{s.label}</div>
-                {bad > 0 && <div className="fgb">错{bad}</div>}
-              </button>
-            )
-          })}
-        </div>
-
-        {serious && (
-          <div className="gapWarn">
-            📢 停了 {miss} 天，词汇在往回漏。漏掉的词复习队列会自动安排回炉，今天从第 {plan?.day ?? '—'} 天接着走就行。
-          </div>
-        )}
-
-        {flowDone ? (
-          <div className="row" style={{ gap: 8 }}>
-            <button className="btn" style={{ flex: 1 }} onClick={() => nav('/d/review')}>📋 去复习巩固</button>
-            <button className="btn ghost" style={{ flex: 1 }} onClick={() => nav('/hall')}>🏛️ 去考场加练</button>
-          </div>
-        ) : (
-          <button className="btn tcGo" onClick={() => nav(curStep.route)}>
-            {step === 1 ? '▶ 开始今天的闯关 · ' : serious ? '⚡ 补上 · ' : '▶ 继续第 ' + step + ' 关 · '}{curStep.icon} {curStep.label}
-          </button>
-        )}
-
-        {/* 等级/积分压缩行：信息还在，不再各占一张卡 */}
-        <div className="tcMeta">
-          LV.{lv.lv} {lv.name} · {progress.points} 积分 · 连续 {progress.streakDays} 天 · 今日 {todayMin} 分钟
-        </div>
-      </div>
-
-      {/* ── 每日计划日期条（v3.7）：整个计划期逐天切换，点一天进选关页 /flow/dayXX ──
-          提前学没有副作用：只有今天的主线听写会推进计划天（markPlanDone 只认 plan），提前做=纯加练 */}
-      {plan && (
-        <div className="card pad" style={{ marginTop: 14 }}>
-          <div className="between" style={{ marginBottom: 10 }}>
-            <div style={{ fontWeight: 800, fontSize: 15 }}>📅 每日计划 · 按天学</div>
-            <span className="sub small">共 {plan.total} 天 · 点任意一天</span>
-          </div>
-          <div className="dayStrip">
+        {/* 日期条（合并进卡）：点哪天，上面的标题/五关格/按钮就切到哪天 */}
+        {plan && (
+          <div className="dayStrip" style={{ marginBottom: 12 }}>
             {Array.from({ length: plan.total }, (_, i) => i + 1).map(no => {
               const date = progress.planLog?.[no]
               const fe = date ? progress.flow?.[date] : undefined
-              const isToday = date === today
-              const nn = String(no).padStart(2, '0')
+              const isTodayCell = no === todayNo
+              const isSel = selDay === no || (selDay === null && isTodayCell)
               return (
-                <button key={no} className={'dsc' + (isToday ? ' today' : '')}
-                  onClick={() => {
-                    if (isToday) { window.scrollTo({ top: 0, behavior: 'smooth' }); return }
-                    nav(`/flow/day${nn}`)
-                  }}>
-                  <div className="dscNo">{isToday ? '今天' : `第${no}天`}</div>
+                <button key={no} className={'dsc' + (isSel ? ' today' : '')}
+                  onClick={() => setSelDay(isTodayCell ? null : no)}>
+                  <div className="dscNo">{isTodayCell ? '今天' : `第${no}天`}</div>
                   <div className="dscBar">
                     {FLOW_STEPS.map(s => {
                       const r = date ? progress.flow?.[date]?.steps?.[s.step] : undefined
@@ -239,14 +211,92 @@ export default function Home() {
                       return <span key={s.step} style={{ background: color }} />
                     })}
                   </div>
-                  <div className="dscDate">{date ? shortDate(date) : '未学'}</div>
+                  <div className="dscDate">{date ? shortDate(date) : isTodayCell ? '在学' : '未学'}</div>
                 </button>
               )
             })}
           </div>
-          <div className="sub small" style={{ marginTop: 8 }}>
-            绿=过 · 黄=有点错 · 红=错一半以上 · 灰=没做。点一天重走那天的五关，成绩记最新一次；「今天」点回顶部。
+        )}
+
+        {/* 五关格（v3.7 可点 + v3.9 跟随选中天）：
+            今天 = 原规则（已过关重做/当前关继续/未到关确认后可跳，账本幂等兜底）；
+            历史天 = 五关全部可单点重做（重学不记今日账，无副作用，无需确认） */}
+        <div className="flowGrid">
+          {FLOW_STEPS.map(s => {
+            const res = sel.fe?.steps?.[s.step]
+            const bad = res && FLOW_SCORED[s.step] ? res.t - res.r : 0
+            const badHalf = bad > 0 && bad * 2 > (res?.t || 1)
+            if (sel.isToday) {
+              const done = flowDoneCount >= s.step
+              const cur = !done && s.step === step
+              const cls = 'fg' + (bad > 0 ? (badHalf ? ' bad' : ' warn') : done ? ' done' : cur ? ' cur' : '')
+              const icon = done || bad > 0 ? (badHalf ? '✗' : bad > 0 ? '⚠' : '✓') : s.icon
+              const locked = s.step > step
+              return (
+                <button key={s.step} className={cls}
+                  onClick={() => {
+                    if (locked && !window.confirm(`「${s.label}」还没轮到（现在该做第 ${step} 关）。可以先做这一关，但不会计入今日闯关进度，确定去吗？`)) return
+                    nav(s.route)
+                  }}>
+                  <div className="fgi">{icon}</div>
+                  <div className="fgn">{s.label}</div>
+                  {bad > 0 && <div className="fgb">错{bad}</div>}
+                </button>
+              )
+            }
+            const done = sel.doneCount >= s.step
+            const cls = 'fg' + (bad > 0 ? (badHalf ? ' bad' : ' warn') : done ? ' done' : '')
+            const icon = done || bad > 0 ? (badHalf ? '✗' : bad > 0 ? '⚠' : '✓') : s.icon
+            return (
+              <button key={s.step} className={cls}
+                onClick={() => nav(s.route.replace(/\/plan$/, '/' + sel.id))}>
+                <div className="fgi">{icon}</div>
+                <div className="fgn">{s.label}</div>
+                {bad > 0 && <div className="fgb">错{bad}</div>}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* 按钮区：今天 = 闯关/复习；历史天 = 重走链 + 打印 + 回今天 */}
+        {sel.isToday ? (
+          <>
+            {serious && (
+              <div className="gapWarn">
+                📢 停了 {miss} 天，词汇在往回漏。漏掉的词复习队列会自动安排回炉，今天从第 {plan?.day ?? '—'} 天接着走就行。
+              </div>
+            )}
+            {flowDone ? (
+              <div className="row" style={{ gap: 8 }}>
+                <button className="btn" style={{ flex: 1 }} onClick={() => nav('/d/review')}>📋 去复习巩固</button>
+                <button className="btn ghost" style={{ flex: 1 }} onClick={() => nav('/hall')}>🏛️ 去考场加练</button>
+              </div>
+            ) : (
+              <button className="btn tcGo" onClick={() => nav(curStep.route)}>
+                {step === 1 ? '▶ 开始今天的闯关 · ' : serious ? '⚡ 补上 · ' : '▶ 继续第 ' + step + ' 关 · '}{curStep.icon} {curStep.label}
+              </button>
+            )}
+          </>
+        ) : (
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn tcGo" style={{ flex: 1.4 }}
+              onClick={() => nav('/learn/' + sel.id)}>
+              {sel.learned ? '🔁 重走这天的五关' : '▶ 加练这天的词'}
+            </button>
+            <button className="btn ghost" style={{ flex: 1 }} onClick={() => nav('/print/' + sel.id)}>🖨️ 纸质卷</button>
+            <button className="btn ghost" style={{ flex: 0.8 }} onClick={() => setSelDay(null)}>↑ 今天</button>
           </div>
+        )}
+
+        {/* 等级/积分压缩行：信息还在，不再各占一张卡 */}
+        <div className="tcMeta">
+          LV.{lv.lv} {lv.name} · {progress.points} 积分 · 连续 {progress.streakDays} 天 · 今日 {todayMin} 分钟
+        </div>
+      </div>
+
+      {sel.isToday && plan && (
+        <div className="sub small" style={{ marginTop: 8, paddingLeft: 4 }}>
+          上面的日期条点任意一天，卡片就切到那天——重做单关或重走整条链都行，成绩记最新一次，不影响今天的计划进度。
         </div>
       )}
 

@@ -9,7 +9,7 @@ import { buildCnOptions } from '../src/lib/translate'
 import { weekStartStr } from '../src/lib/storage'
 import { calcWeekReport } from '../src/lib/weekreport'
 import { mergeProgress } from '../src/lib/sync'
-import { flowAdvance, flowStepOf, flowAllDone, FLOW_STEPS, isFlowTaskId, skipGate } from '../src/lib/flow'
+import { flowAdvance, flowStepOf, flowAllDone, FLOW_STEPS, isFlowTaskId, skipGate, flowRecordStep, flowStepResult, flowDayForTaskId } from '../src/lib/flow'
 import type { Progress } from '../src/types'
 import { resolveRate, SLOW_RATE } from '../src/lib/player'
 
@@ -392,6 +392,53 @@ log.push('【闯关进度】')
   t('wcustom 可走五关链（v3.6 错词五关）', isFlowTaskId('wcustom'))
   t('mix/custom/review 不走链', !isFlowTaskId('mix') && !isFlowTaskId('custom') && !isFlowTaskId('review'))
   t('unit01/final01 不走链', !isFlowTaskId('unit01') && !isFlowTaskId('final01'))
+
+  // ── 单关成绩 steps（v3.7）──
+  log.push('【闯关单关成绩】')
+  // flowAdvance 推进时保留已有成绩
+  const fsteps: NonNullable<Progress['flow']> = { [DAY]: { step: 1, steps: { 1: { t: 10, r: 8, at: 100 } } } }
+  const adv = flowAdvance(fsteps, 2, DAY)
+  t('推进到第 2 关保留成绩', !!adv && adv[DAY].step === 2 && adv[DAY].steps?.[1].r === 8)
+  // flowRecordStep 覆盖式记最新
+  const rec1 = flowRecordStep(fsteps, DAY, 2, 10, 9, 200)
+  t('记第 2 关成绩', rec1[DAY].steps?.[2].t === 10 && rec1[DAY].steps?.[2].r === 9)
+  const rec2 = flowRecordStep(rec1, DAY, 2, 10, 5, 300)
+  t('重做覆盖为最新一次', rec2[DAY].steps?.[2].r === 5 && rec2[DAY].steps?.[2].at === 300)
+  t('记账不动 step 账本（推进只归 advanceFlow）', rec2[DAY].step === 1)
+  // 跳关重做：成绩照记（step 账本仍需顺序）
+  const f0: NonNullable<Progress['flow']> = { [DAY]: { step: 0 } }
+  const rec3 = flowRecordStep(f0, DAY, 5, 10, 10, 400)
+  t('跳关做第 5 关成绩照记', rec3[DAY].steps?.[5].r === 10 && rec3[DAY].step === 0)
+  t('跳关时乱序推进仍被拒', flowAdvance(f0, 5, DAY) === null)
+  // flowStepResult 读取
+  t('flowStepResult 读到成绩', flowStepResult(rec2, DAY, 2)?.r === 5)
+  t('flowStepResult 没有返回 null', flowStepResult(rec2, DAY, 4) === null)
+  // 合并：steps 逐关取 at 新者
+  const s1 = defaultProgress()
+  s1.flow = { [DAY]: { step: 2, steps: { 2: { t: 10, r: 9, at: 200 } } } }
+  const s2 = defaultProgress()
+  s2.flow = { [DAY]: { step: 2, steps: { 2: { t: 10, r: 6, at: 500 } } } }
+  const ms = mergeProgress(s1, s2)
+  t('合并取 at 更新的成绩（云端新）', ms.flow?.[DAY].steps?.[2].r === 6)
+  const s3 = defaultProgress()
+  s3.flow = { [DAY]: { step: 2, steps: { 2: { t: 10, r: 7, at: 900 } } } }
+  const ms2 = mergeProgress(s2, s3)
+  t('合并取 at 更新的成绩（本地新）', ms2.flow?.[DAY].steps?.[2].r === 7)
+  // 合并不同关互不覆盖
+  const s4 = defaultProgress()
+  s4.flow = { [DAY]: { step: 3, steps: { 2: { t: 10, r: 9, at: 200 } } } }
+  const s5 = defaultProgress()
+  s5.flow = { [DAY]: { step: 4, steps: { 4: { t: 10, r: 8, at: 300 } } } }
+  const ms3 = mergeProgress(s4, s5)
+  t('不同关的成绩都保留', ms3.flow?.[DAY].steps?.[2].r === 9 && ms3.flow?.[DAY].steps?.[4].r === 8)
+  t('step 合并仍取大者', ms3.flow?.[DAY].step === 4)
+  // flowDayForTaskId：plan→今天 / dayXX→planLog 反查 / 其他→null
+  const plog = defaultProgress()
+  plog.planLog = { 5: '2026-10-01' }
+  t('plan 记今天', flowDayForTaskId(plog, 'plan', DAY) === DAY)
+  t('day05 反查 planLog 日期', flowDayForTaskId(plog, 'day05', DAY) === '2026-10-01')
+  t('没标记过的 day 返回 null', flowDayForTaskId(plog, 'day06', DAY) === null)
+  t('wcustom/mix 不记成绩', flowDayForTaskId(plog, 'wcustom', DAY) === null && flowDayForTaskId(plog, 'mix', DAY) === null)
 }
 
 // ── 错词总历史 + 跳关路由（v3.6）──

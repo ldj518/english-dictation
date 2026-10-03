@@ -31,6 +31,7 @@ import FormsPage from '../src/pages/Forms'
 import DaysPage from '../src/pages/Days'
 import HallPage from '../src/pages/Hall'
 import ExtraPage from '../src/pages/Extra'
+import FlowDayPage from '../src/pages/FlowDay'
 
 type Case = [string, string, React.ComponentType]
 
@@ -66,6 +67,7 @@ const PARAM_CASES: [string, React.ComponentType][] = [
   ['/test/unit99', UnitTestPage],  // 不存在的单元 → 空态页
   ['/print/day01', PrintSheetPage],
   ['/print/plan', PrintSheetPage],
+  ['/flow/day01', FlowDayPage],  // 选关页（v3.7）：某天五关总览+每关重做
   ['/paper/day01', PaperPage],
   ['/translate/day01', TranslatePage],
   ['/translate/plan', TranslatePage],

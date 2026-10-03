@@ -4,7 +4,7 @@ import Shell from '../components/Shell'
 import PinGate from '../components/PinGate'
 import LetterKeyboard from '../components/LetterKeyboard'
 import FlowNextBar from '../components/FlowNextBar'
-import { isFlowTaskId, skipGate } from '../lib/flow'
+import { isFlowTaskId, skipGate, flowDayForTaskId } from '../lib/flow'
 import { useStore } from '../lib/store'
 import { judgeWithFirst } from '../lib/storage'
 import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems, wordFileMap, playWordText } from '../lib/data'
@@ -26,7 +26,7 @@ import type { AnswerRecord, AudioItem, Track } from '../types'
 export default function Spell() {
   const { id = '' } = useParams()
   const nav = useNavigate()
-  const { progress, recordAnswer, submitSession, profile, advanceFlow } = useStore()
+  const { progress, recordAnswer, submitSession, profile, advanceFlow, recordFlowStep } = useStore()
   const kb = progress.settings.kbBuiltIn !== false
 
   const [track, setTrack] = useState<Track | undefined>(() => getTrack(id))
@@ -131,6 +131,8 @@ export default function Spell() {
     submitSession(track, recs, sec, 'spell', { skipBest: true })
     // 闯关第 4 关（v3.5）：plan 任务做完即记账（幂等）
     if (track.id === 'plan') advanceFlow(4)
+    // 单关成绩（v3.7）：最新一次 {t,r}，plan 记今天、dayXX 记回那天的格子
+    if (isFlowTaskId(track.id)) recordFlowStep(4, total, right, flowDayForTaskId(progress, track.id))
     setResult({ score, right, total, seconds: sec, attemptNo })
   }
 

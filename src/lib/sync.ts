@@ -140,10 +140,18 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
   }
 
   // 闯关进度（v3.5）：同一天取 step 大者（只进不退）
+  // 单关成绩 steps（v3.7）：逐关取 at 更新的（最新一次口径）
   const flow: NonNullable<Progress['flow']> = { ...(a.flow || {}) }
   for (const [k, v] of Object.entries(b.flow || {})) {
     const cur = flow[k]
-    flow[k] = !cur || v.step > cur.step ? v : cur
+    if (!cur) { flow[k] = v; continue }
+    type StepMap = NonNullable<NonNullable<Progress['flow']>[string]['steps']>
+    const steps: StepMap = { ...(cur.steps || {}) }
+    for (const [sn, sr] of Object.entries(v.steps || {})) {
+      const c = steps[Number(sn)]
+      steps[Number(sn)] = !c || sr.at > c.at ? sr : c
+    }
+    flow[k] = { step: Math.max(cur.step, v.step), steps }
   }
 
   // 错词总历史（v3.6）：bad/ok 取大者，lastAt 取新者；lastOk/gradAt/cn 跟随 lastAt 新的一方

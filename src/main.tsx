@@ -30,6 +30,7 @@ import Forms from './pages/Forms'
 import Days from './pages/Days'
 import Hall from './pages/Hall'
 import Extra from './pages/Extra'
+import FlowDay from './pages/FlowDay'
 import AudioFailToast from './components/AudioFailToast'
 import ProfileGate from './components/ProfileGate'
 
@@ -43,6 +44,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/hall" element={<Hall />} />
           <Route path="/extra" element={<Extra />} />
           <Route path="/days" element={<Days />} />
+          <Route path="/flow/:no" element={<FlowDay />} />
           <Route path="/d/:id" element={<Dictation />} />
           <Route path="/learn/:id" element={<Learn />} />
           <Route path="/listen/:id" element={<Listen />} />

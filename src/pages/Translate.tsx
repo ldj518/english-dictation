@@ -12,7 +12,7 @@ import { WORD_MAP } from '../lib/data'
 import AudioGate from '../components/AudioGate'
 import LetterKeyboard from '../components/LetterKeyboard'
 import FlowNextBar from '../components/FlowNextBar'
-import { isFlowTaskId, skipGate } from '../lib/flow'
+import { isFlowTaskId, skipGate, flowDayForTaskId } from '../lib/flow'
 import type { AnswerRecord, AudioItem, Track } from '../types'
 
 /**
@@ -29,7 +29,7 @@ import type { AnswerRecord, AudioItem, Track } from '../types'
 export default function Translate() {
   const { id = '' } = useParams()
   const nav = useNavigate()
-  const { recordAnswer, submitSession, profile, progress, advanceFlow } = useStore()
+  const { recordAnswer, submitSession, profile, progress, advanceFlow, recordFlowStep } = useStore()
   /** 内置 26 键键盘（默认开）：杜绝输入法联想把整词弹出来 */
   const kb = progress.settings.kbBuiltIn !== false
   // 静态任务同步可得；plan/mix 异步合成
@@ -181,6 +181,8 @@ export default function Translate() {
     submitSession(t, recs, sec, 'translate')
     // 闯关第 2 关（v3.5）：plan 任务做完即记账（幂等，乱序不动账）
     if (track.id === 'plan') advanceFlow(2)
+    // 单关成绩（v3.7）：最新一次 {t,r}，plan 记今天、dayXX 记回那天的格子
+    if (isFlowTaskId(track.id)) recordFlowStep(2, total, right, flowDayForTaskId(progress, track.id))
     setResult({ score, right, total, seconds: sec })
   }
 

@@ -56,16 +56,58 @@ export function flowAllDone(progress: Progress, today = todayStr()): boolean {
 }
 
 /**
+ * 计分关（v3.7）：2 听音选义 / 4 首字母拼写 / 5 听写大关 存对错成绩；
+ * 1 见词听音 / 3 开口跟读 不计分（完成即过），格子只显示 ✓。
+ */
+export const FLOW_SCORED: Record<number, boolean> = { 2: true, 4: true, 5: true }
+
+export type FlowStepResult = { t: number; r: number; at: number }
+
+/**
  * 幂等推进（纯函数，store.advanceFlow 调用，logic-test 直测）：
  * step = 刚完成的关号。只有「正在打这一关」（cur+1 === step）才记账，
  * 重放/乱序提交返回 null 不动账；同一天只进不退。
+ * v3.7：推进时保留该天已记录的各关成绩（steps），不能因 step 前进而丢失。
  */
 export function flowAdvance(
   flow: NonNullable<Progress['flow']>, step: number, day: string
 ): NonNullable<Progress['flow']> | null {
   const cur = flow[day]?.step || 0
   if (step !== cur + 1) return null
-  return { ...flow, [day]: { step } }
+  return { ...flow, [day]: { step, steps: flow[day]?.steps } }
+}
+
+/**
+ * 记录单关成绩（v3.7 纯函数，store.recordFlowStep 调用）：
+ * 覆盖式写入该关最新一次结果（重做覆盖，反映当前掌握度）。
+ * 与 step 账本解耦——跳关重做的成绩也照记（step 只认顺序，成绩照实收）。
+ */
+export function flowRecordStep(
+  flow: NonNullable<Progress['flow']>, day: string,
+  stepNo: number, total: number, right: number, at = Date.now()
+): NonNullable<Progress['flow']> {
+  const cur = flow[day] || { step: 0 }
+  const steps = { ...(cur.steps || {}), [stepNo]: { t: total, r: right, at } }
+  return { ...flow, [day]: { ...cur, steps } }
+}
+
+/** 读某天某关的成绩（没有返回 null） */
+export function flowStepResult(
+  flow: Progress['flow'], day: string, stepNo: number
+): FlowStepResult | null {
+  return flow?.[day]?.steps?.[stepNo] || null
+}
+
+/**
+ * 任务 id → 成绩记账的目标日期：
+ * 'plan' → 今天；dayXX → 该计划天首次完成的日期（planLog 反查，重做成绩记回历史格子）；
+ * 其他（wcustom/mix/...）→ null 不记。返回 null 时调用方跳过记账。
+ */
+export function flowDayForTaskId(progress: Progress, id: string, today = todayStr()): string | null {
+  if (id === 'plan') return today
+  const m = /^day(\d+)$/.exec(id)
+  if (!m) return null
+  return progress.planLog?.[Number(m[1])] || null
 }
 
 /**

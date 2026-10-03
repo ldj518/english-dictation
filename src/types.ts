@@ -150,8 +150,10 @@ export interface Progress {
   trioDone?: Record<string, boolean>
   /** 单元过关记录（v3.4）：unitId -> 首次过关分数与日期。≥85% 过关，Home 单元卡亮章 */
   passed?: Record<string, { at: number; score: number }>
+  /** 单关成绩（v3.7）：计分关（2/4/5）存对错；1/3 关不计分只记完成。at 用于跨设备合并取最新 */
+  steps?: Record<number, { t: number; r: number; at: number }>
   /** 闯关进度（v3.5）：日期 yyyy-mm-dd -> { step: 已完成到第几关 }。只进不退，同日取 step 大者 */
-  flow?: Record<string, { step: number }>
+  flow?: Record<string, { step: number; steps?: Record<number, { t: number; r: number; at: number }> }>
   /** 设置 */
   settings: {
     rate: number

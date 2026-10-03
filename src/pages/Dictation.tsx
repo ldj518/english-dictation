@@ -12,7 +12,7 @@ import PinGate from '../components/PinGate'
 import AudioGate from '../components/AudioGate'
 import LetterKeyboard from '../components/LetterKeyboard'
 import FlowNextBar from '../components/FlowNextBar'
-import { isFlowTaskId } from '../lib/flow'
+import { isFlowTaskId, flowDayForTaskId } from '../lib/flow'
 import { todayStr } from '../lib/storage'
 import type { AnswerRecord, AudioItem, Track } from '../types'
 
@@ -51,7 +51,7 @@ async function compressImage(file: File): Promise<File> {
 export default function Dictation() {
   const { id = '' } = useParams()
   const nav = useNavigate()
-  const { progress, recordAnswer, submitSession, updateSettings, profile, markPlanDone, advanceFlow } = useStore()
+  const { progress, recordAnswer, submitSession, updateSettings, profile, markPlanDone, advanceFlow, recordFlowStep } = useStore()
   /** 内置 26 键键盘（默认开）：杜绝输入法联想把整词弹出来 */
   const kb = progress.settings.kbBuiltIn !== false
   // /d/custom：错词本勾选的自定义词单（sessionStorage 传入）
@@ -326,6 +326,10 @@ export default function Dictation() {
     // 闯关第 5 关（v3.5）：plan 整卷做完即记通关（幂等；中途交卷不算）
     if (track.id === 'plan' && recs.length >= track.items.length) {
       advanceFlow(5)
+    }
+    // 单关成绩（v3.7）：整卷才记（中途交卷不算成绩），plan 记今天、dayXX 记回那天的格子
+    if (isFlowTaskId(track.id) && recs.length >= track.items.length) {
+      recordFlowStep(5, total, right, flowDayForTaskId(progress, track.id))
     }
     setResult({ score, right, total, newly, seconds: sec, attemptNo })
     setPhase('done')

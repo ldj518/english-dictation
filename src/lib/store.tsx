@@ -10,7 +10,7 @@ import { enqueueReview, advanceReview, resetReview, reopenReview, dueReviews } f
 import { reportSession, syncStudent, checkBackend, fetchShuffleSalt, pushProgressSnapshot, fetchParentRules } from './api'
 import type { ParentRules } from './api'
 import { syncProfiles, pullAndMerge } from './sync'
-import { flowAdvance } from './flow'
+import { flowAdvance, flowRecordStep } from './flow'
 import type { Badge } from '../types'
 
 interface Ctx {
@@ -33,6 +33,8 @@ interface Ctx {
   passUnit: (unitId: string, score: number) => void
   /** 闯关推进（v3.5）：完成第 step 关后调。幂等——只有当前正好停在 step-1 时才推进，重放/乱序不动账 */
   advanceFlow: (step: number) => void
+  /** 单关成绩记账（v3.7）：计分关（2/4/5）最新一次 {t,r}。day 缺省=今天；传 null 跳过（非链任务） */
+  recordFlowStep: (stepNo: number, total: number, right: number, day?: string | null) => void
   /** 复习模式：答对推进，答错重置 */
   recordReview: (word: string, cn: string, correct: boolean) => void
   updateSettings: (s: Partial<Progress['settings']>) => void
@@ -398,13 +400,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
+  /** 单关成绩（v3.7）：覆盖式记最新一次；day=null（非链任务）跳过 */
+  const recordFlowStep = useCallback((stepNo: number, total: number, right: number, day?: string | null) => {
+    if (!day) return
+    setProgress(p => {
+      const flow = flowRecordStep(p.flow || {}, day, stepNo, total, right)
+      return { ...p, flow }
+    })
+  }, [])
+
   const value = useMemo(() => ({
     progress, profiles, profile, switchProfile, updateProfile,
     recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone,
-    markLearned, awardDailyBonus, passUnit, advanceFlow,
+    markLearned, awardDailyBonus, passUnit, advanceFlow, recordFlowStep,
   }), [progress, profiles, profile, switchProfile, updateProfile,
        recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone,
-       markLearned, awardDailyBonus, passUnit, advanceFlow])
+       markLearned, awardDailyBonus, passUnit, advanceFlow, recordFlowStep])
 
   return (
     <C.Provider value={value}>

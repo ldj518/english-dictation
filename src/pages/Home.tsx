@@ -8,7 +8,7 @@ import { getPlanTrack } from '../lib/data'
 import { fetchWordbooks, fetchParentRules } from '../lib/api'
 import { dueWrongWords, todayStr } from '../lib/storage'
 import { dueReviews } from '../lib/reviewQueue'
-import { FLOW_STEPS, flowStepOf } from '../lib/flow'
+import { FLOW_STEPS, flowStepOf, FLOW_SCORED } from '../lib/flow'
 
 /**
  * 首页（v3.5 三区改版）：
@@ -105,24 +105,11 @@ export default function Home() {
     nav('/d/custom')
   }
 
-  // ── 历史每日计划（v3.6）：有闯关记录的历史天，点一天 = 重走那天的五关链 ──
-  const flowDays = useMemo(() => {
-    const f = progress.flow || {}
-    return Object.keys(f).filter(d => d !== today).sort().reverse().slice(0, 14)
-  }, [progress.flow, today])
-  const planDayByDate = useMemo(() => {
-    const m: Record<string, number[]> = {}
-    Object.entries(progress.planLog || {}).forEach(([no, date]) => {
-      const n = Number(no)
-      if (!Number.isFinite(n)) return
-      ;(m[date] ||= []).push(n)
-    })
-    return m
-  }, [progress.planLog])
-  const dayLabel = (d: string) => {
+  // ── 每日计划日期条（v3.7）：整个计划期逐天可切，点一天进选关页 ──
+  // date→dayNo 反查（planLog: dayNo→date）由 planLog 直接给
+  const shortDate = (d: string) => {
     const [, m, dd] = d.split('-').map(Number)
-    const wd = ['日', '一', '二', '三', '四', '五', '六'][new Date(d + 'T00:00:00').getDay()]
-    return `${m}月${dd}日 · 周${wd}`
+    return `${m}/${dd}`
   }
 
   // 家长寄语（家长中心设置，云端同步）
@@ -171,16 +158,28 @@ export default function Home() {
           <div className="tcStep">第 {flowDoneCount}/5 关</div>
         </div>
 
-        {/* 五关进度条：✓ 绿 = 已过 · 蓝 = 当前 · 灰 = 未到 */}
+        {/* 五关进度条（v3.7）：全部可点——已过关=重做，当前关=继续，未到的关确认后可跳（不计今日账）；
+            有成绩的关显示对错：绿✓ 全对 / 橙⚠ 错一半内 / 红✗ 错一半以上 */}
         <div className="flowGrid">
           {FLOW_STEPS.map(s => {
             const done = flowDoneCount >= s.step
             const cur = !done && s.step === step
+            const res = progress.flow?.[today]?.steps?.[s.step]
+            const bad = res && FLOW_SCORED[s.step] ? res.t - res.r : 0
+            const badHalf = bad > 0 && bad * 2 > (res?.t || 1)
+            const cls = 'fg' + (bad > 0 ? (badHalf ? ' bad' : ' warn') : done ? ' done' : cur ? ' cur' : '')
+            const icon = done || bad > 0 ? (badHalf ? '✗' : bad > 0 ? '⚠' : '✓') : s.icon
+            const locked = s.step > step
             return (
-              <div key={s.step} className={'fg' + (done ? ' done' : cur ? ' cur' : '')}>
-                <div className="fgi">{done ? '✓' : s.icon}</div>
+              <button key={s.step} className={cls}
+                onClick={() => {
+                  if (locked && !window.confirm(`「${s.label}」还没轮到（现在该做第 ${step} 关）。可以先做这一关，但不会计入今日闯关进度，确定去吗？`)) return
+                  nav(s.route)
+                }}>
+                <div className="fgi">{icon}</div>
                 <div className="fgn">{s.label}</div>
-              </div>
+                {bad > 0 && <div className="fgb">错{bad}</div>}
+              </button>
             )
           })}
         </div>
@@ -208,45 +207,45 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── 历史每日计划（v3.6）：查看之前每天的五关完成情况，点击重走那天的链 ── */}
-      {flowDays.length > 0 && (
+      {/* ── 每日计划日期条（v3.7）：整个计划期逐天切换，点一天进选关页 /flow/dayXX ──
+          提前学没有副作用：只有今天的主线听写会推进计划天（markPlanDone 只认 plan），提前做=纯加练 */}
+      {plan && (
         <div className="card pad" style={{ marginTop: 14 }}>
           <div className="between" style={{ marginBottom: 10 }}>
-            <div style={{ fontWeight: 800, fontSize: 15 }}>📅 之前的每日计划</div>
-            <span className="sub small">点一天，重走那天的五关</span>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>📅 每日计划 · 按天学</div>
+            <span className="sub small">共 {plan.total} 天 · 点任意一天</span>
           </div>
-          {flowDays.map(d => {
-            const st = progress.flow?.[d]?.step || 0
-            const nos = planDayByDate[d]
-            const no = nos && nos.length ? Math.max(...nos) : null
-            return (
-              <div
-                key={d}
-                onClick={() => { if (no) nav(`/learn/day${String(no).padStart(2, '0')}`) }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '9px 4px',
-                  borderTop: '1px solid var(--line)', cursor: no ? 'pointer' : 'default',
-                  opacity: no ? 1 : 0.6,
-                }}
-              >
-                <div style={{ width: 92, fontWeight: 700, fontSize: 14, flexShrink: 0 }}>{dayLabel(d)}</div>
-                <div style={{ display: 'flex', gap: 3, flex: 1 }}>
-                  {FLOW_STEPS.map(s => (
-                    <div key={s.step} title={s.label} style={{
-                      width: 22, height: 8, borderRadius: 4,
-                      background: st >= s.step ? 'var(--ok)' : 'var(--line)',
-                    }} />
-                  ))}
-                </div>
-                <div className="sub small" style={{ flexShrink: 0 }}>
-                  {no ? `第 ${nos!.join('、')} 天` : '未标记计划天'}
-                  {no && <span style={{ marginLeft: 4, color: 'var(--blue)' }}>›</span>}
-                </div>
-              </div>
-            )
-          })}
+          <div className="dayStrip">
+            {Array.from({ length: plan.total }, (_, i) => i + 1).map(no => {
+              const date = progress.planLog?.[no]
+              const fe = date ? progress.flow?.[date] : undefined
+              const isToday = date === today
+              const nn = String(no).padStart(2, '0')
+              return (
+                <button key={no} className={'dsc' + (isToday ? ' today' : '')}
+                  onClick={() => {
+                    if (isToday) { window.scrollTo({ top: 0, behavior: 'smooth' }); return }
+                    nav(`/flow/day${nn}`)
+                  }}>
+                  <div className="dscNo">{isToday ? '今天' : `第${no}天`}</div>
+                  <div className="dscBar">
+                    {FLOW_STEPS.map(s => {
+                      const r = date ? progress.flow?.[date]?.steps?.[s.step] : undefined
+                      const bad = r && FLOW_SCORED[s.step] ? r.t - r.r : 0
+                      const passed = !!fe && s.step <= fe.step
+                      const color = !passed ? 'var(--line)'
+                        : bad > 0 ? (bad * 2 > r!.t ? '#e05a4e' : '#e8a13c')
+                        : 'var(--ok)'
+                      return <span key={s.step} style={{ background: color }} />
+                    })}
+                  </div>
+                  <div className="dscDate">{date ? shortDate(date) : '未学'}</div>
+                </button>
+              )
+            })}
+          </div>
           <div className="sub small" style={{ marginTop: 8 }}>
-            今天的计划在上面这张卡里；做完的历史都在这里，随时回去重学。
+            绿=过 · 黄=有点错 · 红=错一半以上 · 灰=没做。点一天重走那天的五关，成绩记最新一次；「今天」点回顶部。
           </div>
         </div>
       )}

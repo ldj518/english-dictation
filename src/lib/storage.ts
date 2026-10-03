@@ -1,5 +1,6 @@
 import type { Progress, WrongWord, Profile } from '../types'
 import { isDueByDay } from './reviewQueue'
+import wordsJson from '../data/words.json'
 
 /** 遗忘曲线间隔（天）：1 / 2 / 4 / 7 / 15 / 30 */
 export const REVIEW_STAGES = [1, 2, 4, 7, 15, 30]
@@ -232,16 +233,35 @@ export function dueWrongWords(p: Progress): WrongWord[] {
  * 让它们按曲线走完自然毕业即可。
  * 启动时对每个身份跑一次（store 引导），返回是否有改动。
  */
+/** word → 教材正式中文（cnFull 优先，带词性；与错词本其他条目格式一致） */
+const WORD_CN: Record<string, string> = {}
+for (const it of wordsJson as { word: string; cnFull?: string; cn?: string }[]) {
+  WORD_CN[it.word] = it.cnFull || it.cn || ''
+}
+
+/**
+ * 清洗测试词污染（v3.9.1）。历史上浏览器测试注入的词（cn=「测试词N」）混进了真身份数据，
+ * 但实测这些条目（word 是教材真词）随后被孩子真实学习复用——count/ok/复习轮次都是真数据，
+ * addWrong 对已存在的词只增 count 不更新 cn，所以「按 cn 删条目」会抹掉真实学习记录。
+ * 因此语义定为：cn 含「测试词」且 word 是教材词 → 只把 cn 修正为教材正式中文（数据全保留）；
+ * word 不是教材词（真垃圾）→ 删除条目。复习队列 review 一律不动。返回是否有变化。
+ */
 export function purgeTestData(p: Progress): boolean {
   let changed = false
   const isTest = (cn?: string) => !!cn && cn.includes('测试词')
   for (const w of Object.keys(p.wrong)) {
-    if (isTest(p.wrong[w].cn)) { delete p.wrong[w]; changed = true }
+    const it = p.wrong[w]
+    if (!isTest(it.cn)) continue
+    const cn = WORD_CN[it.word]
+    if (cn) { it.cn = cn; changed = true } else { delete p.wrong[w]; changed = true }
   }
   const wlog = p.wrongLog
   if (wlog) {
     for (const w of Object.keys(wlog)) {
-      if (isTest(wlog[w].cn)) { delete wlog[w]; changed = true }
+      const it = wlog[w]
+      if (!isTest(it.cn)) continue
+      const cn = WORD_CN[it.word]
+      if (cn) { it.cn = cn; changed = true } else { delete wlog[w]; changed = true }
     }
   }
   return changed

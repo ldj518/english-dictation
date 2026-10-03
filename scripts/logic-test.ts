@@ -523,26 +523,33 @@ log.push('【错词总历史与跳关】')
 }
 
 // ── 测试词清洗（v3.9.1）──
+// 实测口径：被污染的条目（cn=测试词N）word 都是教材真词，且随后被孩子真实学习复用
+// （addWrong 对已有条目只增 count 不更新 cn）——所以教材词只修 cn，数据全保留；
+// 非教材词（真垃圾）才删。review 队列一律不动。
 log.push('【测试词清洗】')
 {
   let p = defaultProgress()
   p = addWrong(p, 'apple', '苹果')
   p = addWrong(p, '测试词1', '测试词1')
   p = addWrong(p, 'banana', '香蕉')
-  p = addWrong(p, '测试词2', '测试词2')
-  // 队列里塞一个「测试词 N」的复习条目 + 一个真词条目：清洗绝不能动队列
+  // moment 是教材词：模拟「测试注入后真实学习复用」的污染现场
+  p = addWrong(p, 'moment', '测试词5')
+  p = addWrong(p, 'moment', 'n.某个时刻；片刻；瞬间')  // 第二次真实答错（cn 仍是测试词5）
   p.review = {
     '测试词1': { word: '测试词1', stage: 1, dueAt: Date.now() + 86400000 },
-    'apple': { word: 'apple', stage: 1, dueAt: Date.now() + 86400000 },
+    'moment': { word: 'moment', stage: 1, dueAt: Date.now() + 86400000 },
   }
-  const beforeLog = Object.keys(p.wrongLog).length
+  const beforeCount = p.wrong['moment'].count
   const changed = purgeTestData(p)
   t('purge 报告有变化', changed === true)
-  t('wrong 里的测试词被清', !p.wrong['测试词1'] && !p.wrong['测试词2'])
-  t('wrong 里的真词保留', !!p.wrong['apple'] && !!p.wrong['banana'])
-  t('wrongLog 里的测试词被清（含 addWrong 刚记的）', !p.wrongLog?.['测试词1'] && !p.wrongLog?.['测试词2'])
+  t('非教材测试词被删', !p.wrong['测试词1'] && !p.wrongLog?.['测试词1'])
+  t('真词条目保留', !!p.wrong['apple'] && !!p.wrong['banana'])
+  t('教材词污染条目保留（不删）', !!p.wrong['moment'])
+  t('教材词 cn 已修正为教材中文', p.wrong['moment'].cn === 'n.某个时刻；片刻；瞬间')
+  t('教材词真实计数不动', p.wrong['moment'].count === beforeCount)
+  t('wrongLog 教材词 cn 修正', !!p.wrongLog?.['moment'] && !p.wrongLog?.['moment'].cn.includes('测试词'))
   t('wrongLog 真词保留', !!p.wrongLog?.['apple'])
-  t('review 队列绝不动（教材真词混名）', !!p.review?.['测试词1'] && !!p.review?.['apple'])
+  t('review 队列绝不动', !!p.review?.['测试词1'] && !!p.review?.['moment'])
   t('clean 后不再报变化', purgeTestData(p) === false)
 
   // 毕业进历史（graduateWrong 的核心逻辑）：出本 + wrongLog 记 gradAt

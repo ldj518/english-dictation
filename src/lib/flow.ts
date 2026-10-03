@@ -69,11 +69,24 @@ export function flowAdvance(
 }
 
 /**
- * 可走「五关链」的任务 id（v3.5.1 自由选关重学）：
- * - 'plan' ：今日主线，完成后记账（flowAdvance）
- * - dayXX  ：考场重学某一天，走同一条链但不记账，做完即散
+ * 可走「五关链」的任务 id（v3.5.1 自由选关重学；v3.6 加错词五关）：
+ * - 'plan'   ：今日主线，完成后记账（flowAdvance）
+ * - dayXX    ：考场重学某一天，走同一条链但不记账，做完即散
+ * - 'wcustom'：错词五关（错词本进来，词单在 sessionStorage custom-words），不记账
  * - 其他（mix/custom/review/unit/final）：不走五关链，页面只给普通按钮
  */
 export function isFlowTaskId(id: string): boolean {
-  return id === 'plan' || /^day\d+$/.test(id)
+  return id === 'plan' || /^day\d+$/.test(id) || id === 'wcustom'
+}
+
+/**
+ * 跳过当前关（v3.6 错词五关「每关可跳过」）：返回下一关路由。
+ * kind = 当前页面的关种类；taskId 替换路由尾部的 /plan。
+ * 第 5 关（听写大关）没有下一关，返回 null——大关本身有「结束并交卷」。
+ */
+export function skipGate(kind: FlowStep['kind'], taskId: string): string | null {
+  const step = KIND_TO_STEP[kind]
+  const next = FLOW_STEPS[step]   // step 是 1 起的当前关号，数组下标 step 正好是下一关
+  if (!next) return null
+  return next.route.replace(/\/plan$/, '/' + taskId)
 }

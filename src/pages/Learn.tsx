@@ -99,10 +99,10 @@ export default function Learn() {
 
   // 闯关态（v3.5）：今天的第 1 关还没过、且做的是 plan 任务 → 完成后推进并直进第 2 关。
   const inFlow = id === 'plan' && flowStepOf(progress) === 1
-  // 重学态（v3.5.1）：dayXX 是考场选来重学的一天 → 完成后走同一条五关链（不记账）
-  const isRelearn = /^day\d+$/.test(id)
+  // 重学态（v3.5.1）：dayXX 是考场选来重学的一天；v3.6：wcustom 错词五关。走同一条链（不记账）
+  const isRelearn = /^day\d+$/.test(id) || id === 'wcustom'
 
-  /** 主按钮：链内前进。plan 记账进第 2 关；dayXX 直接进第 2 关；其他任务直达听写（原逻辑） */
+  /** 主按钮：链内前进。plan 记账进第 2 关；dayXX/wcustom 直接进第 2 关；其他任务直达听写（原逻辑） */
   const goNextFlow = () => {
     recordOnce()
     if (inFlow) {
@@ -148,8 +148,11 @@ export default function Learn() {
     return (
       <Shell title={loadingDyn ? '准备词单' : '未找到'} back>
         <div className="empty">
-          <div className="i">{loadingDyn ? '⏳' : '🤔'}</div>
-          <div>{loadingDyn ? '正在准备今天的词单…' : '没有这个任务'}</div>
+          <div className="i">{loadingDyn ? '⏳' : id === 'wcustom' ? '📖' : '🤔'}</div>
+          <div>{loadingDyn ? '正在准备今天的词单…' : id === 'wcustom' ? '还没有选词' : '没有这个任务'}</div>
+          {id === 'wcustom' && (
+            <button className="btn" style={{ marginTop: 14 }} onClick={() => nav('/review')}>回错词本选词</button>
+          )}
         </div>
       </Shell>
     )
@@ -222,7 +225,7 @@ export default function Learn() {
         {isLast ? (
           <button className="btn" style={{ background: 'var(--blue)', minHeight: 50, width: '100%' }} onClick={goNextFlow}>
             {inFlow ? '✓ 第 1 关完成，进入下一关 →'
-              : isRelearn ? '✓ 这天的词过完了，进入下一关 →'
+              : isRelearn ? '✓ 这批词过完了，进入下一关 →'
                 : '🎧 都过完了，开始听写'}
           </button>
         ) : (
@@ -232,7 +235,7 @@ export default function Learn() {
         )}
         <button className="btn ghost" style={{ width: '100%' }} onClick={inFlow ? goNextFlow : goDictation}>
           {inFlow ? '⏭ 跳过本关，直接下一关'
-            : isRelearn ? '⏭ 跳过学习，直接听写这天'
+            : isRelearn ? '⏭ 跳过学习，直接听写'
               : '⏭ 跳过剩下的，直接听写'}
         </button>
       </div>

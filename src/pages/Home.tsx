@@ -105,6 +105,26 @@ export default function Home() {
     nav('/d/custom')
   }
 
+  // ── 历史每日计划（v3.6）：有闯关记录的历史天，点一天 = 重走那天的五关链 ──
+  const flowDays = useMemo(() => {
+    const f = progress.flow || {}
+    return Object.keys(f).filter(d => d !== today).sort().reverse().slice(0, 14)
+  }, [progress.flow, today])
+  const planDayByDate = useMemo(() => {
+    const m: Record<string, number[]> = {}
+    Object.entries(progress.planLog || {}).forEach(([no, date]) => {
+      const n = Number(no)
+      if (!Number.isFinite(n)) return
+      ;(m[date] ||= []).push(n)
+    })
+    return m
+  }, [progress.planLog])
+  const dayLabel = (d: string) => {
+    const [, m, dd] = d.split('-').map(Number)
+    const wd = ['日', '一', '二', '三', '四', '五', '六'][new Date(d + 'T00:00:00').getDay()]
+    return `${m}月${dd}日 · 周${wd}`
+  }
+
   // 家长寄语（家长中心设置，云端同步）
   const [pmsg, setPmsg] = useState('')
   useEffect(() => {
@@ -187,6 +207,49 @@ export default function Home() {
           LV.{lv.lv} {lv.name} · {progress.points} 积分 · 连续 {progress.streakDays} 天 · 今日 {todayMin} 分钟
         </div>
       </div>
+
+      {/* ── 历史每日计划（v3.6）：查看之前每天的五关完成情况，点击重走那天的链 ── */}
+      {flowDays.length > 0 && (
+        <div className="card pad" style={{ marginTop: 14 }}>
+          <div className="between" style={{ marginBottom: 10 }}>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>📅 之前的每日计划</div>
+            <span className="sub small">点一天，重走那天的五关</span>
+          </div>
+          {flowDays.map(d => {
+            const st = progress.flow?.[d]?.step || 0
+            const nos = planDayByDate[d]
+            const no = nos && nos.length ? Math.max(...nos) : null
+            return (
+              <div
+                key={d}
+                onClick={() => { if (no) nav(`/learn/day${String(no).padStart(2, '0')}`) }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '9px 4px',
+                  borderTop: '1px solid var(--line)', cursor: no ? 'pointer' : 'default',
+                  opacity: no ? 1 : 0.6,
+                }}
+              >
+                <div style={{ width: 92, fontWeight: 700, fontSize: 14, flexShrink: 0 }}>{dayLabel(d)}</div>
+                <div style={{ display: 'flex', gap: 3, flex: 1 }}>
+                  {FLOW_STEPS.map(s => (
+                    <div key={s.step} title={s.label} style={{
+                      width: 22, height: 8, borderRadius: 4,
+                      background: st >= s.step ? 'var(--ok)' : 'var(--line)',
+                    }} />
+                  ))}
+                </div>
+                <div className="sub small" style={{ flexShrink: 0 }}>
+                  {no ? `第 ${nos!.join('、')} 天` : '未标记计划天'}
+                  {no && <span style={{ marginLeft: 4, color: 'var(--blue)' }}>›</span>}
+                </div>
+              </div>
+            )
+          })}
+          <div className="sub small" style={{ marginTop: 8 }}>
+            今天的计划在上面这张卡里；做完的历史都在这里，随时回去重学。
+          </div>
+        </div>
+      )}
 
       {/* ── 状态行：按需亮灯，没有的项直接消失 ── */}
       <div className="chips">

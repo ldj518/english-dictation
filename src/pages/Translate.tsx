@@ -12,7 +12,7 @@ import { WORD_MAP } from '../lib/data'
 import AudioGate from '../components/AudioGate'
 import LetterKeyboard from '../components/LetterKeyboard'
 import FlowNextBar from '../components/FlowNextBar'
-import { isFlowTaskId } from '../lib/flow'
+import { isFlowTaskId, skipGate } from '../lib/flow'
 import type { AnswerRecord, AudioItem, Track } from '../types'
 
 /**
@@ -131,8 +131,11 @@ export default function Translate() {
     return (
       <Shell title={loadingDyn ? '准备词单' : '未找到'} back>
         <div className="empty">
-          <div className="i">{loadingDyn ? '⏳' : '🤔'}</div>
-          <div>{loadingDyn ? '正在准备今天的词单…' : '没有这个任务'}</div>
+          <div className="i">{loadingDyn ? '⏳' : id === 'wcustom' ? '📖' : '🤔'}</div>
+          <div>{loadingDyn ? '正在准备今天的词单…' : id === 'wcustom' ? '还没有选词' : '没有这个任务'}</div>
+          {id === 'wcustom' && (
+            <button className="btn" style={{ marginTop: 14 }} onClick={() => nav('/review')}>回错词本选词</button>
+          )}
         </div>
       </Shell>
     )
@@ -371,6 +374,16 @@ export default function Translate() {
         )}
         <button className="btn ghost" onClick={finish}>结束并交卷</button>
       </div>
+
+      {/* 跳过整关（v3.6 错词五关）：重学链/错词链不记账，可以直接跳到下一关；
+          plan 主线不能跳——账本要求按顺序完成，跳关会导致后面全记不上 */}
+      {isFlowTaskId(track.id) && track.id !== 'plan' && skipGate('translate', track.id) && (
+        <div className="center mt">
+          <button className="btn ghost sm" onClick={() => nav(skipGate('translate', track.id)!)}>
+            跳过这一关，直接去下一关 ›
+          </button>
+        </div>
+      )}
     </Shell>
   )
 }

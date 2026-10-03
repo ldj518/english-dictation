@@ -79,6 +79,9 @@ export default function Dictation() {
   const [answers, setAnswers] = useState<AnswerRecord[]>([])
   const [playing, setPlaying] = useState(false)
   const [items, setItems] = useState<AudioItem[]>([])
+  // effect 内要读「当前 items」但 items 不在依赖里：用 ref 镜像（重跑时复用词单）
+  const itemsRef = useRef<AudioItem[]>([])
+  itemsRef.current = items
   const [salt, setSalt] = useState('')            // 手动重新洗牌的扰动
   const [slowMode, setSlowMode] = useState(false) // 慢速播放高亮
   const startedAt = useRef(Date.now())
@@ -113,12 +116,33 @@ export default function Dictation() {
           setTrack({ ...CUSTOM_TRACK, label: customLabel })
         }
         let list: AudioItem[] = []
+        let fresh = false
         try {
           const cw = sessionStorage.getItem('custom-words')
-          if (cw) list = (JSON.parse(cw) as { word: string; cn: string }[]).map((w, i) => ({
-            no: i + 1, word: w.word, cn: w.cn, file: map.get(w.word) || null,
-          }))
-          sessionStorage.removeItem('custom-words')
+          if (cw) {
+            list = (JSON.parse(cw) as { word: string; cn: string }[]).map((w, i) => ({
+              no: i + 1, word: w.word, cn: w.cn, file: map.get(w.word) || null,
+            }))
+            sessionStorage.removeItem('custom-words')
+            fresh = true
+          }
+        } catch { /* ignore */ }
+        if (!fresh) {
+          // 换盐重跑（🔀 换个顺序 / ⚡ 只重听错词）：sessionStorage 词单已被首次
+          // 加载消费，必须复用内存里的词单。以前这里直接落成空数组 → 渲染成
+          // 「进度 1/0」：自动播报因 cur 为空静默跳过（没声音），输入确认
+          // 触碰 cur 直接白屏（实测踩坑）
+          list = itemsRef.current
+        }
+        // 错词加练：只重练本次答错的词（retrain-words 对自定义卷同样生效）
+        try {
+          const rw = sessionStorage.getItem('retrain-words')
+          if (rw) {
+            sessionStorage.removeItem('retrain-words')
+            const set = new Set(JSON.parse(rw) as string[])
+            const filtered = list.filter(i => set.has(i.word))
+            if (filtered.length) list = filtered
+          }
         } catch { /* ignore */ }
         if (list.length > 1) {
           const mode = currentShuffleMode()
@@ -313,25 +337,34 @@ export default function Dictation() {
     return (
       <Shell title={loadingDyn ? '准备词单' : '未找到'} back>
         <div className="empty">
-          <div className="i">{loadingDyn ? '⏳' : '🤔'}</div>
-          <div>{loadingDyn ? '正在准备今天的词单…' : '没有这个任务'}</div>
+          <div className="i">{loadingDyn ? '⏳' : id === 'wcustom' ? '📖' : '🤔'}</div>
+          <div>{loadingDyn ? '正在准备今天的词单…' : id === 'wcustom' ? '还没有选词' : '没有这个任务'}</div>
+          {id === 'wcustom' && (
+            <button className="btn" style={{ marginTop: 14 }} onClick={() => nav('/review')}>回错词本选词</button>
+          )}
         </div>
       </Shell>
     )
   }
 
   // ── 空词单（v3.2）：如 /d/review 在队列清空后再点进来——
-  //    不能卡「词单准备中…」死循环，更不能走完流程上报一张 0 词空卷污染统计 ──
-  if (track && items.length === 0 && !isCustom) {
+  //    不能卡「词单准备中…」死循环，更不能走完流程上报一张 0 词空卷污染统计。
+  //    v3.6：自定义卷也纳入守卫——但必须等 ready，否则首次加载期间会被误判为空。
+  //    以前 !isCustom 直接跳过守卫，空词单照常渲染答题界面（cur 未定义 → 白屏）──
+  if (track && ready && items.length === 0) {
     return (
       <Shell title={track.label || '没有题目'} back>
         <div className="empty">
           <div className="i">🍃</div>
-          <div>现在没有要做的词</div>
+          <div>{isCustom ? '没有拿到词单' : '现在没有要做的词'}</div>
           <div className="sub small" style={{ marginTop: 6 }}>
-            复习队列清空了。明天学新词、听写答题后会自动排进新的复习。
+            {isCustom
+              ? '词单只传一次，刷新或重进都会丢。回错词本重新勾选再来。'
+              : '复习队列清空了。明天学新词、听写答题后会自动排进新的复习。'}
           </div>
-          <button className="btn" style={{ marginTop: 14 }} onClick={() => nav('/')}>回首页</button>
+          <button className="btn" style={{ marginTop: 14 }} onClick={() => nav(isCustom ? '/review' : '/')}>
+            {isCustom ? '回错词本' : '回首页'}
+          </button>
         </div>
       </Shell>
     )
@@ -353,8 +386,9 @@ export default function Dictation() {
   // 「先学一遍」去 /learn/:id（学完回来带 skip-prep 标记）；「直接听写」本身就是手势，
   // 在这里解锁音频通道，不再多显示一次「点我开始」。
   // prepMode（v2.8 家长管控）：recommended 可跳过 / force 强制先学（藏跳过按钮）/ off 不预习
+  // v3.6：wcustom 是错词五关（进链即已在第 1 关），不设预备页
   const prepMode = progress.settings.prepMode || 'recommended'
-  if (!started && !result && !prepSkipped && !isCustom && prepMode !== 'off') {
+  if (!started && !result && !prepSkipped && !isCustom && id !== 'wcustom' && prepMode !== 'off') {
     const wrongHits = items.filter(i => progress.wrong[i.word]).length
     const learnedToday = (() => {
       const l = progress.learned[id]

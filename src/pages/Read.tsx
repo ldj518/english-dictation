@@ -270,8 +270,11 @@ export default function Read() {
     return (
       <Shell title={id === 'plan' ? '准备词单' : '未找到'} back noNav>
         <div className="empty">
-          <div className="i">{id === 'plan' ? '⏳' : '🤔'}</div>
-          <div>{id === 'plan' ? '正在准备今天的词单…' : '没有这个任务'}</div>
+          <div className="i">{id === 'plan' ? '⏳' : id === 'wcustom' ? '📖' : '🤔'}</div>
+          <div>{id === 'plan' ? '正在准备今天的词单…' : id === 'wcustom' ? '还没有选词' : '没有这个任务'}</div>
+          {id === 'wcustom' && (
+            <button className="btn" style={{ marginTop: 14 }} onClick={() => nav('/review')}>回错词本选词</button>
+          )}
         </div>
       </Shell>
     )

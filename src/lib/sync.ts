@@ -146,6 +146,23 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     flow[k] = !cur || v.step > cur.step ? v : cur
   }
 
+  // 错词总历史（v3.6）：bad/ok 取大者，lastAt 取新者；lastOk/gradAt/cn 跟随 lastAt 新的一方
+  const wrongLog: NonNullable<Progress['wrongLog']> = { ...(a.wrongLog || {}) }
+  for (const [k, v] of Object.entries(b.wrongLog || {})) {
+    const cur = wrongLog[k]
+    if (!cur) { wrongLog[k] = v; continue }
+    wrongLog[k] = {
+      ...cur,
+      bad: max(cur.bad, v.bad),
+      ok: max(cur.ok, v.ok),
+      addedAt: Math.min(cur.addedAt, v.addedAt),
+      cn: v.lastAt > cur.lastAt ? v.cn : cur.cn,
+      lastAt: max(cur.lastAt, v.lastAt),
+      lastOk: v.lastAt > cur.lastAt ? v.lastOk : cur.lastOk,
+      gradAt: max(cur.gradAt || 0, v.gradAt || 0) || undefined,
+    }
+  }
+
   // streakDays/lastDay 跟连续天数大的一方走
   const streakLocal = a.streakDays || 0
   const streakRemote = b.streakDays || 0
@@ -154,6 +171,7 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     best,
     attempts,
     wrong,
+    wrongLog,
     points: max(a.points, b.points),
     streakDays: Math.max(streakLocal, streakRemote),
     lastDay: streakLocal >= streakRemote ? a.lastDay : b.lastDay,

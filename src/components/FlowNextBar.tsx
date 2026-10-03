@@ -34,6 +34,15 @@ export default function FlowNextBar({ doneStep, taskId }: { doneStep: number; ta
           回首页看今日结算 →
         </button>
       </div>
+    ) : taskId === 'wcustom' ? (
+      <div className="card flowDone">
+        <div className="fdTitle">✓ 这批错词闯关完成！</div>
+        <div className="fdSub">五关都过了一遍，写对的词正在离开错词本；还错的明天会再安排</div>
+        <div className="row" style={{ gap: 8 }}>
+          <button className="btn" style={{ flex: 1, background: 'var(--blue)' }} onClick={() => nav('/review')}>回错词本</button>
+          <button className="btn ghost" style={{ flex: 1 }} onClick={() => nav('/')}>回首页</button>
+        </div>
+      </div>
     ) : (
       <div className="card flowDone">
         <div className="fdTitle">✓ 这一天重学完成！</div>

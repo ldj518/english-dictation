@@ -74,6 +74,24 @@ export interface WrongWord {
   dueAt: number
   /** 复习阶段 0-4，对应 1/2/4/7/15 天 */
   stage: number
+  /** 累计答对次数（v3.6）：重听写对/复习答对都 +1，错词重听列表与历史共用 */
+  okCount?: number
+}
+
+/** 错词总历史条目（v3.6）：只增不删。词从错词本毕业后历史仍保留，随时可重听 */
+export interface WrongLogEntry {
+  word: string
+  cn: string
+  /** 累计答错次数 */
+  bad: number
+  /** 累计答对次数 */
+  ok: number
+  addedAt: number
+  lastAt: number
+  /** 最近一次结果 */
+  lastOk: 'ok' | 'bad'
+  /** 从错词本毕业（满级）的时间；毕业后再答错会重新进错词本 */
+  gradAt?: number
 }
 
 /** 成就徽章 */
@@ -101,6 +119,8 @@ export interface Progress {
   attempts: Record<string, number>
   /** 错词本 */
   wrong: Record<string, WrongWord>
+  /** 错词总历史（v3.6）：word -> 全生命周期战绩，永不删除。清空错词本也不动它 */
+  wrongLog?: Record<string, WrongLogEntry>
   /** 总积分 */
   points: number
   /** 连续打卡天数 */

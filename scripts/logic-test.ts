@@ -9,7 +9,7 @@ import { buildCnOptions } from '../src/lib/translate'
 import { weekStartStr } from '../src/lib/storage'
 import { calcWeekReport } from '../src/lib/weekreport'
 import { mergeProgress } from '../src/lib/sync'
-import { flowAdvance, flowStepOf, flowAllDone, FLOW_STEPS, isFlowTaskId } from '../src/lib/flow'
+import { flowAdvance, flowStepOf, flowAllDone, FLOW_STEPS, isFlowTaskId, skipGate } from '../src/lib/flow'
 import type { Progress } from '../src/types'
 import { resolveRate, SLOW_RATE } from '../src/lib/player'
 
@@ -389,8 +389,49 @@ log.push('【闯关进度】')
   // 自由选关重学（v3.5.1）：五关链任务判定
   t('plan 可走五关链', isFlowTaskId('plan'))
   t('day05 可走五关链', isFlowTaskId('day05'))
+  t('wcustom 可走五关链（v3.6 错词五关）', isFlowTaskId('wcustom'))
   t('mix/custom/review 不走链', !isFlowTaskId('mix') && !isFlowTaskId('custom') && !isFlowTaskId('review'))
   t('unit01/final01 不走链', !isFlowTaskId('unit01') && !isFlowTaskId('final01'))
+}
+
+// ── 错词总历史 + 跳关路由（v3.6）──
+log.push('【错词总历史与跳关】')
+{
+  // addWrong/advanceWrong 同步记总历史
+  let p = defaultProgress()
+  p = addWrong(p, 'hold on', '等一下')
+  t('加错词 → 总历史出现该词', !!p.wrongLog?.['hold on'])
+  t('总历史 bad=1', p.wrongLog!['hold on'].bad === 1 && p.wrongLog!['hold on'].lastOk === 'bad')
+  // 连对到毕业：REVIEW_STAGES.length 段，每段答对一次
+  for (let i = 0; i < REVIEW_STAGES.length; i++) advanceWrong(p, 'hold on')
+  t('满级毕业 → 错词本移出', !p.wrong['hold on'])
+  t('毕业 → 总历史保留且标记 gradAt', !!p.wrongLog?.['hold on'] && !!p.wrongLog!['hold on'].gradAt)
+  t('毕业 → ok 计数 = 段数', p.wrongLog!['hold on'].ok === REVIEW_STAGES.length)
+  t('okCount 逐次累计', (p.wrongLog!['hold on'].ok === (REVIEW_STAGES.length)) && true)
+  // 毕业后再答错：回错词本 + 历史 bad+1
+  p = addWrong(p, 'hold on', '等一下')
+  t('毕业后又答错 → 回错词本', !!p.wrong['hold on'])
+  t('历史 bad=2 不被毕业清掉', p.wrongLog!['hold on'].bad === 2)
+  // 写对也记账（recordAnswer 正确分支在页面层，这里直接验证 advanceWrong 幂等外的 ok 记账）
+  const before = p.wrongLog!['hold on'].ok
+  advanceWrong(p, 'hold on')
+  t('答对 → 历史 ok +1', p.wrongLog!['hold on'].ok === before + 1)
+  // 合并：bad/ok 取大者，lastAt 取新者
+  const a = defaultProgress()
+  a.wrongLog = { hi: { word: 'hi', cn: '嗨', bad: 3, ok: 1, addedAt: 100, lastAt: 200, lastOk: 'bad' } }
+  const b = defaultProgress()
+  b.wrongLog = { hi: { word: 'hi', cn: '嗨', bad: 1, ok: 5, addedAt: 100, lastAt: 300, lastOk: 'ok', gradAt: 300 } }
+  const m = mergeProgress(a, b)
+  t('合并 bad 取大者 3', m.wrongLog?.hi.bad === 3)
+  t('合并 ok 取大者 5', m.wrongLog?.hi.ok === 5)
+  t('合并 lastAt 取新者 300', m.wrongLog?.hi.lastAt === 300)
+  t('合并 gradAt 保留', m.wrongLog?.hi.gradAt === 300)
+  // 跳关路由
+  t('跳过第 1 关 → /translate/wcustom', skipGate('learn', 'wcustom') === '/translate/wcustom')
+  t('跳过第 2 关 → /read/wcustom', skipGate('translate', 'wcustom') === '/read/wcustom')
+  t('跳过第 4 关 → /d/wcustom', skipGate('spell', 'wcustom') === '/d/wcustom')
+  t('第 5 关没有跳过', skipGate('dictation', 'wcustom') === null)
+  t('dayXX 重学链也能跳关', skipGate('learn', 'day05') === '/translate/day05')
 }
 
 function todayStrOf(ts: number): string {

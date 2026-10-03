@@ -73,6 +73,9 @@ const PARAM_CASES: [string, React.ComponentType][] = [
   ['/read/plan', ReadPage],     // v3.5.1 回归：闯关第 3 关入口，之前不支持 plan 显示「没有这个任务」
   ['/listen/plan', ListenPage], // 考场「纸听一遍」直达 plan
   ['/paper/plan', PaperPage],   // 考场「纸质批改」直达 plan，之前同样不支持
+  ['/learn/wcustom', LearnPage],     // v3.6 错词五关：无词单时引导回错词本
+  ['/translate/wcustom', TranslatePage],
+  ['/d/wcustom', DictationPage],
   ['/s/sh_test123', SharePage],
 ]
 
@@ -142,6 +145,9 @@ const EXPECTED: Record<string, string> = {
   '/read/plan': '正在准备今天的词单',
   '/listen/plan': '正在准备今天的词单',
   '/paper/plan': '正在准备今天的词单',
+  '/learn/wcustom': '还没有选词',
+  '/translate/wcustom': '还没有选词',
+  '/d/wcustom': '还没有选词',
 }
 
 for (const [path, C] of PARAM_CASES) {

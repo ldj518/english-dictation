@@ -4,7 +4,8 @@
 set -e
 cd "$(dirname "$0")/.."
 
-NODE="C:/Users/51183/.workbuddy/binaries/node/versions/22.22.2-3/node.exe"
+# node 用工作台托管版本：目录名带小版本号会随升级变化，动态取最新一个
+NODE="$(ls -v C:/Users/51183/.workbuddy/binaries/node/versions/*/node.exe 2>/dev/null | tail -1)"
 ESB="node_modules/esbuild/bin/esbuild"
 export NODE_PATH="$(pwd)/node_modules"
 unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY

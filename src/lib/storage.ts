@@ -87,6 +87,7 @@ export const defaultProgress = (): Progress => ({
   trioDone: {},
   passed: {},
   flow: {},
+  wrongLog: {},
   settings: { rate: 1, repeat: 2, gap: 4, voiceMode: 'normal', shuffle: true, shuffleMode: 'daily', kbBuiltIn: true, syncPaper: true },
 })
 
@@ -168,7 +169,7 @@ export function weekStartStr(d = new Date()): string {
 
 const DAY = 86400000
 
-/** 把一个词加入错词本（或提升错误次数、重置复习阶段） */
+/** 把一个词加入错词本（或提升错误次数、重置复习阶段）。同时记入总历史（只增不删） */
 export function addWrong(p: Progress, word: string, cn: string): Progress {
   const now = Date.now()
   const cur: WrongWord = p.wrong[word] || {
@@ -179,22 +180,40 @@ export function addWrong(p: Progress, word: string, cn: string): Progress {
   cur.stage = 0
   cur.lastAt = now
   cur.dueAt = now + REVIEW_STAGES[0] * DAY
+  if (cn) cur.cn = cn
   p.wrong[word] = cur
+  logWrong(p, word, cur.cn, false)
   return p
 }
 
-/** 复习答对：推进阶段；满级后移出错词本 */
+/** 总历史记账（v3.6）：bad/ok 只增不删，词毕业后仍保留全部战绩 */
+export function logWrong(p: Progress, word: string, cn: string, ok: boolean, gradAt?: number): void {
+  const now = Date.now()
+  const log = p.wrongLog?.[word] || { word, cn, bad: 0, ok: 0, addedAt: now, lastAt: now, lastOk: 'bad' as const }
+  if (cn) log.cn = cn
+  if (ok) log.ok += 1; else log.bad += 1
+  log.lastAt = now
+  log.lastOk = ok ? 'ok' : 'bad'
+  if (gradAt) log.gradAt = gradAt
+  p.wrongLog = p.wrongLog || {}
+  p.wrongLog[word] = log
+}
+
+/** 复习答对：推进阶段；满级后移出错词本（总历史保留，标记毕业时间） */
 export function advanceWrong(p: Progress, word: string): { p: Progress; graduated: boolean } {
   const cur = p.wrong[word]
   if (!cur) return { p, graduated: false }
   cur.streak += 1
   cur.lastAt = Date.now()
+  cur.okCount = (cur.okCount || 0) + 1
   if (cur.stage >= REVIEW_STAGES.length - 1) {
     delete p.wrong[word]
+    logWrong(p, word, cur.cn, true, Date.now())
     return { p, graduated: true }
   }
   cur.stage += 1
   cur.dueAt = Date.now() + REVIEW_STAGES[cur.stage] * DAY
+  logWrong(p, word, cur.cn, true)
   return { p, graduated: false }
 }
 
@@ -249,6 +268,6 @@ export function hasLearningData(p: Progress): boolean {
     (p.history && p.history.length > 0) ||
     n(p.best) || n(p.attempts) || n(p.wrong) || n(p.badges) || n(p.minutes) ||
     n(p.learned) || n(p.review) || n(p.reviewDone) || n(p.planLog) ||
-    n(p.trioDone) || n(p.passed) || n(p.flow)
+    n(p.trioDone) || n(p.passed) || n(p.flow) || n(p.wrongLog)
   )
 }

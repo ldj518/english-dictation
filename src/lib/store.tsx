@@ -211,7 +211,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const np = { ...p }
         np.totalAnswers += 1
         np.totalRight += 1
-        // 答对：如果在错词本里，且不是复习模式，暂不推进，由复习模式负责
+        // v3.6：听写答对且词在错词本 → 视同复习成功，推进遗忘曲线。
+        // 以前「答对不动账」导致重新听写全对了词还赖在错词重听里（用户实测抱怨）；
+        // 现在写对就把 dueAt 往后推，连对到满级自动毕业进历史
+        if (np.wrong[word]) advanceWrong(np, word)
         return np
       })
     } else {

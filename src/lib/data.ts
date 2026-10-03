@@ -272,8 +272,30 @@ export async function getReviewTrack(): Promise<Track | undefined> {
 }
 
 /**
+ * 错词五关词卷（v3.6）：/learn/wcustom、/translate/wcustom、…、/d/wcustom。
+ * 词单来自错词本勾选/开始复习时写进 sessionStorage 的 custom-words（各关只读不消费，
+ * 保证五关看到同一份词单、同一种顺序）。没有词单时返回 undefined，页面给出引导。
+ */
+export function getWrongQuizTrack(): Track | undefined {
+  try {
+    const cw = sessionStorage.getItem('custom-words')
+    if (!cw) return undefined
+    const list = JSON.parse(cw) as { word: string; cn: string }[]
+    if (!Array.isArray(list) || !list.length) return undefined
+    return {
+      id: 'wcustom', kind: 'daily', group: 'daily', order: 0,
+      label: `错词五关（${list.length} 词）`, file: '', seconds: Math.max(30, list.length * 8),
+      wordCount: list.length, sections: [],
+      items: list.map((w, i) => [i + 1, w.word, w.cn || WORD_MAP[w.word]?.cn || '', 0, 0] as ItemTuple),
+    }
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * 扩展版 getTrack：内置静态任务之外，还支持动态任务
- *   /d/plan  今日计划   /d/mix  智能混合卷   /d/review  今日复习
+ *   /d/plan  今日计划   /d/mix  智能混合卷   /d/review  今日复习   /d/wcustom  错词五关
  * 打印卷/翻译关/听写页统一走这个入口。
  */
 export async function getTrackAny(id: string): Promise<Track | undefined> {
@@ -282,5 +304,6 @@ export async function getTrackAny(id: string): Promise<Track | undefined> {
   if (id === 'plan') return (await getPlanTrack()).track
   if (id === 'mix') return (await getMixTrack()).track
   if (id === 'review') return await getReviewTrack()
+  if (id === 'wcustom') return getWrongQuizTrack()
   return undefined
 }

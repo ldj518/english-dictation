@@ -4,7 +4,7 @@ import Shell from '../components/Shell'
 import PinGate from '../components/PinGate'
 import LetterKeyboard from '../components/LetterKeyboard'
 import FlowNextBar from '../components/FlowNextBar'
-import { isFlowTaskId } from '../lib/flow'
+import { isFlowTaskId, skipGate } from '../lib/flow'
 import { useStore } from '../lib/store'
 import { judgeWithFirst } from '../lib/storage'
 import { getTrack, getTrackAny, loadAudioIndex, tuplesToItems, wordFileMap, playWordText } from '../lib/data'
@@ -150,8 +150,11 @@ export default function Spell() {
     return (
       <Shell title={loadingDyn ? '准备词单' : '未找到'} back>
         <div className="empty">
-          <div className="i">{loadingDyn ? '⏳' : '🤔'}</div>
-          <div>{loadingDyn ? '正在准备今天的词单…' : '没有这个任务'}</div>
+          <div className="i">{loadingDyn ? '⏳' : id === 'wcustom' ? '📖' : '🤔'}</div>
+          <div>{loadingDyn ? '正在准备今天的词单…' : id === 'wcustom' ? '还没有选词' : '没有这个任务'}</div>
+          {id === 'wcustom' && (
+            <button className="btn" style={{ marginTop: 14 }} onClick={() => nav('/review')}>回错词本选词</button>
+          )}
         </div>
       </Shell>
     )
@@ -241,6 +244,15 @@ export default function Spell() {
       <div className="center mt">
         <button className="btn ghost sm" onClick={finish} disabled={!answers.length && idx === 0}>结束并交卷</button>
       </div>
+
+      {/* 跳过整关（v3.6 错词五关）：重学链/错词链可直接去下一关；plan 主线不能跳 */}
+      {isFlowTaskId(track.id) && track.id !== 'plan' && skipGate('spell', track.id) && (
+        <div className="center">
+          <button className="btn ghost sm" onClick={() => nav(skipGate('spell', track.id)!)}>
+            跳过这一关，直接去下一关 ›
+          </button>
+        </div>
+      )}
     </Shell>
   )
 }

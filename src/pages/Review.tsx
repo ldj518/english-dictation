@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
+import PinGate from '../components/PinGate'
 import { useStore, judge } from '../lib/store'
 import { dueWrongWords, todayStr } from '../lib/storage'
 import { playWordText } from '../lib/data'
@@ -11,15 +12,32 @@ import type { WrongWord, WrongLogEntry } from '../types'
 type Mode = 'list' | 'quiz'
 type Filter = 'due' | 'all' | 'log'
 
+/** lastAt 是否落在今天（日历日比较，跨午夜安全） */
+const isToday = (t: number) => {
+  const a = new Date(t), b = new Date()
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
 export default function Review() {
-  const { progress, recordReview, clearWrong } = useStore()
+  const { progress, recordReview, clearWrong, removeWrong, graduateWrong, addWrongManual } = useStore()
   const nav = useNavigate()
   const [mode, setMode] = useState<Mode>('list')
   const [filter, setFilter] = useState<Filter>('due')
   const [sel, setSel] = useState<Set<string>>(new Set())
+  const [manage, setManage] = useState(false)
+  const [nw, setNw] = useState('')
+  const [nc, setNc] = useState('')
 
-  const all = useMemo(() => Object.values(progress.wrong).sort((a, b) => b.count - a.count), [progress.wrong])
+  // v3.9.1 排序：今天错的词置顶（用户反馈「当天的错词好像没记录」——
+  // 实际有记录，只是被 count 降序挤到后面看不到），其余按错次降序
+  const all = useMemo(() => Object.values(progress.wrong).sort((a, b) => {
+    const ta = isToday(a.lastAt) ? 1 : 0
+    const tb = isToday(b.lastAt) ? 1 : 0
+    if (ta !== tb) return tb - ta
+    return b.count - a.count
+  }), [progress.wrong])
   const due = useMemo(() => dueWrongWords(progress), [progress.wrong])
+  const todayNew = useMemo(() => all.filter(w => isToday(w.lastAt)).length, [all])
   const log = useMemo(
     () => Object.values(progress.wrongLog || {}).sort((a, b) => b.lastAt - a.lastAt),
     [progress.wrongLog],
@@ -81,6 +99,15 @@ export default function Review() {
     nav('/d/custom')
   }
 
+  /** 错词管理：手动加词（家长锁内；已在本里的词提示后忽略） */
+  const addManual = () => {
+    const w = nw.trim()
+    if (!w) return
+    if (progress.wrong[w]) { alert(`「${w}」已经在错词本里了`); return }
+    addWrongManual(w, nc)
+    setNw(''); setNc('')
+  }
+
   if (mode === 'quiz') {
     return <Quiz words={filter === 'all' ? all : due} onExit={() => setMode('list')} />
   }
@@ -127,6 +154,41 @@ export default function Review() {
         </button>
       </div>
 
+      {filter === 'all' && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '8px 2px' }}>
+          <button className="btn ghost sm" onClick={() => setManage(m => !m)}>
+            ⚙️ {manage ? '退出管理' : '管理'}
+          </button>
+        </div>
+      )}
+
+      {filter === 'all' && manage && (
+        <PinGate title="错词管理（家长）">
+          <div className="card pad" style={{ background: 'linear-gradient(180deg,#fffdf5,#fff)', borderColor: '#f0d69a' }}>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>⚙️ 错词管理（家长）</div>
+            <div className="sub small mt">
+              每个词右侧：<b>🎓</b> 已掌握直接毕业（进总历史）；<b>✕</b> 误录删除（历史保留）。
+              手动加的词明天起进复习队列。
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+              <input
+                value={nw} onChange={e => setNw(e.target.value)}
+                placeholder="英文单词"
+                style={{ flex: 1, minWidth: 120, padding: '8px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 14 }}
+                spellCheck={false} autoCapitalize="off" autoCorrect="off"
+              />
+              <input
+                value={nc} onChange={e => setNc(e.target.value)}
+                placeholder="中文意思（可空）"
+                style={{ flex: 1, minWidth: 120, padding: '8px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 14 }}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addManual() } }}
+              />
+              <button className="btn sm" onClick={addManual} disabled={!nw.trim()}>+ 加词</button>
+            </div>
+          </div>
+        </PinGate>
+      )}
+
       {filter === 'log' && list.length > 0 && (
         <div className="sub small" style={{ margin: '10px 2px' }}>
           这里是孩子错过的每一个词的全周期战绩：错几次、对几次、有没有毕业。
@@ -140,7 +202,12 @@ export default function Review() {
           <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--ink)' }}>
             {filter === 'due' ? '今天没有要复习的词' : filter === 'all' ? '错词本是空的' : '还没有历史记录'}
           </div>
-          <div className="mt">{filter === 'log' ? '答错的词会自动记进总历史' : '保持下去，做错的题正在变成会的题'}</div>
+          <div className="mt">
+            {filter === 'log' ? '答错的词会自动记进总历史'
+              : filter === 'due' && todayNew > 0
+                ? `今天新错了 ${todayNew} 个词（在「全部错词」里能看到），明天开始进复习队列`
+                : '保持下去，做错的题正在变成会的题'}
+          </div>
         </div>
       ) : (
         <>
@@ -163,7 +230,10 @@ export default function Review() {
                   checked={sel.has(w.word)} onToggle={() => toggle(w.word)} onSpeak={() => speak(w.word)} />
               ))
               : (filter === 'due' ? due : all).map(w => (
-                <WrongRow key={w.word} w={w} checked={sel.has(w.word)} onToggle={() => toggle(w.word)} onSpeak={() => speak(w.word)} />
+                <WrongRow key={w.word} w={w} checked={sel.has(w.word)} onToggle={() => toggle(w.word)}
+                  onSpeak={() => speak(w.word)} isNew={isToday(w.lastAt)}
+                  onDelete={manage ? () => { if (confirm(`从错词本删除「${w.word}」？（总历史保留）`)) removeWrong(w.word) } : undefined}
+                  onGraduate={manage ? () => { if (confirm(`「${w.word}」已掌握，直接毕业进总历史？`)) graduateWrong(w.word) } : undefined} />
               ))}
           </div>
         </>
@@ -172,7 +242,10 @@ export default function Review() {
   )
 }
 
-function WrongRow({ w, checked, onToggle, onSpeak }: { w: WrongWord; checked: boolean; onToggle: () => void; onSpeak: () => void }) {
+function WrongRow({ w, checked, onToggle, onSpeak, isNew, onDelete, onGraduate }: {
+  w: WrongWord; checked: boolean; onToggle: () => void; onSpeak: () => void
+  isNew?: boolean; onDelete?: () => void; onGraduate?: () => void
+}) {
   const stages = ['1天', '2天', '4天', '7天', '15天', '30天']
   const overdue = w.dueAt <= Date.now()
   const days = Math.ceil((w.dueAt - Date.now()) / 86400000)
@@ -182,7 +255,12 @@ function WrongRow({ w, checked, onToggle, onSpeak }: { w: WrongWord; checked: bo
       <input type="checkbox" checked={checked} onChange={onToggle} style={{ width: 20, height: 20, flexShrink: 0 }} aria-label="选择" />
       <button onClick={onSpeak} style={{ fontSize: 20, width: 36, textAlign: 'center' }} aria-label="朗读">🔊</button>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 16 }}>{w.word}</div>
+        <div style={{ fontWeight: 700, fontSize: 16 }}>
+          {w.word}
+          {isNew && (
+            <span className="pill p-bad" style={{ marginLeft: 6, fontSize: 11 }}>今天</span>
+          )}
+        </div>
         <div className="sub small" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {w.cn}
         </div>
@@ -196,6 +274,14 @@ function WrongRow({ w, checked, onToggle, onSpeak }: { w: WrongWord; checked: bo
           {' · '}{stages[Math.min(w.stage, 5)]}
         </div>
       </div>
+      {(onDelete || onGraduate) && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
+          <button onClick={onGraduate} className="btn ghost sm"
+            style={{ padding: '2px 8px', fontSize: 12 }} aria-label="直接毕业">🎓</button>
+          <button onClick={onDelete} className="btn ghost sm"
+            style={{ padding: '2px 8px', fontSize: 12, color: 'var(--bad)' }} aria-label="删除">✕</button>
+        </div>
+      )}
     </div>
   )
 }

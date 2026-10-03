@@ -225,6 +225,28 @@ export function dueWrongWords(p: Progress): WrongWord[] {
     .sort((a, b) => a.dueAt - b.dueAt)
 }
 
+/**
+ * 清洗测试污染数据（v3.9.1）：浏览器自动化测试期间误入真数据的样例词，
+ * 释义带「测试词」标记。只清 wrong/wrongLog；复习队列不动——那几个词
+ * （darling/ride/moment 等）全是教材真词，队列条目可能是孩子真实学习产生的，
+ * 让它们按曲线走完自然毕业即可。
+ * 启动时对每个身份跑一次（store 引导），返回是否有改动。
+ */
+export function purgeTestData(p: Progress): boolean {
+  let changed = false
+  const isTest = (cn?: string) => !!cn && cn.includes('测试词')
+  for (const w of Object.keys(p.wrong)) {
+    if (isTest(p.wrong[w].cn)) { delete p.wrong[w]; changed = true }
+  }
+  const wlog = p.wrongLog
+  if (wlog) {
+    for (const w of Object.keys(wlog)) {
+      if (isTest(wlog[w].cn)) { delete wlog[w]; changed = true }
+    }
+  }
+  return changed
+}
+
 /** 打卡：返回是否新的一天 */
 export function checkIn(p: Progress): boolean {
   const t = todayStr()

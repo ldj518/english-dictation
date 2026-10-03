@@ -3,7 +3,7 @@ import type { Progress, SessionResult, AnswerRecord, Track, Profile } from '../t
 import {
   load, save, defaultProgress, addWrong, advanceWrong, checkIn, judge, todayStr,
   loadProfiles, saveProfiles, activeProfileId, setActiveProfileId, reset as resetProgress,
-  setDeviceOwner, hasLearningData,
+  setDeviceOwner, hasLearningData, purgeTestData, logWrong,
 } from './storage'
 import { settle, addMinutes, type AwardCtx } from './gamify'
 import { enqueueReview, advanceReview, resetReview, reopenReview, dueReviews } from './reviewQueue'
@@ -39,6 +39,12 @@ interface Ctx {
   recordReview: (word: string, cn: string, correct: boolean) => void
   updateSettings: (s: Partial<Progress['settings']>) => void
   clearWrong: () => void
+  /** 错词管理（v3.9.1，家长锁内用）：仅从错词本删除（历史日志保留） */
+  removeWrong: (word: string) => void
+  /** 错词管理：直接毕业（出本 + 记毕业时间进历史日志） */
+  graduateWrong: (word: string) => void
+  /** 错词管理：手动加词入本（明天起进复习队列） */
+  addWrongManual: (word: string, cn: string) => void
   doReset: () => void
   /** 游戏奖励积分（连连看等纯游戏用；不进答题统计，不进错词本） */
   addPoints: (n: number) => void
@@ -98,6 +104,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         for (const p of merged) syncStudent(p)
       })
       // ② 进度快照：逐个身份拉云端做无损合并（换设备不再失忆）
+      // v3.9.1 引导清洗：历史上测试注入的「测试词 N」污染了真身份数据，
+      // 启动时对每个身份清一遍 wrong/wrongLog 中的测试词（review 队列不动）
+      for (const prof of loadProfiles()) {
+        try {
+          const lp = load(prof.id)
+          if (purgeTestData(lp)) save(lp, prof.id)
+        } catch { /* 单身份清洗失败不影响启动 */ }
+      }
       for (const p of loadProfiles()) {
         void pullAndMerge(p.id).then(merged => {
           if (p.id === activeProfileId()) {
@@ -336,6 +350,42 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setProgress(p => ({ ...p, wrong: {} }))
   }, [])
 
+  // ── 错词管理（v3.9.1，家长锁内用）─────────────────────────────
+  // 深拷贝再改：logWrong/addWrong 都会原地 mutate，与 recordReview 同款防共享引用
+
+  /** 仅从错词本删除（wrongLog 历史日志保留，孩子仍可在历史里看到轨迹） */
+  const removeWrong = useCallback((word: string) => {
+    setProgress(p => {
+      if (!p.wrong[word]) return p
+      const np = JSON.parse(JSON.stringify(p)) as Progress
+      delete np.wrong[word]
+      return np
+    })
+  }, [])
+
+  /** 直接毕业：出本 + 记毕业时间进 wrongLog（「已掌握」时用，跳过剩余复习轮次） */
+  const graduateWrong = useCallback((word: string) => {
+    setProgress(p => {
+      const cur = p.wrong[word]
+      if (!cur) return p
+      const np = JSON.parse(JSON.stringify(p)) as Progress
+      delete np.wrong[word]
+      logWrong(np, word, cur.cn, true, Date.now())
+      return np
+    })
+  }, [])
+
+  /** 手动加词入本（明天起进复习队列） */
+  const addWrongManual = useCallback((word: string, cn: string) => {
+    setProgress(p => {
+      const w = word.trim()
+      if (!w) return p
+      const np = JSON.parse(JSON.stringify(p)) as Progress
+      addWrong(np, w, cn.trim() || '手动加入')
+      return np
+    })
+  }, [])
+
   const addPoints = useCallback((n: number) => {
     setProgress(p => ({ ...p, points: Math.max(0, p.points + n) }))
   }, [])
@@ -413,9 +463,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     progress, profiles, profile, switchProfile, updateProfile,
     recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone,
     markLearned, awardDailyBonus, passUnit, advanceFlow, recordFlowStep,
+    removeWrong, graduateWrong, addWrongManual,
   }), [progress, profiles, profile, switchProfile, updateProfile,
        recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone,
-       markLearned, awardDailyBonus, passUnit, advanceFlow, recordFlowStep])
+       markLearned, awardDailyBonus, passUnit, advanceFlow, recordFlowStep,
+       removeWrong, graduateWrong, addWrongManual])
 
   return (
     <C.Provider value={value}>

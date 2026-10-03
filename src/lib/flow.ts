@@ -101,13 +101,23 @@ export function flowStepResult(
 /**
  * 任务 id → 成绩记账的目标日期：
  * 'plan' → 今天；dayXX → 该计划天首次完成的日期（planLog 反查，重做成绩记回历史格子）；
+ * **没学过的天（加练）→ 虚拟键 'v-dayXX'**（v3.9.1：以前返回 null，加练成绩被整包
+ * 丢弃，首页永远不更新——用户实测报障）。虚拟键与 yyyy-mm-dd 日期键格式不冲突，
+ * 云同步按键合并互不干扰；那天正式学完后 planLog 出现正式日期，展示层优先读正式键。
  * 其他（wcustom/mix/...）→ null 不记。返回 null 时调用方跳过记账。
  */
 export function flowDayForTaskId(progress: Progress, id: string, today = todayStr()): string | null {
   if (id === 'plan') return today
   const m = /^day(\d+)$/.exec(id)
   if (!m) return null
-  return progress.planLog?.[Number(m[1])] || null
+  return progress.planLog?.[Number(m[1])] || 'v-' + id
+}
+
+/** 读某计划天的闯关账目：学过读正式日期键，没学过读虚拟键（加练成绩，v3.9.1） */
+export function flowEntryOfDay(progress: Progress, no: number) {
+  const date = progress.planLog?.[no]
+  if (date) return { date, fe: progress.flow?.[date] }
+  return { date: undefined, fe: progress.flow?.['v-day' + String(no).padStart(2, '0')] }
 }
 
 /**

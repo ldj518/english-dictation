@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import { useStore } from '../lib/store'
-import { FLOW_STEPS, FLOW_SCORED } from '../lib/flow'
+import { FLOW_STEPS, FLOW_SCORED, flowEntryOfDay } from '../lib/flow'
 import { getTrack } from '../lib/data'
 
 /**
@@ -22,8 +22,7 @@ export default function FlowDay() {
   const nn = String(n).padStart(2, '0')
   const taskId = `day${nn}`
 
-  const date = valid ? progress.planLog?.[n] : undefined
-  const fe = date ? progress.flow?.[date] : undefined
+  const { date, fe } = valid ? flowEntryOfDay(progress, n) : { date: undefined, fe: undefined }
   const wc = useMemo(() => {
     if (!valid) return 0
     return getTrack(taskId)?.wordCount || 0
@@ -57,7 +56,7 @@ export default function FlowDay() {
       {/* 五关列表：每关状态 + 成绩 + 单独重做 */}
       <div className="card pad" style={{ marginBottom: 12 }}>
         {FLOW_STEPS.map(s => {
-          const r = date ? progress.flow?.[date]?.steps?.[s.step] : undefined
+          const r = fe?.steps?.[s.step]
           const bad = r && FLOW_SCORED[s.step] ? r.t - r.r : 0
           const badHalf = bad > 0 && bad * 2 > (r?.t || 1)
           const passed = !!fe && s.step <= fe.step

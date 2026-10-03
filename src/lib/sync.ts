@@ -9,7 +9,7 @@
  */
 import type { Progress, Profile, WrongWord } from '../types'
 import { fetchStudents, fetchProgressSnapshot, pushProgressSnapshot, syncStudent } from './api'
-import { load, save, saveProfiles, hasLearningData } from './storage'
+import { load, save, saveProfiles, hasLearningData, purgeTestData } from './storage'
 
 /* ── 身份档案：云端为准 ─────────────────────────────────────────── */
 
@@ -219,6 +219,9 @@ export async function pullAndMerge(profileId: string): Promise<Progress | null> 
   if (!snap || typeof snap !== 'object') return null
   const local = load(profileId)
   const merged = mergeProgress(local, snap as Progress)
+  // v3.9.1 清洗：云端快照可能带着历史测试词，合并后、diff 前清掉——
+  // 这样 cloudDiffers 检出差异会把清洗版推回云端，本地+云端一次收敛
+  purgeTestData(merged)
   const localDiffers = progressChanged(local, merged)
   const cloudDiffers = progressChanged(snap as Progress, merged)
   if (localDiffers) save(merged, profileId)

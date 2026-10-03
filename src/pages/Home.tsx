@@ -8,7 +8,7 @@ import { getPlanTrack, DAILY } from '../lib/data'
 import { fetchWordbooks, fetchParentRules } from '../lib/api'
 import { dueWrongWords, todayStr } from '../lib/storage'
 import { dueReviews } from '../lib/reviewQueue'
-import { FLOW_STEPS, flowStepOf, FLOW_SCORED } from '../lib/flow'
+import { FLOW_STEPS, flowStepOf, FLOW_SCORED, flowEntryOfDay } from '../lib/flow'
 
 /**
  * 首页（v3.5 三区改版）：
@@ -73,8 +73,7 @@ export default function Home() {
         doneCount: flowDoneCount, learned: true,
       }
     }
-    const date = progress.planLog?.[selDay]
-    const fe = date ? progress.flow?.[date] : undefined
+    const { date, fe } = flowEntryOfDay(progress, selDay)
     return {
       isToday: false, no: selDay, date,
       fe, id: 'day' + String(selDay).padStart(2, '0'),
@@ -192,8 +191,7 @@ export default function Home() {
         {plan && (
           <div className="dayStrip" style={{ marginBottom: 12 }}>
             {Array.from({ length: plan.total }, (_, i) => i + 1).map(no => {
-              const date = progress.planLog?.[no]
-              const fe = date ? progress.flow?.[date] : undefined
+              const { date, fe } = flowEntryOfDay(progress, no)
               const isTodayCell = no === todayNo
               const isSel = selDay === no || (selDay === null && isTodayCell)
               return (
@@ -202,7 +200,7 @@ export default function Home() {
                   <div className="dscNo">{isTodayCell ? '今天' : `第${no}天`}</div>
                   <div className="dscBar">
                     {FLOW_STEPS.map(s => {
-                      const r = date ? progress.flow?.[date]?.steps?.[s.step] : undefined
+                      const r = fe?.steps?.[s.step]
                       const bad = r && FLOW_SCORED[s.step] ? r.t - r.r : 0
                       const passed = !!fe && s.step <= fe.step
                       const color = !passed ? 'var(--line)'
@@ -211,7 +209,7 @@ export default function Home() {
                       return <span key={s.step} style={{ background: color }} />
                     })}
                   </div>
-                  <div className="dscDate">{date ? shortDate(date) : isTodayCell ? '在学' : '未学'}</div>
+                  <div className="dscDate">{date ? shortDate(date) : fe ? '加练过' : isTodayCell ? '在学' : '未学'}</div>
                 </button>
               )
             })}

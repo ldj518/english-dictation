@@ -1,7 +1,7 @@
 /** 核心逻辑单测：判分、遗忘曲线、积分、数据完整性。
  *  这些是「一眼看不出对错」的地方，必须机器验证。
  */
-import { judge, addWrong, advanceWrong, dueWrongWords, defaultProgress, REVIEW_STAGES, judgeWithFirst, hasLearningData } from '../src/lib/storage'
+import { judge, addWrong, advanceWrong, dueWrongWords, defaultProgress, REVIEW_STAGES, judgeWithFirst, hasLearningData, purgeTestData, logWrong } from '../src/lib/storage'
 import { settle, levelOf } from '../src/lib/gamify'
 import { ALL_TASKS as TASKS, WORDS, DAILY, UNITS, FINALS, UNIT_WORDS } from '../src/lib/data'
 import { seededShuffle, makeSeed, orderSalt, orderEpoch } from '../src/lib/shuffle'
@@ -10,7 +10,7 @@ import { weekStartStr } from '../src/lib/storage'
 import { calcWeekReport } from '../src/lib/weekreport'
 import { mergeProgress } from '../src/lib/sync'
 import { isDueByDay, dueReviews } from '../src/lib/reviewQueue'
-import { flowAdvance, flowStepOf, flowAllDone, FLOW_STEPS, isFlowTaskId, skipGate, flowRecordStep, flowStepResult, flowDayForTaskId } from '../src/lib/flow'
+import { flowAdvance, flowStepOf, flowAllDone, FLOW_STEPS, isFlowTaskId, skipGate, flowRecordStep, flowStepResult, flowDayForTaskId, flowEntryOfDay } from '../src/lib/flow'
 import type { Progress } from '../src/types'
 import { resolveRate, SLOW_RATE } from '../src/lib/player'
 
@@ -460,13 +460,26 @@ log.push('【闯关进度】')
   const ms3 = mergeProgress(s4, s5)
   t('不同关的成绩都保留', ms3.flow?.[DAY].steps?.[2].r === 9 && ms3.flow?.[DAY].steps?.[4].r === 8)
   t('step 合并仍取大者', ms3.flow?.[DAY].step === 4)
-  // flowDayForTaskId：plan→今天 / dayXX→planLog 反查 / 其他→null
+  // flowDayForTaskId：plan→今天 / dayXX→planLog 反查 / 没标记→虚拟键 v-（v3.9.1：
+  // 加练未学天的成绩以前返回 null 被整包丢弃，现在落虚拟键，首页/五关页能看到）
   const plog = defaultProgress()
   plog.planLog = { 5: '2026-10-01' }
   t('plan 记今天', flowDayForTaskId(plog, 'plan', DAY) === DAY)
   t('day05 反查 planLog 日期', flowDayForTaskId(plog, 'day05', DAY) === '2026-10-01')
-  t('没标记过的 day 返回 null', flowDayForTaskId(plog, 'day06', DAY) === null)
+  t('没标记过的 day 记虚拟键 v-day06', flowDayForTaskId(plog, 'day06', DAY) === 'v-day06')
   t('wcustom/mix 不记成绩', flowDayForTaskId(plog, 'wcustom', DAY) === null && flowDayForTaskId(plog, 'mix', DAY) === null)
+
+  // flowEntryOfDay（v3.9.1）：正式学过读日期键，没学过读虚拟键
+  plog.flow = {
+    '2026-10-01': { step: 3, steps: { 2: { t: 5, r: 4 } } },
+    'v-day06': { step: 1, steps: { 1: { t: 5, r: 2 } } },
+  } as Progress['flow']
+  const e5 = flowEntryOfDay(plog, 5)
+  const e6 = flowEntryOfDay(plog, 6)
+  const e7 = flowEntryOfDay(plog, 7)
+  t('学过的天读正式键', e5.date === '2026-10-01' && e5.fe?.step === 3)
+  t('没学过但加练过读虚拟键', e6.date === undefined && e6.fe?.step === 1)
+  t('完全没碰过的天都为空', e7.date === undefined && e7.fe === undefined)
 }
 
 // ── 错词总历史 + 跳关路由（v3.6）──
@@ -507,6 +520,43 @@ log.push('【错词总历史与跳关】')
   t('跳过第 4 关 → /d/wcustom', skipGate('spell', 'wcustom') === '/d/wcustom')
   t('第 5 关没有跳过', skipGate('dictation', 'wcustom') === null)
   t('dayXX 重学链也能跳关', skipGate('learn', 'day05') === '/translate/day05')
+}
+
+// ── 测试词清洗（v3.9.1）──
+log.push('【测试词清洗】')
+{
+  let p = defaultProgress()
+  p = addWrong(p, 'apple', '苹果')
+  p = addWrong(p, '测试词1', '测试词1')
+  p = addWrong(p, 'banana', '香蕉')
+  p = addWrong(p, '测试词2', '测试词2')
+  // 队列里塞一个「测试词 N」的复习条目 + 一个真词条目：清洗绝不能动队列
+  p.review = {
+    '测试词1': { word: '测试词1', stage: 1, dueAt: Date.now() + 86400000 },
+    'apple': { word: 'apple', stage: 1, dueAt: Date.now() + 86400000 },
+  }
+  const beforeLog = Object.keys(p.wrongLog).length
+  const changed = purgeTestData(p)
+  t('purge 报告有变化', changed === true)
+  t('wrong 里的测试词被清', !p.wrong['测试词1'] && !p.wrong['测试词2'])
+  t('wrong 里的真词保留', !!p.wrong['apple'] && !!p.wrong['banana'])
+  t('wrongLog 里的测试词被清（含 addWrong 刚记的）', !p.wrongLog?.['测试词1'] && !p.wrongLog?.['测试词2'])
+  t('wrongLog 真词保留', !!p.wrongLog?.['apple'])
+  t('review 队列绝不动（教材真词混名）', !!p.review?.['测试词1'] && !!p.review?.['apple'])
+  t('clean 后不再报变化', purgeTestData(p) === false)
+
+  // 毕业进历史（graduateWrong 的核心逻辑）：出本 + wrongLog 记 gradAt
+  let g = defaultProgress()
+  g = addWrong(g, 'hold on', '等一下')
+  for (let i = 0; i < REVIEW_STAGES.length; i++) advanceWrong(g, 'hold on')
+  t('满级毕业出本', !g.wrong['hold on'])
+  t('毕业词 wrongLog 带 gradAt', !!g.wrongLog?.['hold on'].gradAt)
+  // 直接毕业（家长按钮走同一路径）：手动出本 + logWrong(gradAt)
+  let d = defaultProgress()
+  d = addWrong(d, 'wtmp', '临时')
+  delete d.wrong['wtmp']
+  logWrong(d, 'wtmp', '临时', true, Date.now())
+  t('直接毕业 → 本中移除 + gradAt 记账', !d.wrong['wtmp'] && !!d.wrongLog?.['wtmp'].gradAt)
 }
 
 function todayStrOf(ts: number): string {

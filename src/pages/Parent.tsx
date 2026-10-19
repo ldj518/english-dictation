@@ -9,9 +9,9 @@ import {
   createShare, rotateShuffleSalt, pushShuffleMode, currentShuffleMode, fetchShuffleSalt,
   fetchRecordings, recordFileUrl, fetchSessionDetail,
   fetchWordbooks, currentBooks, pushActiveBook, pushDailyWords, createWordbook, deleteWordbook,
-  fetchParentRules, pushParentRules,
+  fetchParentRules, pushParentRules, fetchAppEvents,
   type StatsResp, type PhotoItem, type RecItem, type BooksResp, type ParentRules,
-  type SessionDetail,
+  type SessionDetail, type AppEvent,
 } from '../lib/api'
 import { getPlanTrack } from '../lib/data'
 import { todayStr, load, weekStartStr } from '../lib/storage'
@@ -29,6 +29,12 @@ const prepDesc: Record<string, string> = {
   recommended: '听写前先过一遍今天的词（自动发音的卡片），孩子觉得熟了可以自己点「直接听写」跳过。',
   force: '不学完不放开听写入口，适合新单元第一遍。',
   off: '不显示预习环节，进来直接听写。',
+}
+/** v14：App 题型开关（key 与 Android QuizMode 常量一致） */
+const MODE_KEYS = ['dictate', 'cn2en', 'en2cn', 'exam', 'cloze', 'flash', 'read'] as const
+const MODE_LABEL: Record<string, string> = {
+  dictate: '🎧 听写', cn2en: '✍️ 汉译英', en2cn: '🔄 英译汉', exam: '🧪 综合测试',
+  cloze: '📝 选词填空', flash: '⚡ 闪听冲刺', read: '🎙️ 跟读录音',
 }
 
 /** 秒数 → 「3分20秒」 */
@@ -113,6 +119,13 @@ export default function Parent() {
   const [rulesMsg, setRulesMsg] = useState('')
   const [msgText, setMsgText] = useState('')
   const [examDateText, setExamDateText] = useState('')
+  /* v14：App 远程节奏/提醒的临时输入（rules 回来再初始化，防止空值覆盖） */
+  const [cfgLevels, setCfgLevels] = useState('2')
+  const [cfgCap, setCfgCap] = useState('8')
+  const [cfgGoal, setCfgGoal] = useState('40')
+  const [cfgRemindTime, setCfgRemindTime] = useState('19:30')
+  const [paceMsg, setPaceMsg] = useState('')
+  const [appEvents, setAppEvents] = useState<AppEvent[]>([])
 
   /* ── 本周速览（v3.0）：独立于看板档位，始终显示本周大盘 ── */
   const [weekStats, setWeekStats] = useState<StatsResp | null>(null)
@@ -176,14 +189,27 @@ export default function Parent() {
       setRules(r)
       setMsgText(r.parentMessage || '')
       setExamDateText(r.examDate || '')
+      setCfgLevels(String(r.dailyNewLevels ?? 2))
+      setCfgCap(String(r.reviewCap ?? 8))
+      setCfgGoal(String(r.dailyGoal ?? 40))
+      const h = String(r.remindHour ?? 19).padStart(2, '0')
+      const m = String(r.remindMin ?? 30).padStart(2, '0')
+      setCfgRemindTime(`${h}:${m}`)
       setRulesLoaded(true)
     }).catch(() => { if (!cancel) setRulesLoaded(false) })
     return () => { cancel = true }
   }, [])
 
-  /** 保存管控规则：全量推云端（后端是整体替换）+ 本机即时生效 */
-  const saveRules = async (patch: ParentRules) => {
-    if (!rulesLoaded) { setRulesMsg('规则还在加载，等一秒再试'); return }
+  // v14：孩子最近什么时候打开的 App（打开事件流）
+  useEffect(() => {
+    let cancel = false
+    fetchAppEvents().then(list => { if (!cancel) setAppEvents(list) }).catch(() => {})
+    return () => { cancel = true }
+  }, [])
+
+  /** 保存管控规则：全量推云端（后端是整体替换）+ 本机即时生效；返回是否成功推到云端 */
+  const saveRules = async (patch: ParentRules): Promise<boolean> => {
+    if (!rulesLoaded) { setRulesMsg('规则还在加载，等一秒再试'); return false }
     const merged = { ...rules, ...patch }
     setRules(merged)
     // 本机先生效（家长自己手机上马上能看到效果）
@@ -192,6 +218,7 @@ export default function Parent() {
     setRulesMsg(okRes
       ? '已保存：孩子的所有设备会自动生效'
       : '云端没连上，只在本机生效了；连上后记得回来再存一次')
+    return okRes
   }
 
   /** 切换顺序模式：本地立刻变 + 推到云端（所有设备生效） */
@@ -942,6 +969,118 @@ export default function Parent() {
                   )}
                 </div>
               </div>
+
+              {/* v14：App 每日节奏与提醒（Android 原生端远程管控） */}
+              <div className="card pad">
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>📱 App 每日节奏与提醒</div>
+                <div className="sub small" style={{ marginBottom: 10, lineHeight: 1.7 }}>
+                  控制 Android App 的闯关节奏，孩子下次打开 App 时启动画面自动同步生效。
+                </div>
+                <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+                  <label style={{ flex: 1, fontSize: 12, color: 'var(--sub, #667)' }}>
+                    每日新关上限（1-6）
+                    <input type="number" min={1} max={6} value={cfgLevels}
+                      onChange={e => setCfgLevels(e.target.value)}
+                      style={{ width: '100%', marginTop: 4, padding: '8px 10px', borderRadius: 10, border: '1px solid #e4e8f0', fontSize: 14, boxSizing: 'border-box' }} />
+                  </label>
+                  <label style={{ flex: 1, fontSize: 12, color: 'var(--sub, #667)' }}>
+                    每轮复习上限（4-16）
+                    <input type="number" min={4} max={16} value={cfgCap}
+                      onChange={e => setCfgCap(e.target.value)}
+                      style={{ width: '100%', marginTop: 4, padding: '8px 10px', borderRadius: 10, border: '1px solid #e4e8f0', fontSize: 14, boxSizing: 'border-box' }} />
+                  </label>
+                  <label style={{ flex: 1, fontSize: 12, color: 'var(--sub, #667)' }}>
+                    每日目标（题）
+                    <input type="number" min={10} max={200} value={cfgGoal}
+                      onChange={e => setCfgGoal(e.target.value)}
+                      style={{ width: '100%', marginTop: 4, padding: '8px 10px', borderRadius: 10, border: '1px solid #e4e8f0', fontSize: 14, boxSizing: 'border-box' }} />
+                  </label>
+                </div>
+                <div className="row" style={{ gap: 8 }}>
+                  <button className="btn sm" onClick={() => {
+                    const lv = Number(cfgLevels), cap = Number(cfgCap), goal = Number(cfgGoal)
+                    if (!(lv >= 1 && lv <= 6) || !(cap >= 4 && cap <= 16) || !(goal >= 10 && goal <= 200)) {
+                      setPaceMsg('数值超出范围：新关 1-6 · 复习 4-16 · 目标 10-200'); return
+                    }
+                    setPaceMsg('保存中…')
+                    saveRules({ dailyNewLevels: lv, reviewCap: cap, dailyGoal: goal })
+                      .then(ok => setPaceMsg(ok ? '已保存，孩子下次打开 App 生效' : '云端没连上，稍后再试'))
+                  }}>保存节奏设置</button>
+                </div>
+                {paceMsg && <div className="sub small" style={{ marginTop: 8, color: 'var(--blue)', fontWeight: 600 }}>{paceMsg}</div>}
+
+                <div className="field" style={{ marginTop: 10 }}>
+                  <div>
+                    <div className="k">⏰ 每日提醒（云端为准）</div>
+                    <div className="d">App 启动时自动按这里的时间重排闹钟；手机端不再单独开关</div>
+                  </div>
+                  <button
+                    className={'switch' + (rules.remindOn ? ' on' : '')}
+                    onClick={() => saveRules({ remindOn: !rules.remindOn })}
+                    aria-label="每日提醒开关"
+                  ><i /></button>
+                </div>
+                <div className="row" style={{ gap: 8, marginTop: 8, alignItems: 'center' }}>
+                  <input type="time" value={cfgRemindTime}
+                    onChange={e => setCfgRemindTime(e.target.value)}
+                    style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid #e4e8f0', fontSize: 14 }} />
+                  <button className="btn sm" disabled={!/^\d{2}:\d{2}$/.test(cfgRemindTime)}
+                    onClick={() => {
+                      const [h, m] = cfgRemindTime.split(':').map(Number)
+                      saveRules({ remindHour: h, remindMin: m })
+                    }}>保存提醒时间</button>
+                </div>
+
+                <div className="field" style={{ marginTop: 10 }}>
+                  <div>
+                    <div className="k">🔓 允许自由练习</div>
+                    <div className="d">关掉后 App 里「自由练习」开关直接禁用（默认允许，手机上仍有家长锁把关）</div>
+                  </div>
+                  <button
+                    className={'switch' + (rules.freeModeAllowed !== false ? ' on' : '')}
+                    onClick={() => saveRules({ freeModeAllowed: rules.freeModeAllowed === false })}
+                    aria-label="自由练习总开关"
+                  ><i /></button>
+                </div>
+              </div>
+
+              {/* v14：题型开关 */}
+              <div className="card pad">
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>🧩 允许的题型</div>
+                <div className="sub small" style={{ marginBottom: 10, lineHeight: 1.7 }}>
+                  点一下切换：关掉的题型从 App 的「选练法」菜单里消失（Boss 关固定三轮不受影响）。
+                </div>
+                <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+                  {MODE_KEYS.map(k => {
+                    const on = rules.modes ? rules.modes[k] !== false : true
+                    return (
+                      <button key={k}
+                        style={{
+                          padding: '6px 12px', borderRadius: 999, fontSize: 13, fontWeight: 600,
+                          border: '1px solid ' + (on ? 'var(--blue, #3b82f6)' : '#e4e8f0'),
+                          color: on ? 'var(--blue, #3b82f6)' : '#99a',
+                          background: on ? 'rgba(59,130,246,.08)' : '#fff', cursor: 'pointer',
+                        }}
+                        onClick={() => saveRules({ modes: { ...(rules.modes || {}), [k]: !on } })}>
+                        {on ? '✓ ' : '✕ '}{MODE_LABEL[k]}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* v14：最近打开 App */}
+              {appEvents.length > 0 && (
+                <div className="card pad">
+                  <div style={{ fontWeight: 800, marginBottom: 6 }}>📲 最近打开 App</div>
+                  {appEvents.slice(0, 6).map((e, i) => (
+                    <div key={i} className="row" style={{ justifyContent: 'space-between', padding: '5px 0', fontSize: 13 }}>
+                      <span>{e.student_id === 'p1' ? '🦁 哥哥' : e.student_id === 'p2' ? '🐯 弟弟' : e.student_id} · {e.device || 'Android'} · v{e.app_ver || '?'}</span>
+                      <span style={{ color: '#99a' }}>{fmtWhen(e.at)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* 每日计划与词库管理（v2.5，从看板迁入） */}
               <WordbookCard />

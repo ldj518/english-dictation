@@ -9,13 +9,14 @@
  *  新：30′/60′ 是**下限**，题量按手速倒推，不足用变式重复补满。
  *
  * 档位判定顺序（不能换，命中即停）：
- *   ① 断档 ≥7 天        → restart  本单元重学，新词冻结一周
- *   ② 到期 >45 且断档≥2 → settle   清账期，零新词，每天 26 词
- *   ③ 断档 2–6 天        → recover  恢复期，零新词
- *   ④ 其余               → normal
+ *   ① 断档 ≥7 天   → restart  本单元重学，新词冻结一周
+ *   ② 到期 >45     → settle   清账期，零新词，每天 26 词（**不看断档**，见 tierOf 注释）
+ *   ③ 断档 2–6 天  → recover  恢复期，零新词
+ *   ④ 其余          → normal
  */
 
 import { bjAddDays, bjDiffDays, bjDow, bjIsWeekend, bjShort } from './bj'
+import type { Progress } from '../types'
 
 export type Tier = 'normal' | 'settle' | 'recover' | 'restart' | 'sat' | 'sun'
 
@@ -64,14 +65,16 @@ export interface StudyConfig {
   idleGapMs: number
   /** 填充池上限（防注水） */
   fillMax: number
+  /** 是否启用三周爬坡（18→24→30）。家长想一步到位就关掉 */
+  rampOn: boolean
   /** 切换日：这之前的天按老口径算打卡，之后按新口径 */
   cutoverDay: string
 }
 
 /**
  * 默认配置。
- * 注意 minMinWork 默认 18 而不是 30 —— 分三周爬坡（18 → 24 → 30）由家长后台改，
- * 直接写 30 会让孩子第一天就当惩罚。方案里列了这条风险。
+ * minMinWork 是**目标下限**（第 3 周起生效）；前两周由 rampMinOf 压到 18 / 24，
+ * 直接写 30 会让孩子第一天就当成惩罚（方案 11.5 风险表第一条）。
  */
 export const DEFAULT_CFG: StudyConfig = {
   minMinWork: 30,
@@ -84,7 +87,25 @@ export const DEFAULT_CFG: StudyConfig = {
   fastMs: 1500,
   idleGapMs: 60000,
   fillMax: 40,
+  rampOn: true,
   cutoverDay: '',
+}
+
+/** 爬坡三周的下限（分钟）：第 1 周 / 第 2 周 / 第 3 周起 */
+export const RAMP_MIN = [18, 24, 30] as const
+
+/** 第几周（0 起），按 rampStart 到今天的自然日差 ÷ 7，最多 2 周 */
+export function rampWeekOf(rampStart: string, dayKey: string): number {
+  if (!rampStart) return 2
+  const d = bjDiffDays(dayKey, rampStart)
+  if (d <= 0) return 0
+  return Math.min(2, Math.floor(d / 7))
+}
+
+/** 爬坡后的下限：取「目标」和「本周值」的小者，目标低于 18 就按目标 */
+export function rampMinOf(target: number, week: number): number {
+  const w = RAMP_MIN[Math.max(0, Math.min(2, Math.round(week)))]
+  return Math.min(target, w)
 }
 
 export interface PlanInput {
@@ -103,6 +124,8 @@ export interface PlanInput {
   perItemSec: number
   /** 本单元是否还有没学的新词（可教学） */
   hasNew: boolean
+  /** 爬坡第几周（0/1/2）。不传 = 不爬坡，按下限原值 */
+  rampWeek?: number
   cfg?: Partial<StudyConfig>
 }
 
@@ -117,6 +140,10 @@ export interface DayPlan {
   maxMin: number
   /** 目标交互次数（由下限和手速倒推） */
   targetQ: number
+  /** 本次用的单题耗时（秒），实测值或 20 兜底 */
+  perItemSec: number
+  /** 爬坡第几周（0/1/2）；不爬坡时为 2 */
+  rampWeek: number
   /** 今天该清的到期词数（可能小于 dueN，剩下的顺延不丢） */
   dueN: number
   /** 今天该学的新词数 */
@@ -143,10 +170,16 @@ export function newAllowOf(forgetRate: number, cfg: StudyConfig, hasNew: boolean
   return cap
 }
 
-/** 判定档位（顺序不能换） */
+/**
+ * 判定档位（顺序不能换）。
+ *
+ * 清账档**不再要求断档 ≥2 天**：原来写 `dueN > 45 且 gapDays >= 2`，结果是
+ * 上线首日清账、第 2 天孩子昨天刚学过（gap=1）就落回 normal，新词额度恢复，
+ * 150 个到期词还没清完又开始欠新债。到期堆着就是清账，清到 45 以下自动退出。
+ */
 export function tierOf(gapDays: number, dueN: number, cfg: StudyConfig, dayKey: string): Tier {
   if (gapDays >= 7) return 'restart'
-  if (dueN > cfg.settleThreshold && gapDays >= 2) return 'settle'
+  if (dueN > cfg.settleThreshold) return 'settle'
   if (gapDays >= 2) return 'recover'
   if (bjIsWeekend(dayKey)) return bjDow(dayKey) === 0 ? 'sun' : 'sat'
   return 'normal'
@@ -179,7 +212,11 @@ function seg(k: SegKind, label: string, words: number, q: number): PlanSeg {
 export function buildPlan(inp: PlanInput): DayPlan {
   const cfg = mergeCfg(inp.cfg)
   const weekend = bjIsWeekend(inp.dayKey)
-  const minMin = weekend ? cfg.minMinWeekend : cfg.minMinWork
+  const baseMin = weekend ? cfg.minMinWeekend : cfg.minMinWork
+  // 三周爬坡只作用在工作日：周末本来就有 60 分钟，不存在「突然翻倍」的落差
+  const minMin = (!weekend && cfg.rampOn && typeof inp.rampWeek === 'number')
+    ? rampMinOf(baseMin, inp.rampWeek)
+    : baseMin
   const maxMin = weekend ? cfg.maxMinWeekend : cfg.maxMinWork
   const tier = tierOf(inp.gapDays, inp.dueN, cfg, inp.dayKey)
 
@@ -277,6 +314,8 @@ export function buildPlan(inp: PlanInput): DayPlan {
     tierNote: TIER_NOTE[tier],
     gapDays: inp.gapDays,
     minMin, maxMin, targetQ,
+    perItemSec: perItem,
+    rampWeek: typeof inp.rampWeek === 'number' ? inp.rampWeek : 2,
     dueN: dueToday,
     newN,
     segs,
@@ -354,4 +393,30 @@ export function planHeadline(plan: DayPlan): string {
 /** 清账期还剩几天（首日 182 词 → 7 天） */
 export function settleDaysLeft(dueN: number, cfg: StudyConfig): number {
   return Math.max(1, Math.ceil(dueN / Math.max(1, cfg.settlePerDay)))
+}
+
+/**
+ * 单题耗时（秒），取自近 7 天**实测**：有效时间 ÷ 作答题数。
+ * 以前写死 20，结果「按手速倒推题量」成了空话——手快手慢排出来的题量一模一样。
+ * 样本不足 10 题就用 20 秒兜底，免得一两道题把计划带跑。
+ */
+export function perItemSecOf(p: Progress, dayKey: string, days = 7): number {
+  const from = bjAddDays(dayKey, -(days - 1))
+  let sec = 0, q = 0
+  for (const [d, log] of Object.entries(p.dayLog || {})) {
+    if (bjDiffDays(d, from) < 0) continue      // 比窗口还早
+    if (bjDiffDays(d, dayKey) > 0) continue    // 未来（时钟错乱）
+    sec += log.effSec || 0
+    q += log.qN || 0
+  }
+  if (q < 10) return 20
+  return Math.min(60, Math.max(6, Math.round(sec / q)))
+}
+
+/**
+ * 是否已到封顶（该强制收尾了）。
+ * 封顶不生效的话，孩子会发现「慢慢做反而不用加」，最优策略就变成磨洋工（方案 11.5）。
+ */
+export function capHit(plan: DayPlan, effSec: number): boolean {
+  return effSec >= plan.maxMin * 60
 }

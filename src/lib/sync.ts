@@ -171,6 +171,32 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     }
   }
 
+  /* ── v4/v5 字段：以前整个漏掉，云端一拉就把本地词状态抹平 ── */
+  // 词级状态：同一个词取「最近一次观测」（at 大者），同刻取作答数多的。
+  // 不能用 max(S)：答错会把 S 打回 1，取大会把错词永远锁在高强度上。
+  const wordState: NonNullable<Progress['wordState']> = { ...(b.wordState || {}) }
+  for (const [k, v] of Object.entries(a.wordState || {})) {
+    const r = wordState[k]
+    if (!r) { wordState[k] = v; continue }
+    wordState[k] = (v.at || 0) > (r.at || 0) ? v
+      : (v.at || 0) === (r.at || 0) && (v.n || 0) > (r.n || 0) ? v : r
+  }
+
+  // 日账本：同一天取最后写入的那份（同天重做以后一次为准）
+  const dayLog: NonNullable<Progress['dayLog']> = { ...(b.dayLog || {}) }
+  for (const [k, v] of Object.entries(a.dayLog || {})) {
+    const r = dayLog[k]
+    if (!r || (v.at || 0) >= (r.at || 0)) dayLog[k] = v
+  }
+
+  // 测验记录：按 id 并集（同一场重复上报取分高的那次）
+  const tests: NonNullable<Progress['tests']> = [...(b.tests || [])]
+  const testIds = new Set(tests.map(t => t.id))
+  for (const t of a.tests || []) {
+    if (!testIds.has(t.id)) tests.push(t)
+  }
+  tests.sort((x, y) => (x.at || 0) - (y.at || 0))
+
   // streakDays/lastDay 跟连续天数大的一方走
   const streakLocal = a.streakDays || 0
   const streakRemote = b.streakDays || 0
@@ -197,6 +223,17 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     passed,
     flow,
     settings: { ...a.settings },
+    // v4/v5
+    wordState,
+    dayLog,
+    tests,
+    // 学习参数与迁移标记：本地优先（每台设备自己调过什么，不该被云端改回去）
+    studyCfg: { ...(b.studyCfg || {}), ...(a.studyCfg || {}) },
+    migratedV4: Math.max(a.migratedV4 || 0, b.migratedV4 || 0) || undefined,
+    // 爬坡起点取更早的那天：换设备不该让「第 1 周」重新开始
+    rampFrom: [a.rampFrom, b.rampFrom].filter(Boolean).sort()[0],
+    // 未结算的当日会话不跨设备：本地有就用本地的
+    liveSession: a.liveSession || null,
   }
 }
 

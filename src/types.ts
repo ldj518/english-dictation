@@ -8,6 +8,29 @@ import type { StudyConfig } from './lib/plan'
  * 单日会话账本（v4）。
  * 战报、家长后台「今天为什么只有 4 段」、跨天对比，全部读这一个结构。
  */
+/** 一次测验（v5）：单元闸门 / 周测 */
+export interface TestRun {
+  id: string
+  kind: 'gate' | 'week'
+  /** 单元闸门才有 */
+  unit?: string
+  dayKey: string
+  total: number
+  /** 首答对（不含看答案） */
+  right: number
+  peekN: number
+  score: number
+  /** 拼写段得分（单独算，会选不会写不算过） */
+  spellScore: number
+  pass: boolean
+  passLine: number
+  /** 第几次考 */
+  attempt: number
+  /** 未通过 → 补丁期结束日 */
+  patchUntil?: string
+  at: number
+}
+
 export interface DayLog {
   dayKey: string
   /** 档位：normal / settle / recover / restart / sat / sun */
@@ -213,8 +236,12 @@ export interface Progress {
   studyCfg?: Partial<StudyConfig>
   /** v4 迁移标记：=1 表示已从 review/wrong 反推过 wordState，不再重复迁移 */
   migratedV4?: number
+  /** 三周爬坡起点（yyyy-mm-dd，北京日）。新流程首次启用那天写入，之后不再改 */
+  rampFrom?: string
   /** 未结算的当日会话（退出后回来接着做） */
   liveSession?: LiveSession | null
+  /** 测验记录（v5）：单元闸门 / 周测，append-only */
+  tests?: TestRun[]
 
   /** 设置 */
   settings: {

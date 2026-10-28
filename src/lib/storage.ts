@@ -336,6 +336,9 @@ export function migrateV4(p: Progress): Progress {
   if (p.migratedV4 === 1) return p
   const hasOld = Object.keys(p.review || {}).length + Object.keys(p.wrong || {}).length +
     Object.keys(p.reviewDone || {}).length
-  if (!hasOld) return { ...p, migratedV4: 1, wordState: p.wordState || {} }
-  return { ...p, wordState: { ...migrateFromLegacy(p), ...(p.wordState || {}) }, migratedV4: 1 }
+  // 爬坡起点：新流程第一次启用的那天。老数据也按「今天」算第一周——
+  // 爬坡是为了缓冲「10 分钟 → 30 分钟」的落差，不是按注册天数补课。
+  const rampFrom = p.rampFrom || bjDayKey()
+  if (!hasOld) return { ...p, migratedV4: 1, rampFrom, wordState: p.wordState || {} }
+  return { ...p, rampFrom, wordState: { ...migrateFromLegacy(p), ...(p.wordState || {}) }, migratedV4: 1 }
 }

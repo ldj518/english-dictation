@@ -25,6 +25,17 @@ interface DayBody {
   peekN?: number
   done?: boolean
   segs?: { k: string; label: string; min: number; q: number; right: number }[]
+  /** 当天算出来的计划快照（写 day_plan，家长问「为什么只排 4 段」看它） */
+  plan?: {
+    tier?: string; minMin?: number; maxMin?: number; targetQ?: number
+    dueN?: number; newN?: number; perItemSec?: number; rampWeek?: number
+    segs?: { k: string; label: string; min: number; q: number }[]
+  }
+  /** 分段进入/离开。同一天重复上报 → 先删后插，保持幂等 */
+  segLogs?: {
+    segIndex: number; k?: string; enterAt?: number; leaveAt?: number
+    qN?: number; rightN?: number; peekN?: number
+  }[]
   /** 只上报变化的词状态，不全量推（省流量） */
   words?: {
     word: string; s: number; due: string; lapses: number
@@ -84,13 +95,50 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       await env.DB.batch(stmts)
     }
 
-    return ok({ dayKey: dk, words: words.length })
+    // 3. 计划快照（v5）：家长后台要回答「当时为什么只排 4 段」
+    if (b.plan) {
+      await env.DB.prepare(
+        `INSERT INTO day_plan
+           (student_id, day_key, tier, min_min, max_min, target_q, due_n, new_n,
+            per_item_sec, ramp_week, segs, created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+         ON CONFLICT(student_id, day_key) DO UPDATE SET
+           tier = excluded.tier, min_min = excluded.min_min, max_min = excluded.max_min,
+           target_q = excluded.target_q, due_n = excluded.due_n, new_n = excluded.new_n,
+           per_item_sec = excluded.per_item_sec, ramp_week = excluded.ramp_week,
+           segs = excluded.segs, created_at = excluded.created_at`
+      ).bind(
+        studentId, dk, b.plan.tier || b.tier || 'normal',
+        Number(b.plan.minMin || 0), Number(b.plan.maxMin || 0),
+        Math.round(b.plan.targetQ || 0), Math.round(b.plan.dueN || 0), Math.round(b.plan.newN || 0),
+        Math.round(b.plan.perItemSec || 20), Math.round(b.plan.rampWeek ?? 2),
+        JSON.stringify(b.plan.segs || []), now
+      ).run()
+    }
+
+    // 4. 分段进出（v5）：先删当天再插，重复上报不叠行
+    const logs = (b.segLogs || []).filter(s => Number.isFinite(s.segIndex)).slice(0, 40)
+    if (logs.length) {
+      await env.DB.prepare('DELETE FROM seg_log WHERE student_id = ? AND day_key = ?')
+        .bind(studentId, dk).run()
+      const stmts = logs.map(s => env.DB.prepare(
+        `INSERT INTO seg_log
+           (student_id, day_key, seg_index, seg_kind, enter_at, leave_at, q_n, right_n, peek_n)
+         VALUES (?,?,?,?,?,?,?,?,?)`
+      ).bind(
+        studentId, dk, Math.round(s.segIndex), s.k || '',
+        Math.round(s.enterAt || 0), Math.round(s.leaveAt || 0),
+        Math.max(0, Math.round(s.qN || 0)), Math.max(0, Math.round(s.rightN || 0)),
+        Math.max(0, Math.round(s.peekN || 0))
+      ))
+      await env.DB.batch(stmts)
+    }
+
+    return ok({ dayKey: dk, words: words.length, segs: logs.length, plan: !!b.plan })
   } catch (e) {
     return fail('上报失败: ' + (e as Error).message, 500)
   }
-}
-
-export const onRequestGet: PagesFunction<Env> = async (ctx) => {
+}export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const { request, env } = ctx
   try {
     const u = new URL(request.url)
@@ -119,6 +167,28 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
          GROUP BY due_day ORDER BY due_day`
       ).bind(studentId, today).all()
       return ok({ today, health: row || {}, forecast: fc || [] })
+    }
+
+    // 某天的计划快照 + 分段进出（家长后台「今天这一场」明细）
+    const wantDay = (u.searchParams.get('plan') || '').trim()
+    if (wantDay) {
+      const plan = await env.DB.prepare(
+        `SELECT day_key, tier, min_min, max_min, target_q, due_n, new_n,
+                per_item_sec, ramp_week, segs, created_at
+         FROM day_plan WHERE student_id = ? AND day_key = ?`
+      ).bind(studentId, wantDay).first()
+      const { results: segs } = await env.DB.prepare(
+        `SELECT seg_index, seg_kind, enter_at, leave_at, q_n, right_n, peek_n
+         FROM seg_log WHERE student_id = ? AND day_key = ? ORDER BY seg_index`
+      ).bind(studentId, wantDay).all()
+      return ok({
+        dayKey: wantDay,
+        plan: plan ? {
+          ...plan,
+          segs: (() => { try { return JSON.parse(String((plan as Record<string, unknown>).segs || '[]')) } catch { return [] } })(),
+        } : null,
+        segs: segs || [],
+      })
     }
 
     // 日账本区间（默认近 30 天）

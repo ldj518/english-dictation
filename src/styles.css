@@ -545,6 +545,8 @@ button.fg:active{transform:scale(.96)}
   padding:8px 11px;border-radius:0 8px 8px 0;font-size:12.5px;line-height:1.6}
 .v4homeGo{width:100%;margin-top:12px}
 .v4homeFoot{font-size:11px;color:var(--sub);text-align:center;margin-top:7px;line-height:1.5}
+.v4homeRamp{font-size:11px;color:var(--blue);text-align:center;margin-top:5px;line-height:1.5;
+  background:var(--blue-soft);border-radius:7px;padding:5px 8px}
 .v4legacy{margin:2px 0 14px}
 .v4legacy>summary{font-size:12px;color:var(--sub);padding:8px 2px;cursor:pointer;list-style:none}
 .v4legacy>summary::-webkit-details-marker{display:none}
@@ -581,3 +583,11 @@ button.fg:active{transform:scale(.96)}
 .pv4tr.ok{background:#f7fdf9}
 .pv4tr .good{color:var(--ok);font-weight:700}
 .pv4tr .bad{color:var(--bad);font-weight:700}
+
+/* ── 家长后台 v5：测验档案 / 词级明细 ── */
+.pv4tr>div{text-align:center;font-variant-numeric:tabular-nums;min-width:0}
+.pv4tr>div:first-child{text-align:left}
+.pv4tr.p5{grid-template-columns:1.5fr .9fr 1.05fr .55fr .85fr}
+.pv4tr .ok{color:var(--ok);font-weight:700}
+.pv4tr .warn{color:#b57708;font-weight:700}
+.chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}

@@ -14,6 +14,7 @@ import Settings from './pages/Settings'
 import PrintSheet from './pages/PrintSheet'
 import Paper from './pages/Paper'
 import Parent from './pages/Parent'
+import Gate from './pages/Gate'
 import Train from './pages/Train'
 import Translate from './pages/Translate'
 import Read from './pages/Read'
@@ -47,6 +48,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/days" element={<Days />} />
           <Route path="/flow/:no" element={<FlowDay />} />
           <Route path="/today" element={<Today />} />
+          <Route path="/gate" element={<Gate />} />
+          <Route path="/gate/:unit" element={<Gate />} />
           <Route path="/d/:id" element={<Dictation />} />
           <Route path="/learn/:id" element={<Learn />} />
           <Route path="/listen/:id" element={<Listen />} />

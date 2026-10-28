@@ -27,8 +27,16 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       kind?: string
       mode?: string
       seconds?: number
-      records?: { no?: number; word: string; cn?: string; input?: string; correct?: boolean }[]
+      records?: {
+        no?: number; word: string; cn?: string; input?: string; correct?: boolean
+        ms?: number; attempts?: number; peek?: boolean; fast?: boolean
+      }[]
       photoKey?: string
+      /** v5：首答对（不含看答案）、看答案题数、有效学习秒数、档位 */
+      firstRight?: number
+      peekN?: number
+      effSec?: number
+      tier?: string
     }
 
     const studentId = (body.studentId || '').trim()
@@ -50,19 +58,33 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     // 1. 写 sessions
     await env.DB.prepare(
       `INSERT INTO sessions
-       (id, student_id, track_id, track_label, kind, mode, total, right_count, score, seconds, created_at, day_key, photo_key)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+       (id, student_id, track_id, track_label, kind, mode, total, right_count, score, seconds,
+        created_at, day_key, photo_key, first_right, peek_n, eff_sec, tier)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).bind(
       sessionId, studentId, trackId, body.trackLabel || trackId,
       body.kind || 'daily', body.mode || 'online',
-      total, right, score, seconds, now, dk, body.photoKey || null
+      total, right, score, seconds, now, dk, body.photoKey || null,
+      // v5：把 v4 加的四个口径列真正填上（以前加了列一个都不写，后台只能猜）
+      // 老流程没有 first_right 概念，右答就是首答；也没有看答案与有效时间概念，
+      // 就写 right / 0 / seconds，tier 标 legacy 以便后台区分口径。
+      typeof body.firstRight === 'number' ? body.firstRight : right,
+      Math.max(0, Math.round(body.peekN || 0)),
+      Math.max(0, Math.round(body.effSec || seconds)),
+      body.tier || 'legacy'
     ).run()
 
     // 2. 批量写 answers（D1 batch，一次往返）
     const stmts = records.map((r, i) =>
       env.DB.prepare(
-        `INSERT INTO answers (session_id, word, cn, input, correct, seq) VALUES (?,?,?,?,?,?)`
-      ).bind(sessionId, r.word, r.cn || '', r.input || '', r.correct ? 1 : 0, r.no ?? i + 1)
+        `INSERT INTO answers (session_id, word, cn, input, correct, seq, ms, attempts, peek, fast)
+         VALUES (?,?,?,?,?,?,?,?,?,?)`
+      ).bind(
+        sessionId, r.word, r.cn || '', r.input || '', r.correct ? 1 : 0, r.no ?? i + 1,
+        // v5：四个耗时/重做口径列以前一个都不写，后台没法区分「首答」和「重做后答对」
+        Math.max(0, Math.round(r.ms || 0)), Math.max(1, Math.round(r.attempts || 1)),
+        r.peek ? 1 : 0, r.fast ? 1 : 0
+      )
     )
     // D1 batch 每条最多 100 个语句，分批
     for (let i = 0; i < stmts.length; i += 90) {

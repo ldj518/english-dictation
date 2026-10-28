@@ -10,6 +10,7 @@ import { dueWrongWords, todayStr } from '../lib/storage'
 import { dueReviews } from '../lib/reviewQueue'
 import { FLOW_STEPS, flowStepOf, FLOW_SCORED, flowEntryOfDay } from '../lib/flow'
 import TodayCard from '../components/TodayCard'
+import GateCard from '../components/GateCard'
 
 /**
  * 首页（v3.5 三区改版）：
@@ -172,6 +173,9 @@ export default function Home() {
 
       {/* ── 主区（v4）：今天这一场。有效时间下限 + 必做，双闸门 ── */}
       <TodayCard />
+
+      {/* ── 单元闸门入口（v5）：四条件满足才出现 ── */}
+      <GateCard />
 
       {/* ── 旧的五关模式（保留备用：单元测、自由练还走它）── */}
       <details className="v4legacy">

@@ -12,7 +12,7 @@ import { useStore } from '../lib/store'
 import { WORDS } from '../lib/data'
 import { todayStr } from '../lib/storage'
 import { bjDiffDays, bjDow, fmtSec } from '../lib/bj'
-import { buildPlan, mustTotalOf, mergeCfg } from '../lib/plan'
+import { buildPlan, mustTotalOf, mergeCfg, perItemSecOf, rampWeekOf } from '../lib/plan'
 import { queueHealth } from '../lib/memory'
 
 export default function TodayCard() {
@@ -25,15 +25,18 @@ export default function TodayCard() {
     const gap = progress.lastDay ? Math.max(0, bjDiffDays(day, progress.lastDay)) : 0
     const hasNew = WORDS.some(w => !progress.wordState?.[w.word])
     const cfg = mergeCfg(progress.studyCfg)
+    const week = rampWeekOf(progress.rampFrom || day, day)
     const plan = buildPlan({
       dayKey: day, gapDays: gap, dueN: h.due, weakN: h.weak, nailN: h.nails,
-      forgetRate: h.forgetRate, perItemSec: 20, hasNew, cfg: progress.studyCfg,
+      // 手速取近 7 天实测：以前写死 20 秒，题量对快手慢手一个样
+      forgetRate: h.forgetRate, perItemSec: perItemSecOf(progress, day), hasNew,
+      rampWeek: week, cfg: progress.studyCfg,
     })
     const log = progress.dayLog?.[day]
-    return { h, gap, plan, cfg, log, mustAll: mustTotalOf(plan) }
+    return { h, gap, plan, cfg, log, mustAll: mustTotalOf(plan), week }
   }, [progress, day])
 
-  const { h, gap, plan, cfg, log, mustAll } = info
+  const { h, gap, plan, cfg, log, mustAll, week } = info
   const done = !!log?.done
   const started = !!log && (log.effSec > 0 || log.mustDone > 0)
   const effPct = Math.min(100, Math.round(((log?.effSec || 0) / (plan.minMin * 60)) * 100))
@@ -101,6 +104,14 @@ export default function TodayCard() {
       {!done && (
         <div className="v4homeFoot">
           要满 {plan.minMin} 分钟有效学习 + {mustAll} 题做完才算完成。挂机不算。
+          {plan.maxMin > plan.minMin ? ` 最多 ${plan.maxMin} 分钟就收尾，慢慢做不会加量。` : ''}
+        </div>
+      )}
+
+      {/* 爬坡提示：只有前两周出现，让他知道「今天为什么比明天短」 */}
+      {week < 2 && !plan.weekend && !done && (
+        <div className="v4homeRamp">
+          第 {week + 1} 周先 {plan.minMin} 分钟，{week === 0 ? '下周 24 分钟，第 3 周 30 分钟' : '下周恢复到 30 分钟'}。
         </div>
       )}
     </div>

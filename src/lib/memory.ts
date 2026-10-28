@@ -246,7 +246,10 @@ export function migrateFromLegacy(p: Progress): Record<string, WordState> {
     const prev = out[word]
     out[word] = {
       S: 1,
-      due: prev && bjDiffDays(prev.due, day) > 0 ? prev.due : bjAddDays(day, 1),
+      // 到期日沿用老队列里那条（可能已经逾期），没有才排到明天。
+      // 原来写成「未来的就保留、否则明天」，结果是迁移时把所有逾期词集体推到明天——
+      // 首日只认出 31 个到期，第二天突然冒出 136 个，把清账期整个错开一天。
+      due: prev?.due || bjAddDays(day, 1),
       lapses: Math.max(1, w.count || 1),
       streak: 0, master: 0,
       at: w.lastAt || Date.now(),

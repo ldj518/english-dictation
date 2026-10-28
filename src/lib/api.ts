@@ -509,6 +509,17 @@ export interface DayReport {
   done: boolean
   segs: { k: string; label: string; min: number; q: number; right: number }[]
   words: { word: string; s: number; due: string; lapses: number; streak: number; master: number; ok: number; n: number }[]
+  /** 计划快照（v5）：落 day_plan */
+  plan?: {
+    tier?: string; minMin?: number; maxMin?: number; targetQ?: number
+    dueN?: number; newN?: number; perItemSec?: number; rampWeek?: number
+    segs?: { k: string; label: string; min: number; q: number }[]
+  }
+  /** 分段进出（v5）：落 seg_log */
+  segLogs?: {
+    segIndex: number; k?: string; enterAt?: number; leaveAt?: number
+    qN?: number; rightN?: number; peekN?: number
+  }[]
 }
 
 /**
@@ -518,6 +529,65 @@ export interface DayReport {
 export async function reportDay(p: DayReport): Promise<boolean> {
   const r = await req<{ dayKey: string }>('/day', { method: 'POST', body: JSON.stringify(p) })
   return !!r
+}
+
+/* ══════════ v5：战报归档 ══════════ */
+
+export async function reportOut(d: {
+  studentId: string; dayKey: string; text: string; payload: unknown
+}): Promise<boolean> {
+  const r = await req<{ dayKey: string }>('/report', { method: 'POST', body: JSON.stringify(d) })
+  return !!r
+}
+
+/* ══════════ v5：测验（单元闸门 / 周测）══════════ */
+
+export interface TestReport {
+  id: string
+  studentId: string
+  kind: 'gate' | 'week'
+  unit?: string
+  dayKey: string
+  total: number
+  right: number
+  peekN: number
+  score: number
+  pass: boolean
+  passLine: number
+  attempt: number
+  patchUntil?: string
+  items: {
+    no?: number; word: string; qkind?: string
+    correct?: boolean; peek?: boolean; ms?: number; fast?: boolean
+  }[]
+}
+
+export async function reportTest(t: TestReport): Promise<boolean> {
+  const r = await req<{ id: string }>('/test', { method: 'POST', body: JSON.stringify(t) })
+  return !!r
+}
+
+export interface TestRunRow {
+  id: string
+  kind: string
+  unit: string | null
+  day_key: string
+  total: number
+  right_n: number
+  peek_n: number
+  score: number
+  pass: number
+  pass_line: number
+  attempt: number
+  patch_until: string | null
+  created_at: number
+}
+
+export async function fetchTests(studentId: string, unit?: string): Promise<TestRunRow[]> {
+  const q = new URLSearchParams({ studentId })
+  if (unit) q.set('unit', unit)
+  const r = await req<{ runs: TestRunRow[] }>('/test?' + q.toString())
+  return r?.runs || []
 }
 
 export interface QueueHealthApi {

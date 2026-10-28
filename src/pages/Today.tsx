@@ -23,14 +23,17 @@ import { useStore } from '../lib/store'
 import { WORDS } from '../lib/data'
 import { wordFileMap, playWordText } from '../lib/data'
 import { bjDayKey, bjDiffDays, fmtSec, fmtSecCn } from '../lib/bj'
-import { buildPlan, gateCheck, mergeCfg, mustTotalOf, settleDaysLeft, type DayPlan } from '../lib/plan'
+import { buildPlan, gateCheck, mergeCfg, mustTotalOf, settleDaysLeft, perItemSecOf, rampWeekOf, capHit, type DayPlan } from '../lib/plan'
 import { queueHealth, dueWordList } from '../lib/memory'
+import { buildReport, reportText, reportImage } from '../lib/report'
+import { reportOut } from '../lib/api'
 import {
   buildQBank, extraDrill, cnOf, judgeSentence, SENTENCES, type Q, type QBank,
 } from '../lib/qbank'
 import { EffTimer } from '../lib/timer'
 import { unlockAudio } from '../lib/player'
 import { todayStr } from '../lib/storage'
+import { nextGate, unitName } from '../lib/gate'
 import { reportDay } from '../lib/api'
 import { judge, judgeWithFirst } from '../lib/storage'
 import { syllableText } from '../lib/syllables'
@@ -105,8 +108,9 @@ export default function Today() {
     const h = queueHealth(pg, day)
     const gap = pg.lastDay ? Math.max(0, bjDiffDays(day, pg.lastDay)) : 0
 
-    // 单题中位耗时：从近 30 天逐题记录估。没有就 20 秒
-    const perItem = 20
+    // 单题耗时取近 7 天实测（有效时间 ÷ 作答数）。以前写死 20 秒，
+    // 「按手速倒推题量」等于没做——快手慢手排出来一模一样。
+    const perItem = perItemSecOf(pg, day)
 
     // 还有没有没学过的词（决定今天能不能上新词）
     const fresh = WORDS.filter(w => !state[w.word])
@@ -121,6 +125,7 @@ export default function Today() {
       forgetRate: h.forgetRate,
       perItemSec: perItem,
       hasNew,
+      rampWeek: rampWeekOf(pg.rampFrom || day, day),
       cfg: pg.studyCfg,
     })
     setPlan(p)
@@ -173,6 +178,17 @@ export default function Today() {
   const snap = timer.current ? timer.current.snap() : { effSec: 0, idleSec: 0, wallSec: 0, taps: 0, sinceLastTap: 0 }
   void tick
 
+  /* ── 封顶：到点强制收尾。不设的话他会发现「慢慢做反而不用加」，最优策略变磨洋工 ── */
+  const [capped, setCapped] = useState(false)
+  const [poster, setPoster] = useState('')
+  const [copied, setCopied] = useState('')
+  useEffect(() => {
+    if (phase !== 'run' || !plan) return
+    if (!capHit(plan, snap.effSec)) return
+    setCapped(true)
+    setPhase('wrap')
+  }, [phase, plan, snap.effSec])
+
   /* ── 当前题 ── */
   const q: Q | null = bank ? bank.qs[qi] || null : null
   const segs = plan?.segs || []
@@ -219,6 +235,20 @@ export default function Today() {
    */
   const gradedQRef = useRef<Set<string>>(new Set())   // 已记过分的题 id
 
+  /* ── 分段进出（v5）：看孩子卡在哪一段。按 seg 序号聚，切段时关上一段 ── */
+  const segStats = useRef<Record<number, { enterAt: number; leaveAt: number; qN: number; rightN: number; peekN: number }>>({})
+  const segCur = useRef<number>(-1)
+  useEffect(() => {
+    if (!q) return
+    const idx = q.seg
+    const m = segStats.current
+    if (segCur.current >= 0 && segCur.current !== idx && m[segCur.current] && !m[segCur.current].leaveAt) {
+      m[segCur.current].leaveAt = Date.now()
+    }
+    if (!m[idx]) m[idx] = { enterAt: Date.now(), leaveAt: 0, qN: 0, rightN: 0, peekN: 0 }
+    segCur.current = idx
+  }, [q])
+
   const grade = useCallback((correct: boolean, opts: { peek?: boolean; hinted?: boolean } = {}) => {
     if (!q) return
     timer.current?.tap()
@@ -234,6 +264,12 @@ export default function Today() {
       input: '', seg: q.seg, must: q.must,
     }
     setRecs(prev => [...prev, rec])
+    const st = segStats.current[q.seg]
+    if (st) {
+      st.qN += 1
+      if (rec.correct) st.rightN += 1
+      if (rec.peek) st.peekN += 1
+    }
 
     // 同词当日只判一次：第二次起只练不判（防重刷把分刷高）
     if (q.scored && !gradedRef.current.has(q.word)) {
@@ -287,6 +323,15 @@ export default function Today() {
     saveDay(log)
     saveLive(null)
 
+    // 战报归档（v5）：六块文本 + 结构化 payload，家长页可回看/复制
+    try {
+      const rd = buildReport(progRef.current, plan, perf, day)
+      void reportOut({
+        studentId: profile.id, dayKey: day,
+        text: reportText(rd), payload: rd,
+      }).catch(() => { /* 归档失败不影响学习 */ })
+    } catch { /* 拼装失败也不拦结算 */ }
+
     // 上报云端（fire-and-forget）：只推今天碰过的词，不全量推 368 个
     const touched = Array.from(new Set(perf.map(r => r.word)))
     const ws = progRef.current.wordState || {}
@@ -299,6 +344,23 @@ export default function Today() {
       qN: log.qN, rightN: log.rightN, peekN: log.peekN,
       done: log.done,
       segs: log.segs,
+      // v5：计划快照 + 分段进出，家长后台能回答「为什么只排这几段」「卡在哪段」
+      plan: {
+        tier: plan.tier, minMin: plan.minMin, maxMin: plan.maxMin, targetQ: plan.targetQ,
+        dueN: plan.dueN, newN: plan.newN, perItemSec: plan.perItemSec, rampWeek: plan.rampWeek,
+        segs: plan.segs.map(s => ({ k: s.k, label: s.label, min: s.min, q: s.q })),
+      },
+      segLogs: Object.keys(segStats.current)
+        .map(Number)
+        .sort((a, b) => a - b)
+        .map(i => {
+          const st = segStats.current[i]
+          return {
+            segIndex: i, k: plan.segs[i]?.k || '',
+            enterAt: st.enterAt, leaveAt: st.leaveAt || Date.now(),
+            qN: st.qN, rightN: st.rightN, peekN: st.peekN,
+          }
+        }),
       words: touched.map(w => {
         const s = ws[w]
         return s
@@ -312,6 +374,8 @@ export default function Today() {
   /* ── 时间不够：追加练习 ── */
   const addDrill = useCallback((n = 12) => {
     if (!bank) return
+    // 已封顶就别再加了，否则 effect 会立刻把它拽回结算页，变成来回跳
+    if (plan && capHit(plan, timer.current?.snap().effSec || 0)) return
     // 优先用今天做错的词，其次用到期词
     const wrongOnes = Array.from(new Set(recs.filter(r => !r.correct || r.peek).map(r => r.word)))
     const pool2 = wrongOnes.length
@@ -323,7 +387,7 @@ export default function Today() {
     // 补练后再结算必须重新落库，否则「补完 30 分钟」的结果写不进去（savedRef 还停在上一次）
     savedRef.current = ''
     setPhase('run')
-  }, [bank, recs, day, profile.id])
+  }, [bank, recs, day, profile.id, plan])
 
   /* ── 渲染 ── */
 
@@ -442,6 +506,8 @@ export default function Today() {
     })
     const wrongList = Array.from(new Set(recs.filter(r => !r.correct || r.peek).map(r => r.word)))
     const restSec = Math.max(0, minSec - snap.effSec)
+    // 今天达标了、又正好有单元够格考 → 结算页直接给入口，不用回首页再点一次
+    const gateNext = gate.done ? nextGate(progRef.current, day) : null
 
     return (
       <Shell title="今天" noNav>
@@ -485,6 +551,11 @@ export default function Today() {
           {peekRate > 0.4 && (
             <div className="v4note bad">看答案超过 40%，今天不算完成。看答案的题不计分，也不进掌握了。</div>
           )}
+          {capped && (
+            <div className="v4note">
+              到 {plan.maxMin} 分钟封顶了，今天就收在这儿。慢慢做不会让作业变多，只会让做得快的部分被拖长。
+            </div>
+          )}
 
           {wrongList.length > 0 && (
             <div style={{ marginTop: 12 }}>
@@ -497,9 +568,41 @@ export default function Today() {
             </div>
           )}
 
+          {/* 战报（v5）：存长图 / 复制文字。微信里 a[download] 基本失效，所以出图给他长按保存 */}
+          <div className="row" style={{ gap: 8, marginTop: 14 }}>
+            <button className="btn" style={{ flex: 1 }} onClick={() => {
+              const rd = buildReport(progRef.current, plan, recs, day)
+              try { setPoster(reportImage(rd)) } catch { setPoster('') }
+            }}>存长图（发微信）</button>
+            <button className="btn ghost" style={{ flex: 1 }} onClick={async () => {
+              const rd = buildReport(progRef.current, plan, recs, day)
+              const txt = reportText(rd)
+              try {
+                await navigator.clipboard.writeText(txt)
+                setCopied('已复制，直接粘到微信')
+              } catch {
+                setCopied(txt)
+              }
+            }}>复制文字</button>
+          </div>
+          {poster && (
+            <div style={{ marginTop: 12 }}>
+              <img src={poster} alt="今日战报" style={{ width: '100%', borderRadius: 12, border: '1px solid var(--line)' }} />
+              <div className="sub small" style={{ textAlign: 'center', marginTop: 6 }}>长按图片保存，发微信时选「原图」</div>
+            </div>
+          )}
+          {copied && (
+            <div className="v4note" style={{ marginTop: 10, whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{copied}</div>
+          )}
+
           <div className="row" style={{ gap: 8, marginTop: 16 }}>
             {gate.done ? (
               <>
+                {gateNext && (
+                  <button className="btn" style={{ flex: 1.3 }} onClick={() => nav('/gate/' + gateNext.unit)}>
+                    去考{unitName(gateNext.unit)}
+                  </button>
+                )}
                 <button className="btn" style={{ flex: 1 }} onClick={() => nav('/')}>回首页</button>
                 <button className="btn ghost" style={{ flex: 1 }} onClick={() => nav('/review')}>看错词本</button>
               </>

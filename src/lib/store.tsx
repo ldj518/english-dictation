@@ -6,11 +6,12 @@ import {
   setDeviceOwner, hasLearningData, purgeTestData, logWrong, migrateV4,
 } from './storage'
 import { gradeWord, type WordState } from './memory'
-import type { DayLog, LiveSession } from '../types'
+import type { DayLog, LiveSession, TestRun } from '../types'
+import type { TestItem } from './gate'
 import type { StudyConfig } from './plan'
 import { settle, addMinutes, type AwardCtx } from './gamify'
 import { enqueueReview, advanceReview, resetReview, reopenReview, dueReviews } from './reviewQueue'
-import { reportSession, syncStudent, checkBackend, fetchShuffleSalt, pushProgressSnapshot, fetchParentRules } from './api'
+import { reportSession, syncStudent, checkBackend, fetchShuffleSalt, pushProgressSnapshot, fetchParentRules, reportTest } from './api'
 import type { ParentRules } from './api'
 import { syncProfiles, pullAndMerge } from './sync'
 import { flowAdvance, flowRecordStep } from './flow'
@@ -70,6 +71,8 @@ interface Ctx {
   gradeOne: (word: string, correct: boolean, opts?: { hinted?: boolean; fast?: boolean }) => void
   /** 保存当日会话账本（战报/后台/续做都读它） */
   saveDay: (log: DayLog) => void
+  /** 记一次测验（v5）：本地 append + 上报 test_runs */
+  saveTest: (run: TestRun, items: TestItem[]) => void
   /** 改学习配置（时间下限、新词上限等；与 parent_rules 分开存） */
   setStudyCfg: (patch: Partial<StudyConfig>) => void
   /** 存/清进行中会话（只在热身/教学段恢复，进判分段立即清） */
@@ -490,6 +493,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setProgress(p => ({ ...p, dayLog: { ...(p.dayLog || {}), [log.dayKey]: log } }))
   }, [])
 
+  const saveTest = useCallback((run: TestRun, items: TestItem[]) => {
+    setProgress(p => ({ ...p, tests: [...(p.tests || []), run] }))
+    // 云端归档（fire-and-forget）：失败不影响本地，家长后台回读时以本地为准
+    void reportTest({
+      id: run.id, studentId: activeId, kind: run.kind, unit: run.unit,
+      dayKey: run.dayKey, total: run.total, right: run.right, peekN: run.peekN,
+      score: run.score, pass: run.pass, passLine: run.passLine,
+      attempt: run.attempt, patchUntil: run.patchUntil,
+      items,
+    }).catch(() => { /* 后端挂了不影响判卷 */ })
+  }, [activeId])
+
   const setStudyCfg = useCallback((patch: Partial<StudyConfig>) => {
     setProgress(p => ({ ...p, studyCfg: { ...(p.studyCfg || {}), ...patch } }))
   }, [])
@@ -539,12 +554,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone,
     markLearned, awardDailyBonus, passUnit, advanceFlow, recordFlowStep,
     removeWrong, graduateWrong, addWrongManual,
-    gradeOne, saveDay, setStudyCfg, saveLive, runMigrateV4,
+    gradeOne, saveDay, saveTest, setStudyCfg, saveLive, runMigrateV4,
   }), [progress, profiles, profile, switchProfile, updateProfile,
        recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone,
        markLearned, awardDailyBonus, passUnit, advanceFlow, recordFlowStep,
        removeWrong, graduateWrong, addWrongManual,
-       gradeOne, saveDay, setStudyCfg, saveLive, runMigrateV4])
+       gradeOne, saveDay, saveTest, setStudyCfg, saveLive, runMigrateV4])
 
   return (
     <C.Provider value={value}>

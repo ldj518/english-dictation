@@ -21,6 +21,7 @@ import {
   GATE_PASS, SPELL_PASS, type TestItem,
 } from '../lib/gate'
 import { bjShort, fmtSec } from '../lib/bj'
+import type { TestRun } from '../types'
 
 type Phase = 'idle' | 'run' | 'wrap'
 
@@ -52,6 +53,9 @@ export default function Gate() {
   const [peeked, setPeeked] = useState(false)
   const startAt = useRef(0)
   const savedRef = useRef('')
+  /** 本次真的落了库的那一条。结算后 progress.tests 会多一条，
+   *  再用 gateOf 的 attempt+1 显示就会把自己数成「第 2 次」 */
+  const [savedRun, setSavedRun] = useState<TestRun | null>(null)
 
   const unit = target?.unit || routeUnit || ''
   const q: Q | null = phase === 'run' ? qs[qi] || null : null
@@ -66,6 +70,7 @@ export default function Gate() {
     setQs(paper)
     setQi(0)
     setRecs([])
+    setSavedRun(null)
     setPhase('run')
     startAt.current = Date.now()
   }, [progress, unit, day])
@@ -104,6 +109,7 @@ export default function Gate() {
     const r = gradePaper(recs)
     const attempt = (progress.tests || []).filter(t => t.kind === 'gate' && t.unit === target.unit).length + 1
     const run = makeRun('gate', target.unit, day, r, attempt, `${target.unit}-${day}-${Date.now()}`)
+    setSavedRun(run)
     // 逐题判词：对了记一次，错了也记一次（这就是补丁期该练的依据）
     const seen = new Set<string>()
     for (const x of recs) {
@@ -172,7 +178,7 @@ export default function Gate() {
           <div className="v4verdict">{r.pass ? '✓ 过关' : '未过关'}</div>
           <div className="v4score">{r.score}<span>分</span></div>
           <div className="sub small" style={{ textAlign: 'center', marginBottom: 14 }}>
-            {unitName(target.unit)} · 第 {target.attempt + 1} 次 · {bjShort(day)}
+            {unitName(target.unit)} · 第 {savedRun ? savedRun.attempt : target.attempt + 1} 次 · {bjShort(day)}
           </div>
 
           <div className="v4kpis">

@@ -176,6 +176,9 @@ export default function Home() {
       {/* ── 旧的五关模式（保留备用：单元测、自由练还走它）── */}
       <details className="v4legacy">
         <summary>按老五关做（备用）</summary>
+      <div className="sub small" style={{ margin: '0 2px 10px', lineHeight: 1.6 }}>
+        备用通道：这里的成绩只记老队列和错词本，不推进上面那场的记忆队列，也不算有效学习时间。平时照上面那场做。
+      </div>
       <div className={'card pad todayCard' + (sel.isToday && serious ? ' serious' : '')}>
         <div className="between" style={{ marginBottom: 10 }}>
           <div>

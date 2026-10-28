@@ -138,7 +138,9 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   } catch (e) {
     return fail('上报失败: ' + (e as Error).message, 500)
   }
-}export const onRequestGet: PagesFunction<Env> = async (ctx) => {
+}
+
+export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const { request, env } = ctx
   try {
     const u = new URL(request.url)

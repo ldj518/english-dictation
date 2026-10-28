@@ -13,8 +13,9 @@ import { useStore } from '../lib/store'
 import { todayStr } from '../lib/storage'
 import { bjDiffDays, bjShort } from '../lib/bj'
 import { WORDS } from '../lib/data'
-import { UNITS, gateStats, patchLeft, attemptOf, unitName, GATE_PASS, SPELL_PASS } from '../lib/gate'
-import { LAPSES_NAIL } from '../lib/memory'
+import { UNITS, gateStats, gateOf, patchLeft, attemptOf, unitName, GATE_PASS, SPELL_PASS } from '../lib/gate'
+import { LAPSES_NAIL, dueWordList } from '../lib/memory'
+import { cnOf } from '../lib/qbank'
 
 
 type Filter = 'all' | 'nail' | 'weak' | 'due' | 'master'
@@ -25,17 +26,25 @@ export default function ParentV5({ studentId }: { studentId: string }) {
   const [filter, setFilter] = useState<Filter>('all')
   const [limit, setLimit] = useState(40)
 
-  const gates = useMemo(() => UNITS.map(u => {
+  const gates = useMemo(() => {
+    const dueAll = dueWordList(progress, day, cnOf).length
+    return UNITS.map(u => {
     const st = gateStats(progress, u, day)
+    const gate = gateOf(progress, u, day, dueAll)
     const runs = (progress.tests || []).filter(t => t.kind === 'gate' && t.unit === u)
     const last = runs[runs.length - 1]
     const passed = runs.find(t => t.pass)
     const patch = patchLeft(progress, u, day)
+    // 状态直接照 gate 的判定，不再自己猜「学够 80% 就叫待考」——
+    // 真正卡住它的往往是到期词太多或今天刚学过，家长要知道是哪一条
     const status = passed ? '已通过'
       : patch > 0 ? `补丁中（还剩 ${patch} 天）`
-        : last ? '待重考' : (st.learned >= st.total * 0.8 ? '待考' : '未触发')
-    return { u, st, runs, last, passed, patch, status, attempt: attemptOf(progress, u) }
-  }), [progress, day])
+        : gate.ready ? '可以考'
+          : last ? '待重考'
+            : st.learned ? '暂不可考' : '未触发'
+    return { u, st, runs, last, passed, patch, status, why: gate.why, ready: gate.ready, attempt: attemptOf(progress, u) }
+    })
+  }, [progress, day])
 
   const rows = useMemo(() => {
     const list = WORDS.map(w => {
@@ -58,6 +67,10 @@ export default function ParentV5({ studentId }: { studentId: string }) {
     return pick.sort((a, b) => b.lapses - a.lapses || a.S - b.S || b.overdue - a.overdue)
   }, [progress, filter, day])
 
+  // 「为什么还不能考」：只说卡在哪一条，不晒一堆百分比
+  // 只解释「已经学过、但今天还考不了」的单元——没学过的说「没学过」就够，
+  // 一列七行百分比家长也读不出结论
+  const blocked = gates.filter(g => !g.passed && !g.ready && g.st.learned > 0 && g.attempt < 3)
   const doneN = (progress.tests || []).filter(t => t.pass).length
 
   return (
@@ -83,6 +96,15 @@ export default function ParentV5({ studentId }: { studentId: string }) {
             </div>
           ))}
         </div>
+
+        {blocked.length > 0 && (
+          <div className="sub small" style={{ marginTop: 10, lineHeight: 1.9 }}>
+            <b>还不能考的原因</b>
+            {blocked.map(g => (
+              <div key={g.u}>{unitName(g.u)}：{g.why}</div>
+            ))}
+          </div>
+        )}
 
         {(progress.tests || []).length > 0 && (
           <div className="sub small" style={{ marginTop: 10, lineHeight: 1.9 }}>

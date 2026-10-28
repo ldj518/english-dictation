@@ -1,5 +1,7 @@
 import type { Progress, WrongWord, Profile } from '../types'
 import { isDueByDay } from './reviewQueue'
+import { bjDayKey, bjWeekStart } from './bj'
+import { migrateFromLegacy } from './memory'
 import wordsJson from '../data/words.json'
 
 /** 遗忘曲线间隔（天）：1 / 2 / 4 / 7 / 15 / 30 */
@@ -90,6 +92,11 @@ export const defaultProgress = (): Progress => ({
   passed: {},
   flow: {},
   wrongLog: {},
+  // v4：词级记忆调度（老数据首次加载时由 migrateV4 反推填充）
+  wordState: {},
+  dayLog: {},
+  studyCfg: {},
+  liveSession: null,
   settings: { rate: 1, repeat: 2, gap: 4, voiceMode: 'normal', shuffle: true, shuffleMode: 'daily', kbBuiltIn: true, syncPaper: true },
 })
 
@@ -156,17 +163,15 @@ export function consumeRevertOwner(): void {
 // 模块加载即消费：store 初始化读 activeProfileId()、选人门读 deviceOwner() 之前生效
 consumeRevertOwner()
 
-export function todayStr(d = new Date()): string {
-  const z = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`
+export function todayStr(d?: Date): string {
+  // v4 P0：全站「今天」唯一走北京时区。以前这里用本地时区，Cloudflare 边缘在 UTC、
+  // 手机在 UTC+8，22:00 之后两边差一天，打卡/到期/战报日期全错。
+  return bjDayKey(d ? d.getTime() : Date.now())
 }
 
-/** 本周一的日期串（yyyy-mm-dd，本地时区）。「每周换顺序」用它当盐 */
-export function weekStartStr(d = new Date()): string {
-  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  const day = (x.getDay() + 6) % 7   // 周一=0
-  x.setDate(x.getDate() - day)
-  return todayStr(x)
+/** 本周一的日期串（yyyy-mm-dd，北京时区）。「每周换顺序」用它当盐 */
+export function weekStartStr(d?: Date): string {
+  return bjWeekStart(bjDayKey(d ? d.getTime() : Date.now()))
 }
 
 const DAY = 86400000
@@ -310,6 +315,27 @@ export function hasLearningData(p: Progress): boolean {
     (p.history && p.history.length > 0) ||
     n(p.best) || n(p.attempts) || n(p.wrong) || n(p.badges) || n(p.minutes) ||
     n(p.learned) || n(p.review) || n(p.reviewDone) || n(p.planLog) ||
-    n(p.trioDone) || n(p.passed) || n(p.flow) || n(p.wrongLog)
+    n(p.trioDone) || n(p.passed) || n(p.flow) || n(p.wrongLog) ||
+    // v4：只在 Today 页学过（还没走老页面）也必须算有数据，否则快照上不了云
+    n(p.wordState) || n(p.dayLog)
   )
+}
+
+/* ═══════════ v4 迁移：老队列 → 词级记忆强度 ═══════════ */
+
+/**
+ * 把 review / wrong / reviewDone 反推成 wordState。
+ *
+ * 幂等：migratedV4 已是当前版本就直接返回原对象（引用不变，不触发重渲染）。
+ * 只跑一次——重复跑会用老 stage 覆盖掉新学出来的 S，那是真丢数据。
+ *
+ * 注意：**不清空老字段**。review/wrong 原样留着，老页面（/review、错词本）
+ * 照常能用，回退零成本。
+ */
+export function migrateV4(p: Progress): Progress {
+  if (p.migratedV4 === 1) return p
+  const hasOld = Object.keys(p.review || {}).length + Object.keys(p.wrong || {}).length +
+    Object.keys(p.reviewDone || {}).length
+  if (!hasOld) return { ...p, migratedV4: 1, wordState: p.wordState || {} }
+  return { ...p, wordState: { ...migrateFromLegacy(p), ...(p.wordState || {}) }, migratedV4: 1 }
 }

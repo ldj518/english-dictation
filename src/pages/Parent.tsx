@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import PinGate from '../components/PinGate'
 import { useStore, applyRules } from '../lib/store'
+import ParentV4 from '../components/ParentV4'
 import { markRevertOwner, clearRevertOwner } from '../lib/storage'
 import {
   fetchStats, checkBackend, fetchPinStatus, setParentPin, fetchPapers, paperFileUrl,
@@ -366,6 +367,9 @@ export default function Parent() {
       {/* ══════════ 学习看板 ══════════ */}
       {tab === 'board' && (
         <>
+          {/* v4：今天这一场 / 记忆队列 / 逐日账本（最上面，家长第一眼要看的） */}
+          <ParentV4 studentId={profile.id} />
+
           {/* 每周报告（v3.4）：本周 vs 上周，只和自己比；一键海报发微信 */}
           {(() => {
             const rep = calcWeekReport(progress)

@@ -9,6 +9,7 @@ import { fetchWordbooks, fetchParentRules } from '../lib/api'
 import { dueWrongWords, todayStr } from '../lib/storage'
 import { dueReviews } from '../lib/reviewQueue'
 import { FLOW_STEPS, flowStepOf, FLOW_SCORED, flowEntryOfDay } from '../lib/flow'
+import TodayCard from '../components/TodayCard'
 
 /**
  * 首页（v3.5 三区改版）：
@@ -169,7 +170,12 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── 主区：每日计划合并卡（v3.9）——闯关卡与日期条合一，点哪天卡片原地切换哪天 ── */}
+      {/* ── 主区（v4）：今天这一场。有效时间下限 + 必做，双闸门 ── */}
+      <TodayCard />
+
+      {/* ── 旧的五关模式（保留备用：单元测、自由练还走它）── */}
+      <details className="v4legacy">
+        <summary>按老五关做（备用）</summary>
       <div className={'card pad todayCard' + (sel.isToday && serious ? ' serious' : '')}>
         <div className="between" style={{ marginBottom: 10 }}>
           <div>
@@ -294,21 +300,29 @@ export default function Home() {
 
       {sel.isToday && plan && (
         <div className="sub small" style={{ marginTop: 8, paddingLeft: 4 }}>
-          上面的日期条点任意一天，卡片就切到那天——重做单关或重走整条链都行，成绩记最新一次，不影响今天的计划进度。
+          日期条点任意一天，卡片就切到那天——重做单关或重走整条链都行，成绩记最新一次，不影响今天的计划进度。
         </div>
       )}
+      </details>
 
       {/* ── 状态行：按需亮灯，没有的项直接消失 ── */}
       <div className="chips">
         <button className={'chip' + (trio.n === 3 ? ' ok' : '')} onClick={goTrio}>
           {trio.n === 3 ? '✓ 三件事齐了 +30' : `✅ 三件事 ${trio.n}/3`}
         </button>
-        {due.length > 0 && (
-          <button className="chip warn" onClick={() => nav('/review')}>🔔 错词复习 {due.length}</button>
-        )}
-        {rvDue > 0 && (
-          <button className="chip warn" onClick={() => nav('/d/review')}>📖 该复习 {rvDue} 词</button>
-        )}
+        {/* v4 起「到期」由 TodayCard 统一算（wordState）。老队列这两个数字只是历史残留，
+            再显示会出现「到期 46 / 该复习 136」两个数打架，孩子不知道信哪个，所以藏起来。
+            错词本入口还在底部导航里，不影响查错词。 */}
+        {!progress.wordState || Object.keys(progress.wordState).length === 0 ? (
+          <>
+            {due.length > 0 && (
+              <button className="chip warn" onClick={() => nav('/review')}>🔔 错词复习 {due.length}</button>
+            )}
+            {rvDue > 0 && (
+              <button className="chip warn" onClick={() => nav('/d/review')}>📖 该复习 {rvDue} 词</button>
+            )}
+          </>
+        ) : null}
         <button className="chip" onClick={() => nav('/print/plan')}>🖨️ 今日纸质卷</button>
         {examDays !== null && (
           <button className="chip hot" onClick={goSprint}>

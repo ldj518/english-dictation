@@ -491,3 +491,68 @@ export async function pushParentRules(rules: ParentRules): Promise<boolean> {
   const r = await req('/rules', { method: 'POST', body: JSON.stringify(rules) })
   return !!r
 }
+
+
+/* ═══════════ v4：每日账本 + 词状态 ═══════════ */
+
+export interface DayReport {
+  studentId: string
+  dayKey: string
+  tier: string
+  effSec: number
+  idleSec: number
+  mustDone: number
+  mustTotal: number
+  qN: number
+  rightN: number
+  peekN: number
+  done: boolean
+  segs: { k: string; label: string; min: number; q: number; right: number }[]
+  words: { word: string; s: number; due: string; lapses: number; streak: number; master: number; ok: number; n: number }[]
+}
+
+/**
+ * 上报一天的账本 + 词状态。
+ * fire-and-forget：后端挂了不影响学习，本地 localStorage 始终是事实来源。
+ */
+export async function reportDay(p: DayReport): Promise<boolean> {
+  const r = await req<{ dayKey: string }>('/day', { method: 'POST', body: JSON.stringify(p) })
+  return !!r
+}
+
+export interface QueueHealthApi {
+  today: string
+  health: {
+    total?: number; active?: number; master?: number; due?: number
+    weak?: number; nails?: number; avg_s?: number
+  }
+  forecast: { day: string; n: number }[]
+}
+
+/** 队列健康度（家长后台用；后端不可达返回 null，页面回退到本地计算） */
+export async function fetchQueueHealth(studentId: string): Promise<QueueHealthApi | null> {
+  return req<QueueHealthApi>(`/day?studentId=${encodeURIComponent(studentId)}&queue=1`)
+}
+
+export interface DayRow {
+  day_key: string
+  tier: string
+  eff_sec: number
+  idle_sec: number
+  must_done: number
+  must_total: number
+  q_n: number
+  right_n: number
+  peek_n: number
+  done: boolean
+  segs: { k: string; label: string; min: number; q: number; right: number }[]
+}
+
+/** 近期日账本（家长后台「逐日」表用） */
+export async function fetchDayLog(studentId: string, from?: string, to?: string): Promise<DayRow[]> {
+  const q = new URLSearchParams({ studentId })
+  if (from) q.set('from', from)
+  if (to) q.set('to', to)
+  const r = await req<{ days: DayRow[] }>('/day?' + q.toString())
+  return r?.days || []
+}

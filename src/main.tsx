@@ -31,6 +31,7 @@ import Days from './pages/Days'
 import Hall from './pages/Hall'
 import Extra from './pages/Extra'
 import FlowDay from './pages/FlowDay'
+import Today from './pages/Today'
 import AudioFailToast from './components/AudioFailToast'
 import ProfileGate from './components/ProfileGate'
 
@@ -45,6 +46,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/extra" element={<Extra />} />
           <Route path="/days" element={<Days />} />
           <Route path="/flow/:no" element={<FlowDay />} />
+          <Route path="/today" element={<Today />} />
           <Route path="/d/:id" element={<Dictation />} />
           <Route path="/learn/:id" element={<Learn />} />
           <Route path="/listen/:id" element={<Listen />} />

@@ -3,14 +3,23 @@ import type { Progress, SessionResult, AnswerRecord, Track, Profile } from '../t
 import {
   load, save, defaultProgress, addWrong, advanceWrong, checkIn, judge, todayStr,
   loadProfiles, saveProfiles, activeProfileId, setActiveProfileId, reset as resetProgress,
-  setDeviceOwner, hasLearningData, purgeTestData, logWrong,
+  setDeviceOwner, hasLearningData, purgeTestData, logWrong, migrateV4,
 } from './storage'
+import { gradeWord, type WordState } from './memory'
+import type { DayLog, LiveSession } from '../types'
+import type { StudyConfig } from './plan'
 import { settle, addMinutes, type AwardCtx } from './gamify'
 import { enqueueReview, advanceReview, resetReview, reopenReview, dueReviews } from './reviewQueue'
 import { reportSession, syncStudent, checkBackend, fetchShuffleSalt, pushProgressSnapshot, fetchParentRules } from './api'
 import type { ParentRules } from './api'
 import { syncProfiles, pullAndMerge } from './sync'
 import { flowAdvance, flowRecordStep } from './flow'
+import { WORD_MAP } from './data'
+
+/** 词 → 中文释义（词性在前，与错词本其他条目格式一致） */
+function cnOfWord(word: string): string {
+  return WORD_MAP[word]?.cnFull || WORD_MAP[word]?.cn || ''
+}
 import type { Badge } from '../types'
 
 interface Ctx {
@@ -54,6 +63,19 @@ interface Ctx {
   markLearned: (taskId: string, seconds: number) => void
   /** 三格全齐奖励（v2.7）：预习+听写+照片当天同任务只加一次，加了返回 true */
   awardDailyBonus: (taskId: string) => boolean
+
+  /* ── v4：词级记忆调度（Today 页面专用）────────────────── */
+
+  /** 判一个词：写 wordState（S/lapses/streak/master），答错同时记进错词本 */
+  gradeOne: (word: string, correct: boolean, opts?: { hinted?: boolean; fast?: boolean }) => void
+  /** 保存当日会话账本（战报/后台/续做都读它） */
+  saveDay: (log: DayLog) => void
+  /** 改学习配置（时间下限、新词上限等；与 parent_rules 分开存） */
+  setStudyCfg: (patch: Partial<StudyConfig>) => void
+  /** 存/清进行中会话（只在热身/教学段恢复，进判分段立即清） */
+  saveLive: (live: LiveSession | null) => void
+  /** 一次性迁移（老队列 → wordState），返回迁移后是否成功 */
+  runMigrateV4: () => void
 }
 
 const C = createContext<Ctx | null>(null)
@@ -73,12 +95,13 @@ export function applyRules(s: ParentRules): Partial<Progress['settings']> {
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [profiles, setProfiles] = useState<Profile[]>(() => loadProfiles())
   const [activeId, setActiveId] = useState<string>(() => activeProfileId())
-  const [progress, setProgress] = useState<Progress>(() => load(activeProfileId()))
+  // v4：首次加载做一次老队列 → 词级记忆强度反推（幂等，migratedV4 标记兜底）
+  const [progress, setProgress] = useState<Progress>(() => migrateV4(load(activeProfileId())))
   const [toast, setToast] = useState<Badge[]>([])
 
   // 活跃身份变化时重载进度
   useEffect(() => {
-    setProgress(load(activeId))
+    setProgress(migrateV4(load(activeId)))
   }, [activeId])
 
   // 启动时：探测后端 + 双向同步（身份档案 + 进度快照）+ 拉出题顺序盐
@@ -118,7 +141,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             // 拉取成功结算（含云端确无快照/无变化）：推送门闩放行
             syncReadyRef.current = true
             if (merged) {
-              setProgress(merged)
+              setProgress(migrateV4(merged))
               applyRulesPatch()
             }
           }
@@ -140,7 +163,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!alive) return
       void pullAndMerge(activeId).then(merged => {
         syncReadyRef.current = true
-        if (merged) setProgress(merged)
+        if (merged) setProgress(migrateV4(merged))
       }).catch(() => { /* 拉取异常：门闩保持关闭 */ })
     })
   }, [activeId])
@@ -427,6 +450,58 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return awarded
   }, [])
 
+  /* ── v4：词级记忆调度 ───────────────────────────────── */
+
+  /**
+   * 判一个词。这是新流程唯一的记忆写入口。
+   *
+   * 与老 submitSession 的区别：
+   *  - 老：整卷交卷后按 stage 档位推进 review 队列
+   *  - 新：每题立刻写 S（答对翻倍/答错归 1），队列由 S 反推出来
+   * 答错时同步进错词本，保证老页面（错词本/复习）还能看到——双写期不丢功能。
+   */
+  const gradeOne = useCallback((word: string, correct: boolean,
+    opts?: { hinted?: boolean; fast?: boolean }) => {
+    setProgress(p => {
+      const cur = p.wordState?.[word]
+      const next = gradeWord(cur, correct, opts)
+      const np: Progress = {
+        ...p,
+        wordState: { ...(p.wordState || {}), [word]: next },
+        totalAnswers: p.totalAnswers + 1,
+        totalRight: p.totalRight + (correct ? 1 : 0),
+      }
+      // 答错 → 进错词本（老页面照常可查）；答对且本来在本里 → 记一次 ok
+      if (!correct) {
+        const deep: Progress = JSON.parse(JSON.stringify(np))
+        addWrong(deep, word, cnOfWord(word))
+        return deep
+      }
+      if (np.wrong[word]) {
+        const deep: Progress = JSON.parse(JSON.stringify(np))
+        advanceWrong(deep, word)
+        return deep
+      }
+      return np
+    })
+  }, [])
+
+  const saveDay = useCallback((log: DayLog) => {
+    setProgress(p => ({ ...p, dayLog: { ...(p.dayLog || {}), [log.dayKey]: log } }))
+  }, [])
+
+  const setStudyCfg = useCallback((patch: Partial<StudyConfig>) => {
+    setProgress(p => ({ ...p, studyCfg: { ...(p.studyCfg || {}), ...patch } }))
+  }, [])
+
+  const saveLive = useCallback((live: LiveSession | null) => {
+    setProgress(p => ({ ...p, liveSession: live }))
+  }, [])
+
+  const runMigrateV4 = useCallback(() => {
+    setProgress(p => migrateV4({ ...p, migratedV4: 0 }))
+  }, [])
+
   const doReset = useCallback(() => {
     const np = defaultProgress()
     resetProgress(activeId)
@@ -464,10 +539,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone,
     markLearned, awardDailyBonus, passUnit, advanceFlow, recordFlowStep,
     removeWrong, graduateWrong, addWrongManual,
+    gradeOne, saveDay, setStudyCfg, saveLive, runMigrateV4,
   }), [progress, profiles, profile, switchProfile, updateProfile,
        recordAnswer, submitSession, recordReview, updateSettings, clearWrong, doReset, addPoints, markPlanDone,
        markLearned, awardDailyBonus, passUnit, advanceFlow, recordFlowStep,
-       removeWrong, graduateWrong, addWrongManual])
+       removeWrong, graduateWrong, addWrongManual,
+       gradeOne, saveDay, setStudyCfg, saveLive, runMigrateV4])
 
   return (
     <C.Provider value={value}>

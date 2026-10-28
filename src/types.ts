@@ -1,5 +1,53 @@
 /** 核心类型定义 */
 
+// 纯类型 import（编译后擦除，不产生运行时循环依赖）
+import type { WordState } from './lib/memory'
+import type { StudyConfig } from './lib/plan'
+
+/**
+ * 单日会话账本（v4）。
+ * 战报、家长后台「今天为什么只有 4 段」、跨天对比，全部读这一个结构。
+ */
+export interface DayLog {
+  dayKey: string
+  /** 档位：normal / settle / recover / restart / sat / sun */
+  tier: string
+  /** 有效学习秒数（相邻操作间隔 ≤60 秒才算） */
+  effSec: number
+  /** 空闲秒数（挂机） */
+  idleSec: number
+  /** 必做题完成数 / 总数 */
+  mustDone: number
+  mustTotal: number
+  /** 作答题数 / 首答正确数 / 看答案题数 */
+  qN: number
+  rightN: number
+  peekN: number
+  /** 双闸门是否都过（时间 ≥ 下限 且 必做清空） */
+  done: boolean
+  /** 分段流水账（战报按它画时间条） */
+  segs: { k: string; label: string; min: number; q: number; right: number }[]
+  /** 已完成的段下标 */
+  segDone: number[]
+  /** 最后更新时间戳 */
+  at: number
+}
+
+/** 未结算的进行中会话（退出后回来接着做，只在 WARM/教学段恢复） */
+export interface LiveSession {
+  dayKey: string
+  /** 题目游标 */
+  qi: number
+  /** 已完成段下标 */
+  segDone: number[]
+  /** 累计有效/空闲秒 */
+  effSec: number
+  idleSec: number
+  /** 逐题结果（word -> 首答对不对） */
+  results: { word: string; kind: string; correct: boolean; peek?: boolean; fast?: boolean; hinted?: boolean }[]
+  at: number
+}
+
 /** 音频清单里的一条词（运行时形态） */
 export interface AudioItem {
   no: number
@@ -154,6 +202,20 @@ export interface Progress {
   steps?: Record<number, { t: number; r: number; at: number }>
   /** 闯关进度（v3.5）：日期 yyyy-mm-dd -> { step: 已完成到第几关 }。只进不退，同日取 step 大者 */
   flow?: Record<string, { step: number; steps?: Record<number, { t: number; r: number; at: number }> }>
+
+  /* ═══════ v4 新增：词级记忆调度 ═══════ */
+
+  /** 词级记忆强度：word -> 状态。取代 review 固定档位，日队列的唯一来源 */
+  wordState?: Record<string, WordState>
+  /** 每日会话账本：yyyy-mm-dd -> 当日进度与成绩（战报、家长后台、续做都读它） */
+  dayLog?: Record<string, DayLog>
+  /** 学习配置（家长后台可改，与 parent_rules 分开存，避免整体替换抹字段） */
+  studyCfg?: Partial<StudyConfig>
+  /** v4 迁移标记：=1 表示已从 review/wrong 反推过 wordState，不再重复迁移 */
+  migratedV4?: number
+  /** 未结算的当日会话（退出后回来接着做） */
+  liveSession?: LiveSession | null
+
   /** 设置 */
   settings: {
     rate: number

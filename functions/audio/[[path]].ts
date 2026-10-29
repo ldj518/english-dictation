@@ -11,6 +11,11 @@
  *
  * 放行范围：words/、tracks/ 前缀与 manifest.json，其余一律 400，
  * 防止被当成整桶代理。
+ *
+ * ⚠️ 课文页的整句发音（public/audio/text/*.mp3 + text/manifest.json）不在 R2 里，
+ * 是随构建发布的静态文件，靠 public/_routes.json 的 exclude: ["/audio/text/*"]
+ * 绕开本函数直连静态资源。别把它们加进 ALLOWED_PREFIXES——加了反而 404，
+ * 因为桶里没有这些 key。新增同类静态音频一律走 exclude，不走 R2。
  */
 import { type Env, fail, preflight } from '../api/_utils'
 

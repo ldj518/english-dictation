@@ -503,6 +503,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         np.streakDays = np.lastDay === bjAddDays(log.dayKey, -1) ? (np.streakDays || 0) + 1 : 1
         np.lastDay = log.dayKey
       }
+      // 爬坡起点用「第一次真正完成的一天」，不是 V4 迁移那天。
+      // 迁移是代码上线，孩子可能十几天后才真正开始；按迁移日起算等于把
+      // 18/24/30 分钟这三周的爬坡期空转掉，孩子一上手就是第 2 周甚至第 3 周。
+      if (log.done) {
+        const first = Object.keys(np.dayLog || {})
+          .filter(k => np.dayLog?.[k]?.done)
+          .sort()[0]
+        if (first) np.rampFrom = first
+      }
       return np
     })
   }, [])

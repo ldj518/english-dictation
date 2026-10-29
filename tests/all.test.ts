@@ -324,7 +324,9 @@ t('合并云端快照不丢 v4/v5 字段', (x: T) => {
   x.eq(Object.keys(m.wordState || {}), ['look'], '词状态不被抹掉')
   x.eq(Object.keys(m.dayLog || {}), ['2026-10-25'], '日账本不被抹掉')
   x.eq((m.tests || []).length, 1, '测验记录不被抹掉')
-  x.eq(m.rampFrom, '2026-10-20', '爬坡起点保留')
+  // 语义变了：以前取「迁移日」，现在取「第一次真正完成的那天」（这里 10-25）。
+  // 迁移日只是代码上线，孩子不一定那天就开始学
+  x.eq(m.rampFrom, '2026-10-25', '爬坡起点按第一次完成的日子算')
   x.eq(m.studyCfg?.minMinWork, 24, '学习参数本地优先')
 })
 
@@ -794,6 +796,27 @@ t('断档：dayLog 里完成过的日子也要算（只管 /today 的孩子原�
   // 老页面打卡更晚时以它为准
   const legacy = mk('2026-10-28', { '2026-10-20': { done: true } })
   x.eq(lastStudyDay(legacy, day), '2026-10-28', '老页面打卡更晚时用 lastDay')
+})
+
+t('爬坡起点：按第一次真正完成的日子算，不是迁移日', (x: T) => {
+  const mk = (dayLog: Record<string, unknown>, rampFrom: string) =>
+    ({ dayLog, history: [], rampFrom }) as unknown as Progress
+
+  // 迁移日 10-28，但孩子 11-05 才第一次完成
+  const m = mergeProgress(
+    mk({}, '2026-10-28'),
+    mk({ '2026-11-05': { done: true } }, '2026-10-28'))
+  x.eq(m.rampFrom, '2026-11-05', '有完成日就按完成日起算，别用迁移日')
+
+  // 两边都没完成过 → 保留较早的迁移日（还没开始，等着被覆盖）
+  const m2 = mergeProgress(mk({}, '2026-10-28'), mk({}, '2026-10-20'))
+  x.eq(m2.rampFrom, '2026-10-20', '都没完成时取较早的迁移日')
+
+  // 两台设备各有完成日 → 取更早那天，换设备不重置爬坡
+  const m3 = mergeProgress(
+    mk({ '2026-11-05': { done: true } }, '2026-10-28'),
+    mk({ '2026-11-09': { done: true } }, '2026-10-28'))
+  x.eq(m3.rampFrom, '2026-11-05', '两台设备取更早的完成日')
 })
 
 export default { results }

@@ -58,25 +58,25 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
   const max = (x: number, y: number) => Math.max(x || 0, y || 0)
 
   const best: Progress['best'] = { ...b.best }
-  for (const [k, v] of Object.entries(a.best)) {
+  for (const [k, v] of Object.entries(a.best || {})) {
     const r = best[k]
     if (!r || v.score > r.score) best[k] = v
   }
   const attempts: Progress['attempts'] = { ...b.attempts }
-  for (const [k, v] of Object.entries(a.attempts)) {
+  for (const [k, v] of Object.entries(a.attempts || {})) {
     attempts[k] = max(attempts[k] || 0, v)
   }
   const badges: Progress['badges'] = { ...b.badges }
-  for (const [k, v] of Object.entries(a.badges)) {
+  for (const [k, v] of Object.entries(a.badges || {})) {
     badges[k] = max(badges[k] || 0, v)
   }
   const minutes: Progress['minutes'] = { ...b.minutes }
-  for (const [k, v] of Object.entries(a.minutes)) {
+  for (const [k, v] of Object.entries(a.minutes || {})) {
     minutes[k] = max(minutes[k] || 0, v)
   }
   // 错词本：错误次数多的那条整条胜（count 相同取本地）
   const wrong: Record<string, WrongWord> = { ...b.wrong }
-  for (const [k, v] of Object.entries(a.wrong)) {
+  for (const [k, v] of Object.entries(a.wrong || {})) {
     const r = wrong[k]
     if (!r || v.count >= r.count) wrong[k] = v
   }
@@ -230,8 +230,15 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     // 学习参数与迁移标记：本地优先（每台设备自己调过什么，不该被云端改回去）
     studyCfg: { ...(b.studyCfg || {}), ...(a.studyCfg || {}) },
     migratedV4: Math.max(a.migratedV4 || 0, b.migratedV4 || 0) || undefined,
-    // 爬坡起点取更早的那天：换设备不该让「第 1 周」重新开始
-    rampFrom: [a.rampFrom, b.rampFrom].filter(Boolean).sort()[0],
+    // 爬坡起点：有「完成过的一天」就按最早那天起算，都没完成过才用迁移日。
+    // 直接取两边 rampFrom 的较早者不行——迁移日是 V4 上线的日子，
+    // 孩子可能十几天后才真正开始，那样爬坡期会被空转掉（见 store.saveDay）
+    rampFrom: (() => {
+      const firstDone = (p: Progress) =>
+        Object.keys(p.dayLog || {}).filter(k => p.dayLog?.[k]?.done).sort()[0] || ''
+      const fd = [firstDone(a), firstDone(b)].filter(Boolean).sort()[0]
+      return fd || [a.rampFrom, b.rampFrom].filter(Boolean).sort()[0]
+    })(),
     // 未结算的当日会话不跨设备：本地有就用本地的
     liveSession: a.liveSession || null,
   }

@@ -76,6 +76,11 @@ export interface QBank {
   qs: Q[]
   /** 每题在 segs 里的下标 → 该段第一题的全局下标 */
   segStart: number[]
+  /**
+   * 本次用的进入计数。断点续做要拿它重建同一份题库——
+   * 重进时若不传回这个数，bumpEnter 会 +1，题目顺序全变，接着做就接不上了。
+   */
+  enter: number
 }
 
 export interface Sentence { en: string; cn: string; tip: string }
@@ -139,22 +144,48 @@ export function spellHint(word: string): { hint: string; len: number } {
 
 /* ── 生成题目 ─────────────────────────────────────── */
 
+export interface WordItem {
+  word: string
+  cn: string
+  /**
+   * 记忆强度 S。不传 = 未知，按「能拼」处理（老调用点与单测保持原行为）。
+   * 传了才做拼写分级，见 canSpell。
+   */
+  S?: number
+}
+
 export interface BuildOpts {
   plan: DayPlan
   /** 当前在学单元（句子关从该单元的句子库取句；不传则按到期词所在单元推断） */
   unit?: string
   /** 今天该练的到期词（已按风险排好序） */
-  dueWords: { word: string; cn: string }[]
+  dueWords: WordItem[]
   /** 新词（还没学过的） */
-  newWords: { word: string; cn: string }[]
+  newWords: WordItem[]
   /** 钉子词优先插入变式重复 */
-  nailWords?: { word: string; cn: string }[]
+  nailWords?: WordItem[]
   /** 音频文件映射 */
   fileMap: Map<string, string>
   /** 家庭身份 id（种子用） */
   profileId: string
   /** 今日第几次进入（不传则自动计数） */
   enter?: number
+}
+
+/**
+ * 这个词今天能不能考拼写。
+ *
+ * 病根在 p1 的实账：到期 127 个词里 122 个 S=1（等于没会），而旧流水线
+ * 天天拿拼写去考这 122 个词——拼不出来 → 答错 → S 归 1 → 明天再拼 → 再错。
+ * 死循环跑三周，S=1 的词一个没少。
+ *
+ * 正确路径是把「认」和「写」分开：S < 4 的词先只用听音选义把它抬上去
+ * （答对一次 S×2，两三次就到 4），S ≥ 4 才配拼写题。
+ * 这不是放水——拼写题在卷面上照样扣分，只是不该拿它当唯一手段。
+ */
+export function canSpell(w: WordItem): boolean {
+  if (typeof w.S !== 'number') return true
+  return w.S >= 4
 }
 
 /** 造干扰选项：同单元优先，不够再全库补，保证 4 个不同释义 */
@@ -259,8 +290,8 @@ export function buildQBank(opts: BuildOpts): QBank {
   const fresh = opts.newWords.slice()
 
   let dueCursor = 0
-  const takeDue = (n: number): { word: string; cn: string }[] => {
-    const out: { word: string; cn: string }[] = []
+  const takeDue = (n: number): WordItem[] => {
+    const out: WordItem[] = []
     for (let i = 0; i < n && due.length; i++) {
       out.push(due[dueCursor % due.length])
       dueCursor++
@@ -274,7 +305,7 @@ export function buildQBank(opts: BuildOpts): QBank {
   /** 当天已经出过的句子 id：同一天两批句子关不能出同一句 */
   const usedSents: string[] = []
   /** 本关教过的词。重启档要让后面的拼写考「刚教过的」，不能教一批考另一批 */
-  let taught: { word: string; cn: string }[] = []
+  let taught: WordItem[] = []
   /** taught 只给紧跟着的那一段用一次。分享给后面所有 review 会把「清到期 23 题」
    *  压成 12 题（线上实测总题数 45 → 34、必做 33 → 22） */
   let taughtUsed = false
@@ -285,6 +316,41 @@ export function buildQBank(opts: BuildOpts): QBank {
     const push = (q: Omit<Q, 'id' | 'seg' | 'segKind'>) => {
       qs.push({ ...q, id: `q${n}`, seg: si, segKind: s.k } as Q)
       n++
+    }
+
+    /** 拼写题：屏幕只给中文 + 首字母 + 空格数，绝不出现整词 */
+    const pushSpell = (w: WordItem) => {
+      const { hint, len } = spellHint(w.word)
+      push({
+        kind: 'spell', word: w.word, cn: cn(w.word), file: fileOf(w.word),
+        scored: true, must: true, hint, len,
+      })
+    }
+    /** 听音选义（两步确认） */
+    const pushPickOf = (w: WordItem, i: number, tag: string) => {
+      const { options, answerKey } = makeOptions(w.word, `${seedBase}|${tag}|${si}|${i}`)
+      push({
+        kind: 'pick', word: w.word, cn: cn(w.word), file: fileOf(w.word),
+        scored: true, must: true, options, answerKey,
+      })
+    }
+    /**
+     * 按记忆强度分流（见 canSpell）：
+     * 拼写位只留三分之一，优先给 S 最高的词（最容易拼对的），其余出听音选义。
+     *
+     * 这个比例不是拍脑袋：p1 到期池里 122/127 是 S=1，全出拼写孩子一道都拼不出，
+     * S 永远归 1；全出选义又一道不写，到了卷面还是提笔忘字。三分之一是他
+     * 「能拼对的刚好占三分之一」这个实账倒推的。
+     */
+    const pushGraded = (items: WordItem[], tag: string) => {
+      const slots = Math.max(3, Math.ceil(items.length / 3))
+      const spellSet = new Set(
+        items.filter(canSpell).sort((a, b) => (b.S || 0) - (a.S || 0)).slice(0, slots).map(w => w.word)
+      )
+      items.forEach((w, i) => {
+        if (spellSet.has(w.word)) pushSpell(w)
+        else pushPickOf(w, i, tag)
+      })
     }
 
     switch (s.k) {
@@ -317,13 +383,14 @@ export function buildQBank(opts: BuildOpts): QBank {
           ? (fresh.length ? fresh : takeDue(s.words))
           : (reuse ? taught.slice(0, s.words) : takeDue(s.words))
         if (reuse) taughtUsed = true
-        for (const w of pool.slice(0, s.words)) {
-          const { hint, len } = spellHint(w.word)
-          push({
-            kind: 'spell', word: w.word, cn: cn(w.word), file: fileOf(w.word),
-            scored: true, must: true, hint, len,
-          })
-        }
+        const items = pool.slice(0, s.words)
+        /**
+         * 刚教过的词（recall）和重启档的重学段照旧全拼——教完立刻写是设计意图，
+         * 那一批的 S 天生是 0，按分级走的话一节新课一个词都拼不出来。
+         * 段太短（≤4 题）也全拼，否则孩子一整顿都碰不到拼写。
+         */
+        if (s.k === 'recall' || reuse || items.length <= 4) items.forEach(pushSpell)
+        else pushGraded(items, 'rv')
         break
       }
       case 'choice':
@@ -339,13 +406,10 @@ export function buildQBank(opts: BuildOpts): QBank {
         break
       }
       case 'spell': {
-        for (const w of takeDue(s.words)) {
-          const { hint, len } = spellHint(w.word)
-          push({
-            kind: 'spell', word: w.word, cn: cn(w.word), file: fileOf(w.word),
-            scored: true, must: true, hint, len,
-          })
-        }
+        // 拼写巩固：同样按 S 分流，不是每道都逼默写
+        const items = takeDue(s.words)
+        if (items.length <= 4) items.forEach(pushSpell)
+        else pushGraded(items, 'sp')
         break
       }
       case 'drill': {
@@ -453,7 +517,7 @@ export function buildQBank(opts: BuildOpts): QBank {
     }
   })
 
-  return { dayKey: day, qs, segStart }
+  return { dayKey: day, qs, segStart, enter }
 }
 
 /**

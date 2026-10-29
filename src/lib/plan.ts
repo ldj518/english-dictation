@@ -15,7 +15,7 @@
  *   ④ 其余          → normal
  */
 
-import { bjAddDays, bjDiffDays, bjDow, bjIsWeekend, bjShort } from './bj'
+import { bjAddDays, bjDiffDays, bjDayStart, bjDow, bjIsWeekend, bjShort } from './bj'
 import type { Progress } from '../types'
 
 export type Tier = 'normal' | 'settle' | 'recover' | 'restart' | 'sat' | 'sun'
@@ -72,6 +72,14 @@ export interface StudyConfig {
   idleGapMs: number
   /** 填充池上限（防注水） */
   fillMax: number
+  /**
+   * 学校单元每天保底几个新词。
+   *
+   * 之前清账档是「零新词」的硬规则，结果 p1 卡在清 unit01–03 的旧账里，
+   * 学校讲到 unit04（64 词只碰过 29 个），App 一个 unit04 的词都不给。
+   * 课堂进度不能等旧账清完，所以清账/恢复档也留一个小口子。
+   */
+  schoolNewPerDay: number
   /** 是否启用三周爬坡（18→24→30）。家长想一步到位就关掉 */
   rampOn: boolean
   /** 切换日：这之前的天按老口径算打卡，之后按新口径 */
@@ -92,19 +100,20 @@ export interface StudyConfig {
  * 爬坡（18→24→30）一并关掉——基线本来就该是他做到的 13 分钟，不是三周后爬到 30。
  */
 export const DEFAULT_CFG: StudyConfig = {
-  cfgRev: 2,
+  cfgRev: 3,
   minMinWork: 13,
   minMinWeekend: 30,
   maxMinWork: 30,
   maxMinWeekend: 50,
   newWordCap: 6,
-  // 清账期每天 20 词：按 13 分钟的口径，26 词会让预计时长撑到 18 分钟，
-  // 孩子看到「约 18 分钟」就懒得开始。20 词排出来约 15 分钟，和真实手速对得上。
-  settlePerDay: 20,
+  // 清账期每天 16 词：教学段现在固定占 4 个学校词（约 3 分钟），
+  // 从清账额度里扣掉，预计时长才不会从 15 分钟涨到 18 分钟。
+  settlePerDay: 16,
   settleThreshold: 45,
   fastMs: 1500,
   idleGapMs: 60000,
   fillMax: 40,
+  schoolNewPerDay: 4,
   rampOn: false,
   cutoverDay: '',
 }
@@ -142,6 +151,8 @@ export interface PlanInput {
   perItemSec: number
   /** 本单元是否还有没学的新词（可教学） */
   hasNew: boolean
+  /** 学校正在讲的单元还剩几个没学过的词（没有则 0） */
+  schoolLeft?: number
   /** 爬坡第几周（0/1/2）。不传 = 不爬坡，按下限原值 */
   rampWeek?: number
   cfg?: Partial<StudyConfig>
@@ -164,8 +175,10 @@ export interface DayPlan {
   rampWeek: number
   /** 今天该清的到期词数（可能小于 dueN，剩下的顺延不丢） */
   dueN: number
-  /** 今天该学的新词数 */
+  /** 今天该学的新词数（含学校单元保底词） */
   newN: number
+  /** 其中属于学校单元的有几个（0 = 今天没排学校词） */
+  schoolN: number
   segs: PlanSeg[]
   /** 段预计总时长 */
   estMin: number
@@ -229,9 +242,20 @@ const TIER_NOTE: Record<Tier, string> = {
   normal: '正常工作档',
   settle: '清账档：积压太多，先集中清到期词，暂不学新词',
   recover: '恢复档：刚断了几天，先复习不学新词',
-  restart: '重启档：断超过一周，先重学旧词，新词冻结',
+  restart: '重启档：断了 10 天以上，先重学旧词，新词冻结',
   sat: '周六：清账 + 书写',
   sun: '周日：周测 + 讲卷',
+}
+
+/**
+ * 档位说明。清账档要分两套措辞：
+ * 写死「暂不学新词」但实际排了 4 个课本新词，孩子和家长都会觉得系统在说假话。
+ */
+function tierNoteOf(tier: Tier, schoolN: number): string {
+  if (tier === 'settle' && schoolN > 0) {
+    return `清账档：到期词积压，先集中清，每天另外跟课本学 ${schoolN} 个新词`
+  }
+  return TIER_NOTE[tier]
 }
 
 /** 段规格表：每段的「人均耗时」用于估算（秒/题） */
@@ -270,6 +294,22 @@ export function buildPlan(inp: PlanInput): DayPlan {
   // 断档一周回来的孩子该先补旧的，不该一边说冻结一边上新课。
   const newN = tier === 'normal' ? newAllowOf(inp.forgetRate, cfg, inp.hasNew) : 0
 
+  /**
+   * 学校单元保底词。
+   *
+   * 旧规则是「清账期零新词」，本意是别一边欠旧账一边加新债。但 p1 的实账是：
+   * 到期 127 个、里面 122 个 S=1，照这个规则要清三四周；而学校已经讲到 unit04，
+   * 64 个词只碰过 29 个。也就是说课堂每天在推进，App 一个月不给他一个新词。
+   * 所以清账/恢复/周末也留一个小口子，每天 schoolNewPerDay 个。
+   * 唯一例外是重启档（断 10 天以上）：回来先补旧账，不上新课。
+   */
+  const schoolLeft = Math.max(0, inp.schoolLeft || 0)
+  const schoolN = tier === 'restart'
+    ? 0
+    : (tier === 'normal' ? Math.min(schoolLeft, newN) : Math.min(schoolLeft, cfg.schoolNewPerDay))
+  /** 教学段只排一批：正常档就是新词额度，其他档就是学校保底词 */
+  const teachN = tier === 'restart' ? 0 : Math.max(schoolN, newN)
+
   // 今天能处理多少到期词：按「每词 2 轮（拼写 + 选义）」估容量
   const reviewMin = Math.max(3, Math.round(minMin * 0.42))
   const capByTime = Math.floor((reviewMin * 60) / (perItem * 1.8))
@@ -282,6 +322,12 @@ export function buildPlan(inp: PlanInput): DayPlan {
   // ── 热身：昨天错的 3 个词，只做听音看词闪卡，不判分 ──
   if (tier !== 'restart') segs.push(seg('warm', '热身', Math.min(3, inp.dueN), Math.min(3, inp.dueN)))
 
+  // ── 教学段统一放热身之后：趁还没疲劳把新课过一遍，教完立刻提取 ──
+  if (teachN > 0) {
+    segs.push(seg('learn', `新课 ${teachN} 个词`, teachN, teachN))
+    segs.push(seg('recall', '刚教的写一遍', teachN, teachN))
+  }
+
   if (tier === 'restart') {
     // 先重学旧词：教学卡为主，不判分；末尾少量判分确认
     // 教的和考的是同一批到期词（qbank 里 taught 传给下一段），所以标签写清楚，
@@ -292,28 +338,28 @@ export function buildPlan(inp: PlanInput): DayPlan {
     // 重启档只拼已经学过词的老句子，不引新句
     segs.push(seg('sent', '拼两句老句子', 2, 2))
   } else if (tier === 'settle' || tier === 'recover') {
-    // 只清到期，零新词。清账要清得多，恢复只清一半
+    // 只清到期。清账要清得多，恢复只清一半
     const half = Math.max(6, Math.floor(dueToday / 2))
     segs.push(seg('review', '到期复习', dueToday, dueToday))
-    if (inp.nailN > 0) segs.push(seg('drill', `钉子词 ${Math.min(8, inp.nailN)} 个`, Math.min(8, inp.nailN), Math.min(8, inp.nailN) * 2))
+    if (inp.nailN > 0) segs.push(seg('drill', `钉子词 ${Math.min(5, inp.nailN)} 个`, Math.min(5, inp.nailN), Math.min(5, inp.nailN) * 2))
     segs.push(seg('choice', '听音选义', half, half))
     segs.push(seg('paper', '纸笔 2 词', 2, 2))
     // 积压期只读不出：读懂整句不占工作记忆，拼装会拖慢清账节奏
     if (tier === 'settle') segs.push(seg('mean', '读懂两句', 2, 2))
   } else if (tier === 'sun') {
-    // 周日：周测 + 讲卷，零新词
+    // 周日：周测 + 讲卷
     segs.push(seg('test', '周测 30 题', 30, 30))
     segs.push(seg('review', '到期复习', Math.max(8, Math.floor(dueToday * 0.5)), Math.max(8, Math.floor(dueToday * 0.5))))
-    if (inp.nailN > 0) segs.push(seg('drill', `钉子词 ${Math.min(8, inp.nailN)} 个`, Math.min(8, inp.nailN), Math.min(8, inp.nailN) * 2))
+    if (inp.nailN > 0) segs.push(seg('drill', `钉子词 ${Math.min(5, inp.nailN)} 个`, Math.min(5, inp.nailN), Math.min(5, inp.nailN) * 2))
     segs.push(seg('paper', '纸笔 6 词', 6, 6))
     segs.push(seg('mean', '读懂 4 句', 4, 4))
     segs.push(seg('sent', '拼出 4 句', 4, 4))
     segs.push(seg('drill', '错题归类复盘', 0, 8))
   } else if (tier === 'sat') {
-    // 周六：清账 + 书写，零新词
+    // 周六：清账 + 书写
     const n = Math.min(dueToday, 28)
     segs.push(seg('review', '到期复习', n, n))
-    if (inp.nailN > 0) segs.push(seg('drill', `钉子词 ${Math.min(8, inp.nailN)} 个`, Math.min(8, inp.nailN), Math.min(8, inp.nailN) * 2))
+    if (inp.nailN > 0) segs.push(seg('drill', `钉子词 ${Math.min(5, inp.nailN)} 个`, Math.min(5, inp.nailN), Math.min(5, inp.nailN) * 2))
     segs.push(seg('paper', '纸笔 8 词', 8, 8))
     segs.push(seg('mean', '读懂 4 句', 4, 4))
     segs.push(seg('sent', '拼出 4 句', 4, 4))
@@ -322,12 +368,10 @@ export function buildPlan(inp: PlanInput): DayPlan {
     // 正常工作日：先认词，再读整句，最后拼句。
     // 顺序不能反：句意选择会显示整句英文，排在拼写前面就等于把答案给出去。
     segs.push(seg('review', '到期复习', dueToday, dueToday))
-    if (newN > 0) {
-      segs.push(seg('learn', `新词 ${newN} 个`, newN, newN))
-      segs.push(seg('recall', '新词提取', newN, newN))
-    }
     segs.push(seg('choice', '听音选义', Math.max(5, Math.min(dueToday, 10)), Math.max(5, Math.min(dueToday, 10))))
-    segs.push(seg('spell', '拼写', Math.max(5, Math.min(dueToday, 10)), Math.max(5, Math.min(dueToday, 10))))
+    // 段名写「巩固」不写「拼写」：这一段按词的 S 分流，
+    // S 低的词出的是听音选义，写「拼写」就和实际题型对不上
+    segs.push(seg('spell', '巩固', Math.max(5, Math.min(dueToday, 10)), Math.max(5, Math.min(dueToday, 10))))
     segs.push(seg('mean', '读懂 3 句', 3, 3))
     segs.push(seg('sent', '拼出 3 句', 3, 3))
   }
@@ -361,13 +405,14 @@ export function buildPlan(inp: PlanInput): DayPlan {
   return {
     dayKey: inp.dayKey,
     tier,
-    tierNote: TIER_NOTE[tier],
+    tierNote: tierNoteOf(tier, schoolN),
     gapDays: inp.gapDays,
     minMin, maxMin, targetQ,
     perItemSec: perItem,
     rampWeek: typeof inp.rampWeek === 'number' ? inp.rampWeek : 2,
     dueN: dueToday,
-    newN,
+    newN: teachN,
+    schoolN,
     segs,
     estMin: Math.round(estMin),
     weekend,
@@ -403,6 +448,45 @@ export function lastStudyDay(p: Progress, dayKey: string): string {
 export function gapDaysOf(p: Progress, dayKey: string): number {
   const last = lastStudyDay(p, dayKey)
   return last ? Math.max(0, bjDiffDays(dayKey, last)) : 0
+}
+
+/**
+ * 清账轮转：今天优先清哪个单元。
+ *
+ * 旧逻辑纯按 risk 跨单元乱跳（钉子词 +1000、逾期 +600、S 低 +90），
+ * 结果孩子每天打开看到的是「unit01 三个 + unit03 五个 + unit04 两个」，
+ * 全是陌生面孔，没有一个「这一批我好像见过」的落点。
+ *
+ * 按单元轮转后，今天轮 unit02 就一路清 unit02。同单元的词共享语境
+ * （同一篇课文的词互相带），认出一个能带出一片，比跨单元跳着练舒服得多。
+ * 取模用自然日序数，所以换天必换单元，不依赖任何随机数。
+ */
+export function rotateUnitOf(units: string[], dayKey: string): string {
+  const list = Array.from(new Set(units.filter(Boolean))).sort()
+  if (!list.length) return ''
+  const ord = Math.floor(bjDayStart(dayKey) / 86400000)
+  return list[((ord % list.length) + list.length) % list.length]
+}
+
+/**
+ * 按单元重排到期队列：钉子词置顶 → 今天轮到的单元 → 其余按原风险序。
+ *
+ * 钉子词（lapses ≥ 4）不参与轮转，永远排最前：这批词不拿下会一直占着
+ * 到期名额，把它们跟轮转绑定等于让队列永远清不动。
+ */
+export function rotateByUnit<T extends { word: string; state?: { lapses?: number } }>(
+  list: T[], todayUnit: string, unitOf: (w: string) => string
+): T[] {
+  if (!todayUnit || list.length === 0) return list
+  const nails: T[] = []
+  const rest: T[] = []
+  for (const x of list) {
+    if ((x.state?.lapses || 0) >= 4) nails.push(x)
+    else rest.push(x)
+  }
+  const mine = rest.filter(x => unitOf(x.word) === todayUnit)
+  const others = rest.filter(x => unitOf(x.word) !== todayUnit)
+  return [...nails, ...mine, ...others]
 }
 
 /**

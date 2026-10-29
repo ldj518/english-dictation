@@ -12,7 +12,7 @@ import {
 import {
   buildPlan, tierOf, gateCheck, mustTotalOf, mergeCfg, newAllowOf,
   rampWeekOf, rampMinOf, perItemSecOf, capHit, settleDaysLeft,
-  lastStudyDay, gapDaysOf,
+  lastStudyDay, gapDaysOf, rotateUnitOf, rotateByUnit,
   DEFAULT_CFG, type PlanInput,
 } from '../src/lib/plan'
 import {
@@ -23,7 +23,8 @@ import { bjAddDays, bjDayKey, bjDiffDays } from '../src/lib/bj'
 import { mergeProgress } from '../src/lib/sync'
 import { buildReport, reportText } from '../src/lib/report'
 import { sentUnitIds, getSentUnit, pickSents, cnDistractors, contentSet, isNearDup } from '../src/lib/sentbank'
-import { scrambleOrder, judgeSentence, buildQBank } from '../src/lib/qbank'
+import { scrambleOrder, judgeSentence, buildQBank, canSpell } from '../src/lib/qbank'
+import { schoolUnitOf } from '../src/lib/school'
 import type { Progress } from '../src/types'
 import wordsJson from '../src/data/words.json'
 
@@ -168,7 +169,7 @@ t('档位：断档与重启优先级', (x: T) => {
   x.eq(tierOf(0, 10, cfg, '2026-11-01'), 'sun', '周日')
 })
 
-t('清账期零新词，每天清 20 词', (x: T) => {
+t('清账期零新词，每天清 16 词', (x: T) => {
   const inp: PlanInput = {
     dayKey: '2026-10-28', gapDays: 3, dueN: 182, weakN: 150, nailN: 9,
     forgetRate: 0.1, perItemSec: 20, hasNew: true, cfg: {},
@@ -176,9 +177,37 @@ t('清账期零新词，每天清 20 词', (x: T) => {
   const p = buildPlan(inp)
   x.eq(p.tier, 'settle', '进清账')
   x.eq(p.newN, 0, '新词冻结')
-  x.eq(p.dueN, 20, '每天清 20 个（13 分钟口径，26 会撑到 18 分钟）')
-  x.ck(p.segs.every(s => s.k !== 'learn' && s.k !== 'recall'), '不出教学段')
-  x.ck(settleDaysLeft(p.dueN, cfg) <= 10, '182 词不超过 10 天')
+  x.eq(p.schoolN, 0, '不知道学校讲哪课 → 不排学校词')
+  x.eq(p.dueN, 16, '每天清 16 个（留出教学段那 3 分钟）')
+  x.ck(p.segs.every(s => s.k !== 'learn' && s.k !== 'recall'), '没学校词就不出教学段')
+  x.ck(settleDaysLeft(p.dueN, cfg) <= 12, '182 词不超过 12 天')
+})
+
+t('清账期也跟学校进度：每天保底 4 个学校词', (x: T) => {
+  const base: PlanInput = {
+    dayKey: '2026-10-28', gapDays: 0, dueN: 127, weakN: 122, nailN: 6,
+    forgetRate: 0.1, perItemSec: 13, hasNew: true, schoolLeft: 35, cfg: {},
+  }
+  const p = buildPlan(base)
+  x.eq(p.tier, 'settle', '到期 127 → 清账档')
+  x.eq(p.newN, 4, '教学段给 4 个')
+  x.eq(p.schoolN, 4, '全是学校词')
+  x.ck(p.segs.some(s => s.k === 'learn'), '有教学卡')
+  x.ck(p.segs.some(s => s.k === 'recall'), '教完立刻提取')
+  // 教学段必须在到期复习之前：趁没疲劳上新课
+  const iLearn = p.segs.findIndex(s => s.k === 'learn')
+  const iReview = p.segs.findIndex(s => s.k === 'review')
+  x.ck(iLearn >= 0 && iLearn < iReview, '教学段排在复习前面')
+
+  // 学校词学完了就不再占位
+  const done = buildPlan({ ...base, schoolLeft: 0 })
+  x.eq(done.schoolN, 0, '学校词学完 → 不排')
+  x.ck(!done.segs.some(s => s.k === 'learn'), '不出教学段')
+
+  // 断 10 天以上回来：先补旧账，不上学校新课
+  const back = buildPlan({ ...base, gapDays: 11 })
+  x.eq(back.tier, 'restart', '断 11 天 → 重启档')
+  x.eq(back.schoolN, 0, '重启档不给学校词')
 })
 
 t('新词额度随遗忘率浮动 3–8', (x: T) => {
@@ -289,8 +318,8 @@ t('必做题量不含填充池', (x: T) => {
 })
 
 t('清账剩余天数', (x: T) => {
-  x.eq(settleDaysLeft(182, cfg), 10, '182 ÷ 20 → 10 天')
-  x.eq(settleDaysLeft(20, cfg), 1, '一天清完')
+  x.eq(settleDaysLeft(182, cfg), 12, '182 ÷ 16 → 12 天')
+  x.eq(settleDaysLeft(16, cfg), 1, '一天清完')
 })
 
 /* ══════════ 3. 词表 ══════════ */
@@ -858,6 +887,109 @@ t('断档：云端 sessions 的最后练习日也算（每日计划这条线不�
   // 未来日一律不认（时钟错乱）
   const future = { lastDay: '2026-10-07', dayLog: {}, lastActiveDay: '2027-01-01' } as unknown as Progress
   x.eq(gapDaysOf(future, day), 22, '未来日不算学习')
+})
+
+/* ══════════ 7. 分层 / 轮转 / 断点（v6.1） ══════════ */
+
+t('拼写分级：S=1 的词出听音选义，不逼默写', (x: T) => {
+  // 8 个词里只有 2 个 S≥4，其余都没会
+  const due = [
+    { word: 'hold on', cn: '别挂断', S: 1 },
+    { word: 'darling', cn: '亲爱的', S: 1 },
+    { word: 'guitar', cn: '吉他', S: 1 },
+    { word: 'piano', cn: '钢琴', S: 1 },
+    { word: 'violin', cn: '小提琴', S: 1 },
+    { word: 'trumpet', cn: '小号', S: 1 },
+    { word: 'weekend', cn: '周末', S: 8 },
+    { word: 'holiday', cn: '假日', S: 16 },
+  ]
+  x.eq(canSpell({ word: 'a', cn: '', S: 1 }), false, 'S=1 不能拼')
+  x.eq(canSpell({ word: 'a', cn: '', S: 4 }), true, 'S=4 可以拼')
+  x.eq(canSpell({ word: 'a', cn: '' }), true, '不传 S 保持老行为')
+
+  const plan = buildPlan(planIn({ dayKey: '2026-10-29', dueN: 8, hasNew: false }))
+  const bank = buildQBank({ plan, dueWords: due, newWords: [], fileMap: new Map(), profileId: 't', enter: 1 })
+  const spellWords = bank.qs.filter(q => q.kind === 'spell').map(q => q.word)
+  const weak = due.filter(w => w.S < 4).map(w => w.word)
+  x.ck(spellWords.every(w => !weak.includes(w)),
+    `S=1 的词不该出拼写，但出了：${spellWords.filter(w => weak.includes(w)).join(',')}`)
+  x.ck(spellWords.length > 0, '也不能一道拼写都没有，那就变成纯选择题了')
+  x.ck(bank.qs.filter(q => q.kind === 'pick').length > 0, '拼不出的词出听音选义')
+})
+
+t('拼写分级：刚教的词全拼（教学段不能被分级砍掉）', (x: T) => {
+  const due = [
+    { word: 'hold on', cn: '别挂断', S: 1 },
+    { word: 'darling', cn: '亲爱的', S: 1 },
+    { word: 'guitar', cn: '吉他', S: 1 },
+    { word: 'piano', cn: '钢琴', S: 1 },
+  ]
+  const plan = buildPlan(planIn({ dayKey: '2026-10-29', dueN: 4, hasNew: false }))
+  const bank = buildQBank({ plan, dueWords: due, newWords: [], fileMap: new Map(), profileId: 't', enter: 1 })
+  x.ck(bank.qs.filter(q => q.kind === 'spell').length > 0, '短段（≤4 题）全拼')
+})
+
+t('清账轮转：同一天固定，四天覆盖四个单元', (x: T) => {
+  const units = ['unit01', 'unit02', 'unit03', 'unit04']
+  x.eq(rotateUnitOf(units, '2026-10-29'), rotateUnitOf(units, '2026-10-29'), '同一天算两次结果一样')
+  const seen = new Set(['2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01'].map(d => rotateUnitOf(units, d)))
+  x.eq(seen.size, 4, `四天该覆盖四个单元，实际只到 ${[...seen].join(',')}`)
+  x.eq(rotateUnitOf([], '2026-10-29'), '', '没有候选单元返回空')
+})
+
+t('清账轮转：钉子词置顶，今天轮到的单元排第二', (x: T) => {
+  const u = (w: string) => w.split('@')[1]
+  const list = [
+    { word: 'a@unit01', state: { lapses: 0 } },
+    { word: 'b@unit02', state: { lapses: 0 } },
+    { word: 'c@unit03', state: { lapses: 0 } },
+    { word: 'n@unit03', state: { lapses: 5 } },
+  ]
+  const out = rotateByUnit(list, 'unit02', u).map(z => z.word)
+  x.eq(out[0], 'n@unit03', '钉子词永远第一，不参与轮转')
+  x.eq(out[1], 'b@unit02', '今天轮 unit02 → 紧跟钉子词')
+  x.eq(out.length, 4, '按单元重排不能丢词')
+})
+
+t('断点存档：计划和题库 JSON 往返后一字不差', (x: T) => {
+  const due = [{ word: 'hold on', cn: '别挂断' }, { word: 'darling', cn: '亲爱的' }]
+  const plan = buildPlan(planIn({ dayKey: '2026-10-29', dueN: 2, hasNew: false }))
+  const bank = buildQBank({ plan, dueWords: due, newWords: [], fileMap: new Map(), profileId: 't', enter: 1 })
+  // 存档就是 JSON.stringify 进 localStorage，取出来必须还能接着做
+  const back = JSON.parse(JSON.stringify({ plan, bank }))
+  x.eq(back.bank.qs.length, bank.qs.length, '题数不变')
+  x.eq(
+    back.bank.qs.map((q: { id: string; word: string }) => q.id + q.word),
+    bank.qs.map(q => q.id + q.word),
+    '题序和词一致（否则接着做会跳过没答的题）'
+  )
+  x.eq(back.plan.segs.length, plan.segs.length, '段结构不变')
+  x.eq(back.plan.dueN, plan.dueN, '到期词数不变')
+})
+
+t('课本进度：第一个没学完的单元就是学校在讲的', (x: T) => {
+  const ws = wordsJson as unknown as { word: string; unit: string }[]
+  const ofUnit = (u: string) => ws.filter(w => w.unit === u).map(w => w.word)
+
+  // unit01、unit02 学完，unit03 只学了 5 个 → 学校在讲 unit03
+  const state: Record<string, unknown> = {}
+  for (const w of ofUnit('unit01')) state[w] = { S: 20 }
+  for (const w of ofUnit('unit02')) state[w] = { S: 20 }
+  for (const w of ofUnit('unit03').slice(0, 5)) state[w] = { S: 20 }
+  const s = schoolUnitOf({ wordState: state } as unknown as Progress)
+  x.eq(s.unit, 'unit03', '第一个有进度但没满的单元')
+  x.eq(s.learned, 5, '学过 5 个')
+  x.eq(s.left, s.total - 5, '剩下的当没学')
+
+  // 全新账号 → 从第一单元开始
+  const blank = schoolUnitOf({ wordState: {} } as unknown as Progress)
+  x.eq(blank.unit, 'unit01', '没学过 → 第一单元')
+  x.eq(blank.left, blank.total, '一个都没学')
+
+  // 全部学完 → left = 0，不再排学校新词
+  const all: Record<string, unknown> = {}
+  for (const w of ws) all[w.word] = { S: 20 }
+  x.eq(schoolUnitOf({ wordState: all } as unknown as Progress).left, 0, '全学完 → 没有学校新词')
 })
 
 export default { results }

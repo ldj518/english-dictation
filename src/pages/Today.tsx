@@ -25,17 +25,18 @@ import { useStore } from '../lib/store'
 import { WORDS } from '../lib/data'
 import { wordFileMap, playWordText } from '../lib/data'
 import { bjDayKey, bjDiffDays, fmtSec, fmtSecCn } from '../lib/bj'
-import { buildPlan, gateCheck, mergeCfg, mustTotalOf, settleDaysLeft, perItemSecOf, rampWeekOf, capHit, gapDaysOf, type DayPlan } from '../lib/plan'
+import { buildPlan, gateCheck, mergeCfg, mustTotalOf, settleDaysLeft, perItemSecOf, rampWeekOf, capHit, gapDaysOf, rotateByUnit, rotateUnitOf, type DayPlan } from '../lib/plan'
 import { queueHealth, dueWordList, type Channel } from '../lib/memory'
 import { buildReport, reportText, reportImage } from '../lib/report'
 import { reportOut } from '../lib/api'
 import {
-  buildQBank, cnOf, judgeSentence, SENTENCES, type Q, type QBank,
+  buildQBank, cnOf, unitOf, judgeSentence, SENTENCES, type Q, type QBank,
 } from '../lib/qbank'
 import { EffTimer } from '../lib/timer'
 import { unlockAudio } from '../lib/player'
-import { todayStr } from '../lib/storage'
+import { todayStr, loadResume, saveResume, clearResume, type ResumeState } from '../lib/storage'
 import { nextGate, unitName } from '../lib/gate'
+import { schoolUnitOf } from '../lib/school'
 import { reportDay, postAnswer, newSessionId } from '../lib/api'
 import { judge, judgeWithFirst } from '../lib/storage'
 import { syllableText } from '../lib/syllables'
@@ -73,6 +74,10 @@ export default function Today() {
   const [fileMap, setFileMap] = useState<Map<string, string>>(new Map())
   const [err, setErr] = useState('')
   const [dueTotal, setDueTotal] = useState(0)
+  /** 学校正在讲的单元（跟课堂走的那个） */
+  const [schoolUnit, setSchoolUnit] = useState('')
+  /** 今天中途退出留下的断点；null = 没有 */
+  const [resume, setResume] = useState<ResumeState | null>(null)
 
   // 答题交互状态
   const [sel, setSel] = useState<string | null>(null)      // 选中的选项 key
@@ -96,6 +101,8 @@ export default function Today() {
   const sidRef = useRef<string>(newSessionId())
   const qiRef = useRef(0)
   const audioRef = useRef<Map<string, string>>(new Map())
+  /** 今天是否已经写过 dayLog（同一天只写一次；断点续做后要重置，否则完整记录写不进去） */
+  const savedRef = useRef<string>('')
 
   /* ── 构建今日会话 ──────────────────────────────────── */
 
@@ -109,6 +116,35 @@ export default function Today() {
     const fm = await wordFileMap().catch(() => new Map<string, string>())
     setFileMap(fm)
     audioRef.current = fm
+
+    /**
+     * 今天有断点 → 原样接着用，绝不重算。
+     *
+     * 重算一定漂移：孩子答对 5 个词，wordState 就变了，到期池跟着变，
+     * 段结构和题序全变。这时候还按存档的「第 12 题」往下走，
+     * 等于跳过一堆没答过的题。所以计划连同题库整份存、整份取。
+     */
+    const saved = loadResume(profile.id, day)
+    if (saved?.plan && saved?.bank) {
+      const sb = saved.bank as QBank
+      if (saved.qi > 0 && saved.qi < sb.qs.length) {
+        setPlan(saved.plan as DayPlan)
+        setBank(sb)
+        setDueTotal(dueWordList(pg, day, cnOf).length)
+        setSchoolUnit(schoolUnitOf(pg).unit)
+        sidRef.current = saved.sid
+        // 答题记录等点「继续」时才恢复；这里先清干净，防换身份时残留上一场
+        setQi(0)
+        qiRef.current = 0
+        setRecs([])
+        gradedRef.current = new Map()
+        gradedQRef.current = new Set()
+        setResume(saved)
+        setPhase('start')
+        return
+      }
+      clearResume(profile.id)
+    }
 
     const state = pg.wordState || {}
     const h = queueHealth(pg, day)
@@ -124,6 +160,11 @@ export default function Today() {
     const fresh = WORDS.filter(w => !state[w.word])
     const hasNew = fresh.length > 0
 
+    // ── 学校单元：课本进度从答题记录推，不用家长每天报 ──
+    const sch = schoolUnitOf(pg)
+    const schoolUnit = sch.unit
+    const schoolLeft = sch.left
+
     const p = buildPlan({
       dayKey: day,
       gapDays: gap,
@@ -133,19 +174,28 @@ export default function Today() {
       forgetRate: h.forgetRate,
       perItemSec: perItem,
       hasNew,
+      schoolLeft,
       rampWeek: rampWeekOf(pg.rampFrom || day, day),
       cfg: pg.studyCfg,
     })
     setPlan(p)
+    setSchoolUnit(schoolUnit)
 
-    // 到期词（按风险排）→ 取今天该做的数
-    const dueAll = dueWordList(pg, day, cnOf)
-    setDueTotal(dueAll.length)
-    const due = dueAll.slice(0, p.dueN).map(x => ({ word: x.word, cn: x.cn }))
-    const nails = dueAll.filter(x => x.state.lapses >= 4).slice(0, 10).map(x => ({ word: x.word, cn: x.cn }))
+    // 到期词（按风险排）→ 再按单元轮转重排：今天轮到哪个单元就一路清那个单元
+    const dueBase = dueWordList(pg, day, cnOf)
+    setDueTotal(dueBase.length)
+    const dueUnits = Array.from(new Set(dueBase.map(x => unitOf(x.word))))
+    const dueAll = rotateByUnit(dueBase, rotateUnitOf(dueUnits, day), unitOf)
+    const due = dueAll.slice(0, p.dueN).map(x => ({ word: x.word, cn: x.cn, S: x.state.S }))
+    const nails = dueAll.filter(x => x.state.lapses >= 4).slice(0, 10)
+      .map(x => ({ word: x.word, cn: x.cn, S: x.state.S }))
 
-    // 新词：按词表顺序取第一个还没状态的（天然接着教材走）
-    const newWords = fresh.slice(0, p.newN).map(w => ({ word: w.word, cn: cnOf(w.word) }))
+    // 新词：学校单元优先（跟课堂走），其余按词表顺序补
+    const freshSorted = [
+      ...fresh.filter(w => (w.unit || 'extra') === schoolUnit),
+      ...fresh.filter(w => (w.unit || 'extra') !== schoolUnit),
+    ]
+    const newWords = freshSorted.slice(0, p.newN).map(w => ({ word: w.word, cn: cnOf(w.word) }))
 
     if (!due.length && !newWords.length) {
       setErr('还没有可学的词。先去做一次听写或单元测，系统会建立记忆状态。')
@@ -155,7 +205,7 @@ export default function Today() {
 
     const b = buildQBank({
       plan: p, dueWords: due, newWords, nailWords: nails,
-      fileMap: fm, profileId: profile.id,
+      unit: schoolUnit, fileMap: fm, profileId: profile.id,
     })
     setBank(b)
     setQi(0)
@@ -166,10 +216,66 @@ export default function Today() {
     setRecs([])
     gradedRef.current = new Map()
     gradedQRef.current = new Set()
+    setResume(null)
     setPhase('start')
   }, [day, profile.id])
 
   useEffect(() => { void build() }, [build])
+
+  /* ── 断点续做 ──────────────────────────────────────────
+   * 孩子的工作日实测只有 10–13 分钟，一天的必做是 30 多道，他几乎每次都是
+   * 中途退出的。旧版退出后什么都不留，明天从第 1 题重来，今天做的全白做。 */
+
+  /** 从存档继续：题序、已答记录、判定档、会话 id 一起恢复 */
+  const resumeRun = useCallback(() => {
+    if (!resume || !bank) return
+    qiRef.current = resume.qi
+    setQi(resume.qi)
+    setRecs(resume.recs as Rec[])
+    gradedRef.current = new Map(resume.graded)
+    // 已经答到第 qi 题，说明前面这些都判过了，不能再判一次
+    gradedQRef.current = new Set(bank.qs.slice(0, resume.qi).map(x => x.id))
+    sidRef.current = resume.sid
+    // 续做之后结算必须重写：退出时那份 dayLog 是半截的，不重置 savedRef 就永远改不回来
+    savedRef.current = ''
+    setPhase('run')
+  }, [resume, bank])
+
+  /** 重来：清掉存档，同一份题从第 1 题开始 */
+  const restartRun = useCallback(() => {
+    clearResume(profile.id)
+    setResume(null)
+    setRecs([])
+    setQi(0)
+    qiRef.current = 0
+    gradedRef.current = new Map()
+    gradedQRef.current = new Set()
+    savedRef.current = ''
+    setPhase('run')
+  }, [profile.id])
+
+  /** 首次进答题时建计时器；接着当天已累计的时间算（中途退出不清零） */
+  const startTimerOnce = useCallback(() => {
+    if (timer.current) return
+    const prev = progRef.current.dayLog?.[day]
+    timer.current = new EffTimer(cfg.idleGapMs, Date.now(), {
+      effSec: prev?.effSec || 0, idleSec: prev?.idleSec || 0,
+    })
+  }, [cfg.idleGapMs, day])
+
+  /**
+   * 边答边存。每答一题存一次——题目最多几十道，localStorage 写得动，
+   * 而少存一次就少一段进度，这个交易不划算。
+   */
+  useEffect(() => {
+    if (phase !== 'run' || !bank || !plan) return
+    if (qi === 0 && recs.length === 0) return
+    saveResume(profile.id, {
+      day, qi, recs, plan, bank,
+      graded: Array.from(gradedRef.current.entries()),
+      sid: sidRef.current, at: Date.now(),
+    })
+  }, [phase, qi, recs, bank, plan, day, profile.id])
 
   /* ── 计时器：启动 + 每秒刷新 + 切后台暂停 ── */
   useEffect(() => {
@@ -349,11 +455,12 @@ export default function Today() {
   }, [bank, qi])
 
   /** 结算落库 */
-  const savedRef = useRef<string>('')
   useEffect(() => {
     if (phase !== 'wrap' || !plan || !bank) return
     if (savedRef.current === day) return     // 同一天只写一次，防 effect 重入覆盖
     savedRef.current = day
+    // 结算完成 → 断点就没用了，删掉，明天首页不会提示「继续」
+    clearResume(profile.id)
     const perf = [...recs]
     // 先算完成判定再落库：done 是「必做 + 看答案比例」的结论，不能写死 false
     const gate0 = gateCheck({
@@ -500,11 +607,13 @@ export default function Today() {
 
           {plan.tier === 'settle' && (
             <div className="v4note bad">
-              你有 <b>{dueTotal}</b> 个词到期，堆了不少。今天先集中清 <b>{plan.dueN}</b> 个，
-              新词暂停
+              你有 <b>{dueTotal}</b> 个词到期，堆了不少。今天集中清 <b>{plan.dueN}</b> 个
+              {plan.schoolN > 0
+                ? `，另外跟课本走 ${plan.schoolN} 个新词（${unitName(schoolUnit)}，学校正在讲）`
+                : '，新词先暂停'}
               {plan.dueN >= dueTotal
                 ? '，一次清完。'
-                : `，剩下的 ${dueTotal - plan.dueN} 个明天接着清（约 ${settleDaysLeft(dueTotal - plan.dueN, cfg)} 天走完）。`}
+                : `。剩下的 ${dueTotal - plan.dueN} 个明天接着清（约 ${settleDaysLeft(dueTotal - plan.dueN, cfg)} 天走完）。`}
             </div>
           )}
           {plan.tier === 'recover' && (
@@ -523,19 +632,35 @@ export default function Today() {
             不用凑时长——做得快就早点收工。看答案的题不超过 40%。最多 {plan.maxMin} 分钟封顶。
           </div>
 
-          <button className="btn" style={{ marginTop: 14 }} onClick={() => {
-            unlockAudio()
-            if (!timer.current) {
-              // 接着当天已累计的时间算（中途退出不清零）
-              const prev = progRef.current.dayLog?.[day]
-              timer.current = new EffTimer(cfg.idleGapMs, Date.now(), {
-                effSec: prev?.effSec || 0, idleSec: prev?.idleSec || 0,
-              })
-            }
-            setPhase('run')
-          }}>
-            ▶ 开始
-          </button>
+          {resume ? (
+            <>
+              <div className="v4note ok" style={{ marginTop: 12 }}>
+                上次做到第 <b>{resume.qi + 1}</b> 题（共 {bank?.qs.length || 0} 题）就退出了，接着做不用重来。
+              </div>
+              <button className="btn" style={{ marginTop: 10 }} onClick={() => {
+                unlockAudio()
+                startTimerOnce()
+                resumeRun()
+              }}>
+                ▶ 继续（第 {resume.qi + 1} 题）
+              </button>
+              <button className="btn ghost" style={{ marginTop: 8 }} onClick={() => {
+                unlockAudio()
+                startTimerOnce()
+                restartRun()
+              }}>
+                从头重新做
+              </button>
+            </>
+          ) : (
+            <button className="btn" style={{ marginTop: 14 }} onClick={() => {
+              unlockAudio()
+              startTimerOnce()
+              setPhase('run')
+            }}>
+              ▶ 开始
+            </button>
+          )}
         </div>
       </Shell>
     )

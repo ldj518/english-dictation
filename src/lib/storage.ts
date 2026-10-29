@@ -121,6 +121,61 @@ export function reset(profileId = activeProfileId()) {
   localStorage.removeItem(progressKey(profileId))
 }
 
+/* ── 断点存档（v6）：中途退出不丢进度 ── */
+
+/**
+ * 断点存档。
+ *
+ * 为什么必须做：p1 的工作日实测只有 10–13 分钟，而一天的必做题是 30 多道。
+ * 他几乎每次都是中途退出的。旧版退出后什么都没留——题目按天固定、但答到第几题
+ * 全丢，明天从第 1 题重来，等于把今天做的 8 题扔掉。
+ *
+ * 只存「做到哪、答过什么、这次用的进入计数」，不存题库——
+ * 有了 enter 就能用同一个种子重建出一模一样的题序（buildQBank 是纯函数）。
+ */
+export interface ResumeState {
+  day: string
+  qi: number
+  recs: unknown[]
+  /** 已判过分的词 → 通道（Map 存不进 JSON，转数组） */
+  graded: [string, 'recog' | 'prod'][]
+  sid: string
+  /**
+   * 当日计划和整份题库，原样存。
+   *
+   * 为什么不重算：重进时必然漂移。答对几个词 → wordState 变了 → 到期池变了
+   * → 段结构、题序、必做总数全跟着变，接着做就会跳过一堆没答的题。
+   * 唯一靠谱的办法是把这一份原样存下来继续用。
+   * 60 题约 20–30 KB，localStorage 装得下。
+   */
+  plan: unknown
+  bank: unknown
+  at: number
+}
+
+const resumeKey = (profileId: string) => `eng-dict-resume:${profileId}`
+
+export function saveResume(profileId: string, st: ResumeState): void {
+  try {
+    localStorage.setItem(resumeKey(profileId), JSON.stringify(st))
+  } catch { /* 满了就算了，不打断答题 */ }
+}
+
+export function loadResume(profileId: string, day: string): ResumeState | null {
+  try {
+    const raw = localStorage.getItem(resumeKey(profileId))
+    if (!raw) return null
+    const st = JSON.parse(raw) as ResumeState
+    // 只认今天的：昨天的存档接不上今天的新计划（段结构可能都变了）
+    if (!st || st.day !== day || typeof st.qi !== 'number') return null
+    return st
+  } catch { return null }
+}
+
+export function clearResume(profileId: string): void {
+  try { localStorage.removeItem(resumeKey(profileId)) } catch { /* ignore */ }
+}
+
 /* ── 设备主人标记（v3.3）：这台设备「今天谁学」选的人 ── */
 const OWNER_KEY = 'eng-dict-device-owner'
 

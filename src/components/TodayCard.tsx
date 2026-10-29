@@ -14,6 +14,7 @@ import { todayStr } from '../lib/storage'
 import { bjDiffDays, bjDow } from '../lib/bj'
 import { buildPlan, mustTotalOf, mergeCfg, perItemSecOf, rampWeekOf, gapDaysOf } from '../lib/plan'
 import { queueHealth } from '../lib/memory'
+import { schoolUnitOf } from '../lib/school'
 
 export default function TodayCard() {
   const nav = useNavigate()
@@ -26,14 +27,17 @@ export default function TodayCard() {
     const hasNew = WORDS.some(w => !progress.wordState?.[w.word])
     const cfg = mergeCfg(progress.studyCfg)
     const week = rampWeekOf(progress.rampFrom || day, day)
+    // 学校单元必须和 /today 用同一个来源，否则首页说 6 段、进去是 8 段
+    const sch = schoolUnitOf(progress)
     const plan = buildPlan({
       dayKey: day, gapDays: gap, dueN: h.due, weakN: h.weak, nailN: h.nails,
       // 手速取近 7 天实测：以前写死 20 秒，题量对快手慢手一个样
       forgetRate: h.forgetRate, perItemSec: perItemSecOf(progress, day), hasNew,
+      schoolLeft: sch.left,
       rampWeek: week, cfg: progress.studyCfg,
     })
     const log = progress.dayLog?.[day]
-    return { h, gap, plan, cfg, log, mustAll: mustTotalOf(plan), week }
+    return { h, gap, plan, cfg, log, mustAll: mustTotalOf(plan), week, sch }
   }, [progress, day])
 
   const { h, gap, plan, cfg, log, mustAll, week } = info

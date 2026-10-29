@@ -46,7 +46,7 @@ export interface DayLog {
   qN: number
   rightN: number
   peekN: number
-  /** 双闸门是否都过（时间 ≥ 下限 且 必做清空） */
+  /** 今天是否完成（必做清空 + 看答案不超 40%；时长不参与判定） */
   done: boolean
   /** 分段流水账（战报按它画时间条） */
   segs: { k: string; label: string; min: number; q: number; right: number }[]

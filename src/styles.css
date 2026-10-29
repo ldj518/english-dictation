@@ -32,6 +32,8 @@ header{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.92);
 .hd .sp{font-size:13px;color:var(--sub)}
 .iconbtn{border:0;background:transparent;font-size:16px;color:var(--blue);padding:6px 4px;
   display:flex;align-items:center;gap:4px;font-weight:600}
+/* 必做做完后右上角变「完成 ✓」，用绿色区分，别再让它看着像「中途退出」 */
+.iconbtn.go{color:var(--ok)}
 
 /* ── 卡片 ── */
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);

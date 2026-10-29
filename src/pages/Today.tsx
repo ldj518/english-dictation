@@ -3,8 +3,10 @@
  *
  * 和老流程的根本区别：
  *  老：每天固定 5 关，做完就结束（10 分钟点完也算完成）
- *  新：30′/60′ 是**有效时间下限**，题量按手速倒推；双闸门（时间够 + 必做清空）
- *      缺一个都不结算、不给星、不算打卡。
+ *  新（2026-10-29 修订）：完成只看**必做题做完 + 看答案不超 40%**。
+ *      时间不再是闸门，只用来决定今天排多少题（13′ 工作日 / 30′ 周末）。
+ *      旧口径「有效时间满 30′ 且必做清空」把每天只坐 10 分钟的孩子
+ *      判成天天未完成，断档越滚越长——见 plan.ts DEFAULT_CFG 注释。
  *
  * 防敷衍六条（每条都能在代码里找到落点）：
  *  ① 速答不计掌握 —— gradeOne 收到 fast 时 S 只 ×1.5
@@ -353,7 +355,7 @@ export default function Today() {
     if (savedRef.current === day) return     // 同一天只写一次，防 effect 重入覆盖
     savedRef.current = day
     const perf = [...recs]
-    // 先算闸门再落库：done 是双闸门的结论，不能写死 false
+    // 先算完成判定再落库：done 是「必做 + 看答案比例」的结论，不能写死 false
     const gate0 = gateCheck({
       effSec: timer.current?.snap().effSec || 0, plan,
       mustDone: perf.filter(r => r.must).length, mustTotal: mustAll,
@@ -473,8 +475,8 @@ export default function Today() {
               <div className="l">段</div>
             </div>
             <div className="v4kpi">
-              <div className="v">≥{plan.minMin}′</div>
-              <div className="l">有效时间下限</div>
+              <div className="v">{plan.minMin}′</div>
+              <div className="l">预计用时</div>
             </div>
             <div className="v4kpi">
               <div className="v">{mustAll}</div>
@@ -517,8 +519,8 @@ export default function Today() {
             </div>
           )}
           <div className="v4note">
-            <b>这场什么时候结束？</b>两件事都做到才算完：① 有效学习时间够 {plan.minMin} 分钟（挂机不算），
-            ② 必做 {mustAll} 题做完（做错也算做完，但要重做一次）。
+            <b>这场什么时候结束？</b>必做 {mustAll} 题做完就结束（做错也算做完，但要重做一次），
+            不用凑时长——做得快就早点收工。看答案的题不超过 40%。最多 {plan.maxMin} 分钟封顶。
           </div>
 
           <button className="btn" style={{ marginTop: 14 }} onClick={() => {
@@ -675,7 +677,11 @@ export default function Today() {
   /* ── 答题中 ── */
   return (
     <Shell title="今天" noNav right={
-      <button className="iconbtn" onClick={() => setPhase('wrap')} aria-label="结束">结束</button>
+      // 必做做完就把按钮文字从「结束」改成「完成」——
+      // 后面还排着钉子词等非必做题，孩子不知道可以收工就会一直做下去
+      <button className={'iconbtn' + (mustAll > 0 && mustDone >= mustAll ? ' go' : '')} onClick={() => setPhase('wrap')} aria-label="结束">
+        {mustAll > 0 && mustDone >= mustAll ? '完成 ✓' : '结束'}
+      </button>
     }>
       {/* 三格面板：恒定可见，任何时候都知道还差多少 */}
       <div className="v4panel">
@@ -694,6 +700,14 @@ export default function Today() {
           <div className="v4pl">用时</div>
         </div>
       </div>
+
+      {/* 必做做完就给出口。剩下的是钉子词/加练，不做也算完成——
+          不给这句话，孩子会以为「还有题没做完」而一直做到放弃。 */}
+      {mustAll > 0 && mustDone >= mustAll && recs.length < bank.qs.length && (
+        <div className="v4note" style={{ marginTop: 8 }}>
+          <b>今天的必做已经做完了。</b>点右上角「完成 ✓」结算就行，后面 {bank.qs.length - recs.length} 道加练不做也算完成。
+        </div>
+      )}
 
       {/* 段进度条 */}
       <div className="v4segs">

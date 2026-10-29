@@ -406,10 +406,10 @@ export function gapDaysOf(p: Progress, dayKey: string): number {
 }
 
 /**
- * 计划是否达标（双闸门，缺一不算）：
- *  ① 有效时间 ≥ 下限
- *  ② 必做（判分段）全部做完
- * 只满足一个 → 不结算、不给星、不算打卡。
+ * 计划是否达标（2026-10-29 起只剩两条真闸门）：
+ *  ① 必做（判分段）全部做完
+ *  ② 看答案的题不超过 40%
+ * 有效时长不计入判定——它只决定今天排多少题。详见 gateCheck。
  */
 export interface GateInput {
   effSec: number

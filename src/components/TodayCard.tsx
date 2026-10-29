@@ -12,7 +12,7 @@ import { useStore } from '../lib/store'
 import { WORDS } from '../lib/data'
 import { todayStr } from '../lib/storage'
 import { bjDiffDays, bjDow, fmtSec } from '../lib/bj'
-import { buildPlan, mustTotalOf, mergeCfg, perItemSecOf, rampWeekOf } from '../lib/plan'
+import { buildPlan, mustTotalOf, mergeCfg, perItemSecOf, rampWeekOf, gapDaysOf } from '../lib/plan'
 import { queueHealth } from '../lib/memory'
 
 export default function TodayCard() {
@@ -22,7 +22,7 @@ export default function TodayCard() {
 
   const info = useMemo(() => {
     const h = queueHealth(progress, day)
-    const gap = progress.lastDay ? Math.max(0, bjDiffDays(day, progress.lastDay)) : 0
+    const gap = gapDaysOf(progress, day)
     const hasNew = WORDS.some(w => !progress.wordState?.[w.word])
     const cfg = mergeCfg(progress.studyCfg)
     const week = rampWeekOf(progress.rampFrom || day, day)

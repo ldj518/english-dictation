@@ -15,6 +15,7 @@ import { reportSession, syncStudent, checkBackend, fetchShuffleSalt, pushProgres
 import type { ParentRules } from './api'
 import { syncProfiles, pullAndMerge } from './sync'
 import { flowAdvance, flowRecordStep } from './flow'
+import { bjAddDays, bjDiffDays } from './bj'
 import { WORD_MAP } from './data'
 
 /** 词 → 中文释义（词性在前，与错词本其他条目格式一致） */
@@ -491,7 +492,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const saveDay = useCallback((log: DayLog) => {
-    setProgress(p => ({ ...p, dayLog: { ...(p.dayLog || {}), [log.dayKey]: log } }))
+    setProgress(p => {
+      const np: Progress = { ...p, dayLog: { ...(p.dayLog || {}), [log.dayKey]: log } }
+      // 完成了才算「学过一天」。
+      // 原来这里只写 dayLog、不碰 lastDay，而 lastDay 只由老页面（听写/单元测）
+      // 的 submitSession → checkIn 更新。结果是：孩子只用 /today 之后，gapDays
+      // 永远停在老页面最后一次打卡的日期上——线上实测卡在 10-07，之后每天都判
+      // 「断档 22 天」→ 每天都是重启档（不学新词、不出听音选义、不出句意选择）。
+      if (log.done && (!np.lastDay || bjDiffDays(log.dayKey, np.lastDay) > 0)) {
+        np.streakDays = np.lastDay === bjAddDays(log.dayKey, -1) ? (np.streakDays || 0) + 1 : 1
+        np.lastDay = log.dayKey
+      }
+      return np
+    })
   }, [])
 
   const saveTest = useCallback((run: TestRun, items: TestItem[]) => {

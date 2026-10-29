@@ -12,6 +12,7 @@ import {
 import {
   buildPlan, tierOf, gateCheck, mustTotalOf, mergeCfg, newAllowOf,
   rampWeekOf, rampMinOf, perItemSecOf, capHit, settleDaysLeft,
+  lastStudyDay, gapDaysOf,
   DEFAULT_CFG, type PlanInput,
 } from '../src/lib/plan'
 import {
@@ -767,6 +768,32 @@ t('重启档：教的和考的是同一批词（教 12 考 8）', (x: T) => {
     const got = bank.qs.filter(q => q.seg === i).length
     x.eq(got, s.q, `第 ${i + 1} 段应出 ${s.q} 题，实际 ${got}`)
   }
+})
+
+t('断档：dayLog 里完成过的日子也要算（只管 /today 的孩子原来被判天天断档）', (x: T) => {
+  const day = '2026-10-29'
+  const mk = (lastDay: string, logs: Record<string, { done?: boolean }>) =>
+    ({ lastDay, dayLog: logs }) as unknown as Progress
+
+  // 真实事故：lastDay 停在老页面最后一次打卡（10-07），之后一直在 /today 学
+  const only = mk('2026-10-07', { '2026-10-27': { done: true }, '2026-10-28': { done: true } })
+  x.eq(lastStudyDay(only, day), '2026-10-28', '应取 dayLog 里最近的完成日')
+  x.eq(gapDaysOf(only, day), 1, '断 1 天，不该算成 22 天')
+
+  // 没完成的日子不算学过
+  const half = mk('2026-10-07', { '2026-10-28': { done: false } })
+  x.eq(gapDaysOf(half, day), 22, '没完成就不算学过一天')
+
+  // 时钟错乱的未来日不认
+  const future = mk('2026-10-07', { '2027-01-01': { done: true } })
+  x.eq(lastStudyDay(future, day), '2026-10-07', '未来日不认')
+
+  // 从没学过 → 0，不能是巨大值（否则首次使用直接进重启档）
+  x.eq(gapDaysOf(mk('', {}), day), 0, '首次使用不算断档')
+
+  // 老页面打卡更晚时以它为准
+  const legacy = mk('2026-10-28', { '2026-10-20': { done: true } })
+  x.eq(lastStudyDay(legacy, day), '2026-10-28', '老页面打卡更晚时用 lastDay')
 })
 
 export default { results }

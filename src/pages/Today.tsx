@@ -23,7 +23,7 @@ import { useStore } from '../lib/store'
 import { WORDS } from '../lib/data'
 import { wordFileMap, playWordText } from '../lib/data'
 import { bjDayKey, bjDiffDays, fmtSec, fmtSecCn } from '../lib/bj'
-import { buildPlan, gateCheck, mergeCfg, mustTotalOf, settleDaysLeft, perItemSecOf, rampWeekOf, capHit, type DayPlan } from '../lib/plan'
+import { buildPlan, gateCheck, mergeCfg, mustTotalOf, settleDaysLeft, perItemSecOf, rampWeekOf, capHit, gapDaysOf, type DayPlan } from '../lib/plan'
 import { queueHealth, dueWordList, type Channel } from '../lib/memory'
 import { buildReport, reportText, reportImage } from '../lib/report'
 import { reportOut } from '../lib/api'
@@ -110,7 +110,9 @@ export default function Today() {
 
     const state = pg.wordState || {}
     const h = queueHealth(pg, day)
-    const gap = pg.lastDay ? Math.max(0, bjDiffDays(day, pg.lastDay)) : 0
+    // 断档天数统一从 plan.gapDaysOf 出（lastDay 与 dayLog.done 取较晚者），
+    // 别在这里自己拼一遍——两个入口各算一次必然对不上
+    const gap = gapDaysOf(pg, day)
 
     // 单题耗时取近 7 天实测（有效时间 ÷ 作答数）。以前写死 20 秒，
     // 「按手速倒推题量」等于没做——快手慢手排出来一模一样。

@@ -13,10 +13,19 @@ const BASE = '/api'
 /** 是否后端可达（首次探测后缓存） */
 let backendAlive: boolean | null = null
 
-async function req<T>(path: string, init?: RequestInit): Promise<T | null> {
+/** 单次请求的超时（毫秒）。
+ *  国内到 Cloudflare 落在洛杉矶，晚上实测 TTFB 1–9 秒、还会整条 40 秒超时。
+ *  没有超时的话，一个挂死的请求会占着连接和 UI 状态直到浏览器自己放弃；
+ *  宁可早点认失败（本地数据本来就是事实来源），也别让孩子对着转圈等 40 秒。 */
+const TIMEOUT_MS = 12000
+
+async function req<T>(path: string, init?: RequestInit, timeoutMs = TIMEOUT_MS): Promise<T | null> {
+  const ac = new AbortController()
+  const timer = setTimeout(() => ac.abort(), timeoutMs)
   try {
     const r = await fetch(BASE + path, {
       ...init,
+      signal: ac.signal,
       headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
     })
     if (!r.ok) return null
@@ -24,6 +33,8 @@ async function req<T>(path: string, init?: RequestInit): Promise<T | null> {
     return j.ok ? j : null
   } catch {
     return null
+  } finally {
+    clearTimeout(timer)
   }
 }
 
@@ -82,7 +93,17 @@ export async function fetchProgressSnapshot(
   studentId: string,
 ): Promise<{ data: unknown; lastActiveDay?: string; recentPace?: RecentPace } | null> {
   try {
-    const r = await fetch(`${BASE}/progress?studentId=${encodeURIComponent(studentId)}`)
+    // 进度快照给 25 秒：它不阻塞首屏（本地数据先渲染），弱网下这一趟往往要
+    // 6–20 秒。用统一的 12 秒会把它误判成失败——而它失败会让「拉过才能推」的
+    // 门闩一直关着，跨设备同步整晚都不生效，比慢一点更糟。
+    const ac = new AbortController()
+    const timer = setTimeout(() => ac.abort(), 25000)
+    let r: Response
+    try {
+      r = await fetch(`${BASE}/progress?studentId=${encodeURIComponent(studentId)}`, { signal: ac.signal })
+    } finally {
+      clearTimeout(timer)
+    }
     if (!r.ok) return null
     const j = await r.json() as {
       ok: boolean; data?: unknown; lastActiveDay?: string | null; recentPace?: RecentPace | null
@@ -691,7 +712,7 @@ export async function fetchDayAnswers(studentId: string, day: string): Promise<A
  * 逐题落库（v6）。fire-and-forget：答完一题顺手报一条，
  * 失败就算了——不能因为网络把答题卡住。
  */
-export function postAnswer(a: {
+export interface AnswerPost {
   studentId: string
   sessionId: string
   dayKey: string
@@ -706,6 +727,21 @@ export function postAnswer(a: {
   attempts?: number
   peek?: boolean
   fast?: boolean
-}): void {
+}
+
+export function postAnswer(a: AnswerPost): void {
   void req('/answer', { method: 'POST', body: JSON.stringify(a) })
+}
+
+/**
+ * 批量落库（v8）。一趟写 N 条，专治「一题一次跨境往返」。
+ * 服务端对超出 50 条的部分截断，坏一条跳一条。
+ */
+export async function postAnswers(rows: AnswerPost[]): Promise<boolean> {
+  if (!rows.length) return true
+  const r = await req<{ n: number }>('/answer', {
+    method: 'POST',
+    body: JSON.stringify({ answers: rows }),
+  })
+  return !!r
 }

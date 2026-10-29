@@ -9,6 +9,7 @@ import {
   migrateFromLegacy, assertMigration, S_MAX, S_MASTER, LAPSES_NAIL,
   type WordState,
 } from '../src/lib/memory'
+import { BATCH, QUEUE_MAX, capQueue, shouldFlush } from '../src/lib/answerQueue'
 import {
   buildPlan, tierOf, gateCheck, mustTotalOf, mergeCfg, newAllowOf,
   rampWeekOf, rampMinOf, perItemSecOf, capHit, settleDaysLeft,
@@ -1047,6 +1048,28 @@ t('课本进度：第一个没学完的单元就是学校在讲的', (x: T) => {
   const all: Record<string, unknown> = {}
   for (const w of ws) all[w.word] = { S: 20 }
   x.eq(schoolUnitOf({ wordState: all } as unknown as Progress).left, 0, '全学完 → 没有学校新词')
+})
+
+t('作答队列：攒满 5 条才发，超上限丢最旧的', (x: T) => {
+  // 国内一题一次跨境往返要 1–9 秒，所以必须攒批；但也不能无上限地屯
+  x.ck(!shouldFlush(BATCH - 1), `${BATCH - 1} 条先不发`)
+  x.ck(shouldFlush(BATCH), `${BATCH} 条就发`)
+  x.eq(capQueue([1, 2, 3]).length, 3, '没超上限原样返回')
+
+  const big = Array.from({ length: QUEUE_MAX + 37 }, (_, i) => i)
+  const capped = capQueue(big)
+  x.eq(capped.length, QUEUE_MAX, `截到 ${QUEUE_MAX} 条`)
+  // 丢最旧的：留着的是尾部（离线一小时攒下的，越新越有用）
+  x.eq(capped[0], 37, '从第 37 条开始留')
+  x.eq(capped[capped.length - 1], QUEUE_MAX + 36, '最后一条是最新的')
+})
+
+t('作答队列：容量边界不会把新数据挤掉', (x: T) => {
+  const full = Array.from({ length: QUEUE_MAX }, (_, i) => i)
+  const push = capQueue([...full, QUEUE_MAX])
+  x.eq(push.length, QUEUE_MAX, '满了还是 QUEUE_MAX')
+  x.eq(push[push.length - 1], QUEUE_MAX, '刚进来的那条必须留着')
+  x.ck(!push.includes(0), '最旧的那条被丢掉')
 })
 
 export default { results }

@@ -36,6 +36,7 @@ import Today from './pages/Today'
 import Text from './pages/Text'
 import AudioFailToast from './components/AudioFailToast'
 import ProfileGate from './components/ProfileGate'
+import { registerSW } from './lib/sw'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -82,3 +83,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </StoreProvider>
   </React.StrictMode>
 )
+
+// 离线缓存（v8）：让第二次打开不再跨境拿 730KB 的包和当场的音频。
+// 放在 render 之后，别和首屏抢带宽。
+registerSW()

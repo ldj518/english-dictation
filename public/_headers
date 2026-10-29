@@ -1,0 +1,42 @@
+# 缓存头（v8）
+#
+# 为什么要写这个文件：
+#   Pages 对静态资源的默认是 `max-age=14400, must-revalidate`——4 小时后
+#   每次打开都要回源确认一次。国内访问落到洛杉矶，一次确认就是 1–9 秒。
+#   `/assets/*` 的文件名里带内容哈希，改一个字节名字就变，可以永久缓存，
+#   根本不需要 4 小时问一次。
+#
+# 注意：`/audio/words/*`、`/audio/tracks/*` 走 Functions（R2 代理），
+# 那里的 Cache-Control 在代码里设（immutable 一年 + 边缘缓存），
+# 这里的规则只管静态文件。
+
+# 带哈希的资源：一年 + immutable。浏览器连问都不会再问
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 图标：内容基本不变，但文件名不带哈希，给 30 天别给一年
+/icons/*
+  Cache-Control: public, max-age=2592000
+
+# 课文整句音频等静态音频（/audio/text/*）
+/audio/*
+  Cache-Control: public, max-age=2592000
+
+# Service Worker 本体：绝不能缓存，否则新版本永远装不上
+/sw.js
+  Cache-Control: no-cache, max-age=0
+
+# 版本清单：让浏览器每次校验，配合 SW 的 network-first 3.5 秒超时
+/manifest.json
+  Cache-Control: public, max-age=86400
+
+# 页面壳：必须每次校验（发版要能立刻生效）。
+# 弱网下的「秒开」由 Service Worker 负责，不靠这里缓存 HTML。
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+# 接口：一律不缓存，家长看到的账必须是服务端当下的
+/api/*
+  Cache-Control: no-store

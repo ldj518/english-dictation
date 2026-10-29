@@ -37,7 +37,8 @@ import { unlockAudio } from '../lib/player'
 import { todayStr, loadResume, saveResume, clearResume, type ResumeState } from '../lib/storage'
 import { nextGate, unitName } from '../lib/gate'
 import { schoolUnitOf } from '../lib/school'
-import { reportDay, postAnswer, newSessionId } from '../lib/api'
+import { reportDay, newSessionId } from '../lib/api'
+import { enqueueAnswer } from '../lib/answerQueue'
 import { judge, judgeWithFirst } from '../lib/storage'
 import { syllableText } from '../lib/syllables'
 import type { DayLog } from '../types'
@@ -409,8 +410,10 @@ export default function Today() {
 
     // v6：逐题落库。原来这条流水线一条明细都不留，孩子中途退出后
     // 家长后台只剩分段耗时，看不到「今天错了哪几个词」。
-    // 失败不影响答题（postAnswer 内部吞掉异常），也不重复记（上面 already 去重）。
-    postAnswer({
+    // v8：改成入队（攒 5 条发一次）。原来一题一次 POST——晚上跨境
+    // 一趟 1–9 秒，30 题就是 30 趟，手机一直在发请求还容易超时丢数据。
+    // 入队是同步内存操作，答题完全不等网络。
+    enqueueAnswer({
       studentId: profile.id,
       sessionId: sidRef.current,
       dayKey: day,

@@ -154,6 +154,38 @@ function dayIndex(dayKey: string): number {
 }
 
 /**
+ * 内容词集合（去掉虚词）。
+ *
+ * 用来判断两句「是不是在说同一件事」。课本里同一段常有改写句：
+ *   It takes a few more steps after that before the water becomes clean again.
+ *   It takes a few more steps before the water becomes clean again.
+ * 两句中文译文几乎一样，一起进选项就是「两个都对」；一起进拼装题就是同题做两遍。
+ */
+const STOP_EN = new Set([
+  'the','a','an','to','of','in','on','at','and','or','but','is','was','were','are','be','been','being',
+  'it','its','he','she','they','them','his','her','their','this','that','these','those','for','with',
+  'from','as','by','not','do','did','does','done','had','has','have','would','will','can','could',
+  'then','next','well','so','if','my','your','our','me','i','you','we','us','there','what','how',
+  'who','when','where','why','one','all','no','up','out','into','about','after','before','again','too','also',
+])
+
+export function contentSet(en: string): Set<string> {
+  const out = new Set<string>()
+  for (const w of en.toLowerCase().replace(/[^a-z' ]/g, ' ').split(/\s+/)) {
+    if (w && !STOP_EN.has(w)) out.add(w)
+  }
+  return out
+}
+
+/** 两句是否近似（内容词 Jaccard ≥ 阈值）。0.5 对应「改了几个词的同段句子」 */
+export function isNearDup(a: Set<string>, b: Set<string>, th = 0.5): boolean {
+  let hit = 0
+  for (const w of a) if (b.has(w)) hit++
+  const union = a.size + b.size - hit
+  return union > 0 && hit / union >= th
+}
+
+/**
  * 挑当天该出的句子。
  *
  * 返回的顺序不是难度顺序——按「挂词分 + 日序轮转」混排，
@@ -170,6 +202,12 @@ export function pickSents(opts: PickOpts): SentBankItem[] {
   // 候选池：过掉当天已用的
   let pool = unit.sents.filter(s => !used.has(s.id))
   if (opts.use === 'block') pool = pool.filter(s => s.blocks.length >= 2)
+  // 句意选择：译文带引号的句子不进——正确项唯一带「」，孩子看标点就能选，
+  // 等于没读懂。这类句子留给拼装题，那里引号是要拼出来的东西，反而是考点。
+  if (opts.use === 'mean') {
+    const plain = pool.filter(s => !/[“”]/.test(s.cn))
+    if (plain.length >= opts.count) pool = plain
+  }
   if (!pool.length) pool = unit.sents.filter(s => !used.has(s.id))
   if (!pool.length) return []
 
@@ -188,22 +226,33 @@ export function pickSents(opts: PickOpts): SentBankItem[] {
     sc += opts.use === 'block' ? blockScore(s.blocks.length) : meanScore(s.level)
     // 长度惩罚：20 词的长句在手机上要滚屏，拼装题尤其难受
     if (s.en.split(/\s+/).length > 15) sc -= 12
-    return { s, sc, rot: rotIdx.get(s.id) ?? 0 }
+    return { s, sc, rot: rotIdx.get(s.id) ?? 0, sig: contentSet(s.en) }
   })
 
   scored.sort((a, b) => b.sc - a.sc || a.rot - b.rot)
 
   // 难度均衡：同一 level 最多连出 2 句，避免一次三句全是问句
+  // 近似句去重：同一天不出「改了几个词的同段句子」，否则两道拼装题其实是同一题
   const picked: SentBankItem[] = []
+  const pickedSig: Set<string>[] = []
   const lvCount: Record<string, number> = {}
   for (const it of scored) {
     if (picked.length >= opts.count) break
     const c = lvCount[it.s.level] || 0
     if (c >= 2 && opts.count > 3) continue
+    if (pickedSig.some(p => isNearDup(p, it.sig))) continue
     picked.push(it.s)
+    pickedSig.push(it.sig)
     lvCount[it.s.level] = c + 1
   }
-  // 均衡卡住了数量就放宽，宁可连着同档也不要少出题
+  // 均衡或去重卡住了数量就放宽：先放弃均衡，再放弃去重，宁可重复也不要少出题
+  for (const it of scored) {
+    if (picked.length >= opts.count) break
+    if (picked.includes(it.s)) continue
+    if (pickedSig.some(p => isNearDup(p, it.sig))) continue
+    picked.push(it.s)
+    pickedSig.push(it.sig)
+  }
   for (const it of scored) {
     if (picked.length >= opts.count) break
     if (picked.includes(it.s)) continue
@@ -216,15 +265,22 @@ export function pickSents(opts: PickOpts): SentBankItem[] {
  * 给句子配干扰项（句意选择用）。
  *
  * 干扰项必须「看着像那么回事」，随机抓三句中文，孩子一眼就能排除，等于没考。
- * 三层过滤：
+ * 四层过滤：
  *  1. 句式要一致 —— 题干是陈述句，选项里混一个「……为什么要称赞这件衣服？」，
  *     孩子不用读懂英文，看问号就知道不该选（实测第一批就出现了这个）
- *  2. 长度要接近 —— 四个字 vs 三十个字，长短本身就是提示
- *  3. 同单元优先，其次同语法特征
+ *  2. 不能是近似句 —— 课本同一段常有改写句（It takes a few more steps after that...
+ *     vs ...before the water becomes clean again.），两句译文都对，
+ *     拿来当干扰项就是「两个选项都对」，孩子必错
+ *  3. 长度要接近 —— 四个字 vs 三十个字，长短本身就是提示
+ *  4. 同单元优先，其次同语法特征
  */
 export function cnDistractors(target: SentBankItem, unit: string, n = 3): string[] {
   const u = getSentUnit(unit)
-  const all = (u ? u.sents : allSents()).filter(s => s.id !== target.id && s.cn !== target.cn)
+  const base = (u ? u.sents : allSents()).filter(s => s.id !== target.id && s.cn !== target.cn)
+  // 近似句先剔掉；剔完不够再退回全集（宁可出个近似句，也不能少选项）
+  const tsig = contentSet(target.en)
+  const distinct = base.filter(s => !isNearDup(tsig, contentSet(s.en)))
+  const all = distinct.length >= n ? distinct : base
   const tq = target.level === 'S2'
 
   const sameForm = all.filter(s => (s.level === 'S2') === tq)
@@ -235,8 +291,14 @@ export function cnDistractors(target: SentBankItem, unit: string, n = 3): string
   const far = pool.filter(s => !near.includes(s))
   const order = [...seededShuffle(near, 'dis|' + target.id), ...seededShuffle(far, 'far|' + target.id)]
 
+  // 标点体例对齐：目标译文带「」，干扰项也优先带「」，否则「唯一带引号的那个」就是答案
+  const tQuoted = /[“”]/.test(target.cn)
+  const final = tQuoted
+    ? [...order.filter(s => /[“”]/.test(s.cn)), ...order.filter(s => !/[“”]/.test(s.cn))]
+    : order
+
   const out: string[] = []
-  for (const s of order) {
+  for (const s of final) {
     if (out.length >= n) break
     if (out.includes(s.cn)) continue
     out.push(s.cn)

@@ -9,7 +9,7 @@
  *  新：30′/60′ 是**下限**，题量按手速倒推，不足用变式重复补满。
  *
  * 档位判定顺序（不能换，命中即停）：
- *   ① 断档 ≥7 天   → restart  本单元重学，新词冻结一周
+ *   ① 断档 ≥7 天   → restart  先重学旧词，新词冻结一周
  *   ② 到期 >45     → settle   清账期，零新词，每天 26 词（**不看断档**，见 tierOf 注释）
  *   ③ 断档 2–6 天  → recover  恢复期，零新词
  *   ④ 其余          → normal
@@ -190,7 +190,7 @@ const TIER_NOTE: Record<Tier, string> = {
   normal: '正常工作档',
   settle: '清账档：积压太多，先集中清到期词，暂不学新词',
   recover: '恢复档：刚断了几天，先复习不学新词',
-  restart: '重启档：断超过一周，本单元重学，新词冻结',
+  restart: '重启档：断超过一周，先重学旧词，新词冻结',
   sat: '周六：清账 + 书写',
   sun: '周日：周测 + 讲卷',
 }
@@ -225,9 +225,11 @@ export function buildPlan(inp: PlanInput): DayPlan {
   const perItem = Math.min(60, Math.max(6, inp.perItemSec || 20))
   const targetQ = Math.round((minMin * 60) / perItem)
 
-  const newN = (tier === 'normal' || tier === 'restart')
-    ? newAllowOf(inp.forgetRate, cfg, inp.hasNew)
-    : 0
+  // 重启档不给新词：文案写的是「新词冻结」，代码也得真冻。
+  // 之前把 restart 也算进 newAllowOf，结果「本单元重学 12 题」里塞的是 6 个
+  // 从没见过的词（教学卡池 fresh 优先），标签和行为对不上：
+  // 断档一周回来的孩子该先补旧的，不该一边说冻结一边上新课。
+  const newN = tier === 'normal' ? newAllowOf(inp.forgetRate, cfg, inp.hasNew) : 0
 
   // 今天能处理多少到期词：按「每词 2 轮（拼写 + 选义）」估容量
   const reviewMin = Math.max(3, Math.round(minMin * 0.42))
@@ -242,10 +244,12 @@ export function buildPlan(inp: PlanInput): DayPlan {
   if (tier !== 'restart') segs.push(seg('warm', '热身', Math.min(3, inp.dueN), Math.min(3, inp.dueN)))
 
   if (tier === 'restart') {
-    // 本单元重学：教学卡为主，不判分；末尾少量判分确认
+    // 先重学旧词：教学卡为主，不判分；末尾少量判分确认
+    // 教的和考的是同一批到期词（qbank 里 taught 传给下一段），所以标签写清楚，
+    // 别再说「本单元」——到期词是按风险排的，跨单元，本来就不是「本单元」。
     const n = 12
-    segs.push(seg('learn', '本单元重学', n, n))
-    segs.push(seg('review', '认回这些词', 8, 8))
+    segs.push(seg('learn', '重学 12 个旧词', n, n))
+    segs.push(seg('review', '拼出刚教的 8 个', 8, 8))
     // 重启档只拼已经学过词的老句子，不引新句
     segs.push(seg('sent', '拼两句老句子', 2, 2))
   } else if (tier === 'settle' || tier === 'recover') {

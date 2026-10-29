@@ -21,8 +21,8 @@ import {
 import { bjAddDays, bjDayKey, bjDiffDays } from '../src/lib/bj'
 import { mergeProgress } from '../src/lib/sync'
 import { buildReport, reportText } from '../src/lib/report'
-import { sentUnitIds, getSentUnit, pickSents, cnDistractors } from '../src/lib/sentbank'
-import { scrambleOrder, judgeSentence } from '../src/lib/qbank'
+import { sentUnitIds, getSentUnit, pickSents, cnDistractors, contentSet, isNearDup } from '../src/lib/sentbank'
+import { scrambleOrder, judgeSentence, buildQBank } from '../src/lib/qbank'
 import type { Progress } from '../src/types'
 import wordsJson from '../src/data/words.json'
 
@@ -598,6 +598,64 @@ t('句子库：中文标点统一全角（半角 ?! 在选项里太扎眼）', (
   }
 })
 
+t('干扰项：不能拿近似句的译文当选项（两个都对 = 孩子必错）', (x: T) => {
+  // 课本同一段常有改写句：
+  //   It takes a few more steps after that before the water becomes clean again.
+  //   It takes a few more steps before the water becomes clean again.
+  // 两句译文都对，一起进选项就是无解题。实测 unit03 有 3 句会踩到。
+  let bad = 0
+  let checked = 0
+  for (const u of sentUnitIds()) {
+    const unit = getSentUnit(u)!
+    for (const s of unit.sents) {
+      const ds = cnDistractors(s, u, 3)
+      const dupeCn = unit.sents
+        .filter(o => o.id !== s.id && isNearDup(contentSet(s.en), contentSet(o.en)))
+        .map(o => o.cn)
+      const hit = ds.filter(d => dupeCn.includes(d))
+      checked++
+      if (hit.length) {
+        bad++
+        if (bad <= 3) x.ck(false, `${s.id} 的选项混入近似句译文：${hit[0]}`)
+      }
+    }
+  }
+  x.ck(bad === 0, `${bad}/${checked} 句的干扰项仍是近似句`)
+})
+
+t('选句：同一批不出近似句（否则两道拼装题是同一题）', (x: T) => {
+  for (const u of sentUnitIds()) {
+    for (const dk of ['2026-10-01', '2026-10-15', '2026-10-29']) {
+      const pick = pickSents({
+        unit: u, dayKey: dk, profileId: 'mix|' + dk,
+        newWords: [], nailWords: [], dueWords: [], count: 4, use: 'mean',
+      })
+      for (let i = 0; i < pick.length; i++) {
+        for (let j = i + 1; j < pick.length; j++) {
+          const v = isNearDup(contentSet(pick[i].en), contentSet(pick[j].en))
+          // 池子太小允许退化，但 7 句以上的单元不该退化
+          const pool = getSentUnit(u)!.sents.length
+          if (pool >= 7) x.ck(!v, `${u}/${dk} 同批出了近似句：${pick[i].en} / ${pick[j].en}`)
+        }
+      }
+    }
+  }
+})
+
+t('选句：读懂段不出「译文带引号」的句子（引号即答案）', (x: T) => {
+  // 正确项唯一带「」、三个干扰项都不带，孩子看标点就能选，等于没考。
+  // 这类句子留给拼装题：那里引号是要拼出来的，反而是考点。
+  for (const u of sentUnitIds()) {
+    const pick = pickSents({
+      unit: u, dayKey: '2026-10-29', profileId: 'q|' + u,
+      newWords: [], nailWords: [], dueWords: [], count: 4, use: 'mean',
+    })
+    const quoted = pick.filter(s => /[“”]/.test(s.cn))
+    const plain = getSentUnit(u)!.sents.filter(s => !/[“”]/.test(s.cn)).length
+    if (plain >= 4) x.eq(quoted.length, 0, `${u} 的读懂题里混进了带引号的句子：${quoted[0]?.cn || ''}`)
+  }
+})
+
 t('拼装乱序：至少 3 处错位', (x: T) => {
   for (const n of [3, 4, 5]) {
     for (const seed of ['a', 'b', 'c', 'd']) {
@@ -679,6 +737,36 @@ t('每日计划：清账期只读不拼，重启期只拼老句', (x: T) => {
   x.eq(restart.tier, 'restart', '断 9 天进重启档')
   x.eq(restart.segs.filter(s => s.k === 'sent').reduce((a, s) => a + s.q, 0), 2, '重启期拼两句老句')
   x.eq(restart.segs.filter(s => s.k === 'mean').reduce((a, s) => a + s.q, 0), 0, '重启期不出句意选择')
+  // 文案写「新词冻结」，newN 就必须是 0。线上实测过一天：标签说冻结，
+  // day_plan.new_n 却是 6，教学卡讲的是 6 个从没见过的词（theatre / germ / road…）
+  x.eq(restart.newN, 0, '重启档不给新词')
+})
+
+t('重启档：教的和考的是同一批词（教 12 考 8）', (x: T) => {
+  // 线上实测：重启档「本单元重学 12 题」实际只出 6 张卡，而且那 6 个是全新词，
+  // 紧接着的 8 道拼写却考到期词——教一批、考另一批，等于白教。
+  const wj = wordsJson as { word: string; cn: string }[]
+  const due = wj.slice(0, 30).map(w => ({ word: w.word, cn: w.cn }))
+  const plan = buildPlan(planIn({ dayKey: '2026-10-29', gapDays: 9, dueN: 30, weakN: 60, nailN: 0, hasNew: true }))
+  const bank = buildQBank({
+    plan, dueWords: due, newWords: [], fileMap: new Map(), profileId: 't', enter: 1,
+  })
+  const teach = bank.qs.filter(q => q.kind === 'teach')
+  x.eq(teach.length, 12, '教学卡 12 张（和计划里的「12 题」对上）')
+
+  const learnSeg = plan.segs.findIndex(s => s.k === 'learn')
+  const nextReview = plan.segs.findIndex((s, i) => i > learnSeg && s.k === 'review')
+  const spelled = bank.qs.filter(q => q.seg === nextReview).map(q => q.word)
+  x.eq(spelled.length, 8, '紧跟的拼写 8 题')
+  x.ck(spelled.every(w => teach.some(t => t.word === w)), `拼写考了没教过的词：${spelled.filter(w => !teach.some(t => t.word === w))[0] || ''}`)
+
+  // 教过的词只能借给紧跟的一段。线上实测：借给所有 review 之后，
+  // 「继续清到期 +23 词」被压成 12 题，整场 45 题变 34 题、必做 33 变 22。
+  const later = plan.segs.map((s, i) => ({ s, i })).filter(x => x.i > nextReview && x.s.k === 'review')
+  for (const { s, i } of later) {
+    const got = bank.qs.filter(q => q.seg === i).length
+    x.eq(got, s.q, `第 ${i + 1} 段应出 ${s.q} 题，实际 ${got}`)
+  }
 })
 
 export default { results }

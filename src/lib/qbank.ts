@@ -273,6 +273,11 @@ export function buildQBank(opts: BuildOpts): QBank {
   const segStart: number[] = []
   /** 当天已经出过的句子 id：同一天两批句子关不能出同一句 */
   const usedSents: string[] = []
+  /** 本关教过的词。重启档要让后面的拼写考「刚教过的」，不能教一批考另一批 */
+  let taught: { word: string; cn: string }[] = []
+  /** taught 只给紧跟着的那一段用一次。分享给后面所有 review 会把「清到期 23 题」
+   *  压成 12 题（线上实测总题数 45 → 34、必做 33 → 22） */
+  let taughtUsed = false
   let n = 0
 
   plan.segs.forEach((s, si) => {
@@ -294,7 +299,8 @@ export function buildQBank(opts: BuildOpts): QBank {
       case 'learn': {
         // 教学卡：音 → 形 → 义 → 音节，必须点「记住了」
         const pool = fresh.length ? fresh : takeDue(s.words)
-        for (const w of pool.slice(0, s.words)) {
+        taught = pool.slice(0, s.words)
+        for (const w of taught) {
           push({ kind: 'teach', word: w.word, cn: cn(w.word), file: fileOf(w.word), scored: false, must: false })
         }
         break
@@ -302,9 +308,15 @@ export function buildQBank(opts: BuildOpts): QBank {
       case 'review':
       case 'recall': {
         // 拼写判分。到了句段之前一定有拼写（方案里定的顺序）
+        // 重启档紧接着教学卡：考刚教过的那批（教 12 考 8），教考分离会让孩子
+        // 在「重学」当天先看 12 张脸生的卡、再拼 8 个没讲过的词，等于白教。
+        // 只在第一段 review 生效：taughtUsed 之后回到正常取词，
+        // 否则「继续清到期 +23 词」会退化成再考一遍那 12 个词。
+        const reuse = plan.tier === 'restart' && taught.length > 0 && !taughtUsed
         const pool = s.k === 'recall'
           ? (fresh.length ? fresh : takeDue(s.words))
-          : takeDue(s.words)
+          : (reuse ? taught.slice(0, s.words) : takeDue(s.words))
+        if (reuse) taughtUsed = true
         for (const w of pool.slice(0, s.words)) {
           const { hint, len } = spellHint(w.word)
           push({

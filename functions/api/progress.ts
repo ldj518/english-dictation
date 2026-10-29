@@ -29,13 +29,26 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     await ensureTable(env)
     const sid = new URL(request.url).searchParams.get('studentId') || ''
     if (!ID_RE.test(sid)) return fail('非法 studentId', 400)
+    // v6.1：断档判定不能只看快照里的 lastDay。
+    // 「每日计划」那条线（第 N/37 天）不写 lastDay，日账只落在 sessions 表，
+    // 结果线上 p1 学到 10-25，lastDay 却停在 10-07 → 被判断档 22 天 → 天天重启档。
+    // 这里把 sessions 的最后一天一并返回，前端合并进断档计算。
+    let lastActiveDay: string | null = null
+    try {
+      const s = await env.DB.prepare(
+        `SELECT MAX(day_key) AS d FROM sessions WHERE student_id = ?`
+      ).bind(sid).first<{ d: string | null }>()
+      lastActiveDay = s?.d || null
+    } catch {
+      // sessions 表尚未建立（全新库）时忽略，不影响主流程
+    }
     const row = await env.DB.prepare(
       `SELECT data, updated_at FROM progress_snapshots WHERE student_id = ?`
     ).bind(sid).first<{ data: string; updated_at: number }>()
-    if (!row) return ok({ data: null, updatedAt: null })
+    if (!row) return ok({ data: null, updatedAt: null, lastActiveDay })
     let data: unknown = null
     try { data = JSON.parse(row.data) } catch { data = null }
-    return ok({ data, updatedAt: row.updated_at })
+    return ok({ data, updatedAt: row.updated_at, lastActiveDay })
   } catch (e) {
     return fail('读取失败: ' + (e as Error).message, 500)
   }

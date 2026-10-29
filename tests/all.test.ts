@@ -819,4 +819,25 @@ t('爬坡起点：按第一次真正完成的日子算，不是迁移日', (x: T
   x.eq(m3.rampFrom, '2026-11-05', '两台设备取更早的完成日')
 })
 
+t('断档：云端 sessions 的最后练习日也算（每日计划这条线不写 lastDay）', (x: T) => {
+  const day = '2026-10-29'
+  // 真实事故：p1 从 10-08 起一直用「每日计划」，这条线只写 sessions 不写 lastDay，
+  // 于是 lastDay 冻在 10-07，被判「断档 22 天」→ 天天重启档
+  const real = { lastDay: '2026-10-07', dayLog: {}, lastActiveDay: '2026-10-25' } as unknown as Progress
+  x.eq(lastStudyDay(real, day), '2026-10-25', '以 sessions 最后一天为准')
+  x.eq(gapDaysOf(real, day), 4, '真实断档 4 天，不是 22 天')
+
+  // 三个来源取最晚：lastDay 10-27 / dayLog 10-28 / sessions 10-25
+  const mixed = {
+    lastDay: '2026-10-27',
+    dayLog: { '2026-10-28': { done: true } },
+    lastActiveDay: '2026-10-25',
+  } as unknown as Progress
+  x.eq(lastStudyDay(mixed, day), '2026-10-28', '三者取最晚')
+
+  // 未来日一律不认（时钟错乱）
+  const future = { lastDay: '2026-10-07', dayLog: {}, lastActiveDay: '2027-01-01' } as unknown as Progress
+  x.eq(gapDaysOf(future, day), 22, '未来日不算学习')
+})
+
 export default { results }

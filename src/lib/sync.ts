@@ -259,10 +259,18 @@ export function progressChanged(a: Progress, b: Progress): boolean {
  * 的唯一可靠路径。
  */
 export async function pullAndMerge(profileId: string): Promise<Progress | null> {
-  const snap = await fetchProgressSnapshot(profileId)
-  if (!snap || typeof snap !== 'object') return null
+  const got = await fetchProgressSnapshot(profileId)
+  if (!got || !got.data || typeof got.data !== 'object') return null
+  const snap = got.data as Progress
   const local = load(profileId)
   const merged = mergeProgress(local, snap as Progress)
+  // 断档判定要认 sessions 里的最后练习日：这条线（每日计划）不写 lastDay，
+  // 缺了它孩子学到 10-25 也会被判成「断档 22 天」→ 直接进重启档
+  if (got.lastActiveDay) {
+    if (!merged.lastActiveDay || got.lastActiveDay > merged.lastActiveDay) {
+      merged.lastActiveDay = got.lastActiveDay
+    }
+  }
   // v3.9.1 清洗：云端快照可能带着历史测试词，合并后、diff 前清掉——
   // 这样 cloudDiffers 检出差异会把清洗版推回云端，本地+云端一次收敛
   purgeTestData(merged)

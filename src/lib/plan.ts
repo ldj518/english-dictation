@@ -337,23 +337,27 @@ export function buildPlan(inp: PlanInput): DayPlan {
 }
 
 /**
- * 上次真正学过的一天 = 老页面打卡（lastDay）与已完成的每日流水线（dayLog.done）取较晚者。
+ * 上次真正学过的一天，三个来源取最晚者：
+ *  ① lastDay          —— 老页面（听写/单元测）打卡
+ *  ② dayLog[k].done   —— 每日流水线结算
+ *  ③ lastActiveDay    —— 云端 sessions 表里最后一条练习记录（服务端算好带回）
  *
- * 只看 lastDay 会漏掉「只用 /today」的孩子：lastDay 由 checkIn 更新，而 checkIn 只在
- * 老页面（听写/单元测）的 submitSession 里调用，每日流水线根本不走那条路。
- * 线上实测：孩子 10-07 之后改用 /today，lastDay 就永远停在 10-07，
- * 之后每天都被判「断档 22 天」→ 天天重启档，新词、听音选义、句意选择全被压掉。
- *
- * 因此 /today 结算达标时要同时写 lastDay（见 store.saveDay），这里再兼容历史数据。
+ * 只看 lastDay 会严重误判，线上踩过两次：
+ *  · 孩子 10-07 之后改用「每日计划」，那条线不写 lastDay → lastDay 冻在 10-07
+ *  · 于是 10-29 被判成「断档 22 天」→ 天天重启档，新词/听音选义/句意选择全被压掉
+ * 实际孩子 10-25 还在学（sessions 有 4 条记录），真实断档只有 4 天。
+ * 所以 ③ 必须进判定——它是唯一能覆盖「每日计划」这条线的证据。
  */
 export function lastStudyDay(p: Progress, dayKey: string): string {
-  let last = p.lastDay || ''
+  const cands: string[] = []
+  if (p.lastDay) cands.push(p.lastDay)
+  if (p.lastActiveDay) cands.push(p.lastActiveDay)
   for (const [k, l] of Object.entries(p.dayLog || {})) {
     if (!l?.done) continue
-    if (bjDiffDays(dayKey, k) < 0) continue     // 时钟错乱的未来日不认
-    if (k > last) last = k
+    cands.push(k)
   }
-  return last
+  // 时钟错乱的未来日不认（否则会算出负断档）
+  return cands.filter(d => bjDiffDays(dayKey, d) >= 0).sort().pop() || ''
 }
 
 /** 距上次真正学习的天数；从没学过返回 0（首次使用不算断档） */

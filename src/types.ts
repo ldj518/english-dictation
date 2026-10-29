@@ -198,6 +198,12 @@ export interface Progress {
   streakDays: number
   /** 最近打卡日期 yyyy-mm-dd */
   lastDay: string
+  /**
+   * 云端 sessions 表里最后一天有练习记录的日子（服务端算好带回来，只读）。
+   * 断档判定必须认它：「每日计划」那条线不写 lastDay，只看 lastDay 会把
+   * 「4 天没学」算成「22 天没学」，一进就是重启档。
+   */
+  lastActiveDay?: string
   /** 已解锁徽章 */
   badges: Record<string, number>
   /** 累计作答数 / 正确数 */

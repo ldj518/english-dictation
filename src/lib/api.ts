@@ -72,13 +72,18 @@ export async function fetchStudents(): Promise<StudentRow[]> {
   return r?.students || []
 }
 
-/** 拉某孩子的进度快照（云端没有返回 null） */
-export async function fetchProgressSnapshot(studentId: string): Promise<unknown | null> {
+/** 拉某孩子的进度快照（云端没有返回 null）。
+ *  lastActiveDay 是服务端从 sessions 表算出的「最后一天有练习记录」，
+ *  专门给断档判定用——「每日计划」那条线不写 progress.lastDay。 */
+export async function fetchProgressSnapshot(
+  studentId: string,
+): Promise<{ data: unknown; lastActiveDay?: string } | null> {
   try {
     const r = await fetch(`${BASE}/progress?studentId=${encodeURIComponent(studentId)}`)
     if (!r.ok) return null
-    const j = await r.json() as { ok: boolean; data?: unknown }
-    return j.ok ? (j.data ?? null) : null
+    const j = await r.json() as { ok: boolean; data?: unknown; lastActiveDay?: string | null }
+    if (!j.ok) return null
+    return { data: j.data ?? null, lastActiveDay: j.lastActiveDay || undefined }
   } catch {
     return null
   }

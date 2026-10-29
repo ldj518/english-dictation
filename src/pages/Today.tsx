@@ -459,8 +459,6 @@ export default function Today() {
     if (phase !== 'wrap' || !plan || !bank) return
     if (savedRef.current === day) return     // 同一天只写一次，防 effect 重入覆盖
     savedRef.current = day
-    // 结算完成 → 断点就没用了，删掉，明天首页不会提示「继续」
-    clearResume(profile.id)
     const perf = [...recs]
     // 先算完成判定再落库：done 是「必做 + 看答案比例」的结论，不能写死 false
     const gate0 = gateCheck({
@@ -468,6 +466,9 @@ export default function Today() {
       mustDone: perf.filter(r => r.must).length, mustTotal: mustAll,
       peekN: perf.filter(r => r.peek).length, qN: perf.length,
     })
+    // 只有真做完才清断点。没做完就点「结束」看一眼的，存档必须留着——
+    // 否则他每次中途退出，第二天又是从第 1 题重来，断点续做等于白做。
+    if (gate0.done) clearResume(profile.id)
     const qN = perf.filter(r => !r.peek).length
     const rightN = perf.filter(r => !r.peek && r.correct).length
     const peekN = perf.filter(r => r.peek).length

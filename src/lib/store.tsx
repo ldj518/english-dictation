@@ -5,7 +5,7 @@ import {
   loadProfiles, saveProfiles, activeProfileId, setActiveProfileId, reset as resetProgress,
   setDeviceOwner, hasLearningData, purgeTestData, logWrong, migrateV4,
 } from './storage'
-import { gradeWord, type WordState } from './memory'
+import { gradeWord, type WordState, type Channel } from './memory'
 import type { DayLog, LiveSession, TestRun } from '../types'
 import type { TestItem } from './gate'
 import type { StudyConfig } from './plan'
@@ -68,7 +68,7 @@ interface Ctx {
   /* ── v4：词级记忆调度（Today 页面专用）────────────────── */
 
   /** 判一个词：写 wordState（S/lapses/streak/master），答错同时记进错词本 */
-  gradeOne: (word: string, correct: boolean, opts?: { hinted?: boolean; fast?: boolean }) => void
+  gradeOne: (word: string, correct: boolean, opts?: { hinted?: boolean; fast?: boolean; channel?: Channel }) => void
   /** 保存当日会话账本（战报/后台/续做都读它） */
   saveDay: (log: DayLog) => void
   /** 记一次测验（v5）：本地 append + 上报 test_runs */
@@ -464,7 +464,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
    * 答错时同步进错词本，保证老页面（错词本/复习）还能看到——双写期不丢功能。
    */
   const gradeOne = useCallback((word: string, correct: boolean,
-    opts?: { hinted?: boolean; fast?: boolean }) => {
+    opts?: { hinted?: boolean; fast?: boolean; channel?: Channel }) => {
+    // 看答案的题：S 归 1，不进通道判定——它本来就不算一次作答
     setProgress(p => {
       const cur = p.wordState?.[word]
       const next = gradeWord(cur, correct, opts)

@@ -1,0 +1,494 @@
+{
+ "version": 1,
+ "unit": "unit06",
+ "unitName": "Unit 6 Home Sweet Home",
+ "sents": [
+  {
+   "id": "u6-01",
+   "en": "Sorry, I have to clean the bathroom now.",
+   "cn": "抱歉，我现在得打扫浴室。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "bathroom"
+   ],
+   "blocks": [
+    "Sorry, I have to clean the bathroom now."
+   ],
+   "src": "text",
+   "no": 41,
+   "ms0": 106488,
+   "ms1": 110088
+  },
+  {
+   "id": "u6-02",
+   "en": "Mum, can I invite my friends to our new house?",
+   "cn": "妈妈，我可以邀请朋友们来我们的新家吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "invite"
+   ],
+   "blocks": [
+    "Mum, can I invite my friends to our new house?"
+   ],
+   "src": "text",
+   "no": 72,
+   "ms0": 156708,
+   "ms1": 161352
+  },
+  {
+   "id": "u6-03",
+   "en": "Yes, but now we need to get ready for their arrival.",
+   "cn": "是啊，不过现在我们得为他们的到来做准备。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "arrival"
+   ],
+   "blocks": [
+    "Yes, but now we need",
+    "to get ready",
+    "for their arrival."
+   ],
+   "src": "text",
+   "no": 85,
+   "ms0": 194400,
+   "ms1": 198576
+  },
+  {
+   "id": "u6-04",
+   "en": "Well, it's not \"grandma clean\" yet!",
+   "cn": "不过还没达到“奶奶标准的干净”！",
+   "cnFixed": false,
+   "level": "S5",
+   "gram": [
+    "quote",
+    "neg"
+   ],
+   "words": [
+    "yet"
+   ],
+   "blocks": [
+    "Well, it's not \"grandma clean\" yet!"
+   ],
+   "src": "text",
+   "no": 88,
+   "ms0": 203796,
+   "ms1": 206964
+  },
+  {
+   "id": "u6-05",
+   "en": "Dad, could you please give me a lift to the shop this afternoon?",
+   "cn": "爸爸，今天下午你能载我去商店吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "lift"
+   ],
+   "blocks": [
+    "Dad, could you please give me a lift to the shop this afternoon?"
+   ],
+   "src": "text",
+   "no": 130,
+   "ms0": 310500,
+   "ms1": 314964
+  },
+  {
+   "id": "u6-06",
+   "en": "Helen, can I borrow your chess set?",
+   "cn": "海伦，我能借下你的棋具吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "borrow"
+   ],
+   "blocks": [
+    "Helen, can I borrow your chess set?"
+   ],
+   "src": "text",
+   "no": 132,
+   "ms0": 318708,
+   "ms1": 321156
+  },
+  {
+   "id": "u6-07",
+   "en": "Sorry, Jim, but you have to pack up your things first.",
+   "cn": "抱歉，吉姆，你得先把东西打包好。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "pack"
+   ],
+   "blocks": [
+    "Sorry, Jim,",
+    "but you have to pack",
+    "up your things first."
+   ],
+   "src": "text",
+   "no": 143,
+   "ms0": 345312,
+   "ms1": 349488
+  },
+  {
+   "id": "u6-08",
+   "en": "Can I stay out until eleven?",
+   "cn": "我可以在外面待到十一点吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "modal",
+    "clause"
+   ],
+   "words": [
+    "until"
+   ],
+   "blocks": [
+    "Can I stay out until eleven?"
+   ],
+   "src": "text",
+   "no": 151,
+   "ms0": 366264,
+   "ms1": 369180
+  },
+  {
+   "id": "u6-09",
+   "en": "Can I go to the movies?",
+   "cn": "我可以去看电影吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "movie"
+   ],
+   "blocks": [
+    "Can I go to the movies?"
+   ],
+   "src": "text",
+   "no": 160,
+   "ms0": 388764,
+   "ms1": 390960
+  },
+  {
+   "id": "u6-10",
+   "en": "Grandpa helped us pull the heavy luggage into the house.",
+   "cn": "外公帮我们把沉重的行李拉进屋里。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "pull",
+    "luggage"
+   ],
+   "blocks": [
+    "Grandpa helped us pull the heavy luggage",
+    "into the house."
+   ],
+   "src": "text",
+   "no": 192,
+   "ms0": 491832,
+   "ms1": 496692
+  },
+  {
+   "id": "u6-11",
+   "en": "\"Ah, home again!\" said Mum with a smile on her face.",
+   "cn": "“啊，又回家了！”妈妈脸上带着微笑说。",
+   "cnFixed": false,
+   "level": "S5",
+   "gram": [
+    "quote"
+   ],
+   "words": [
+    "ah"
+   ],
+   "blocks": [
+    "\"Ah, home again!\" said Mum",
+    "with a smile",
+    "on her face."
+   ],
+   "src": "text",
+   "no": 193,
+   "ms0": 496692,
+   "ms1": 501372
+  },
+  {
+   "id": "u6-12",
+   "en": "\"Mm, the familiar taste of home!\" said Mum.",
+   "cn": "“嗯，这就是熟悉的家的味道！”妈妈感慨道。",
+   "cnFixed": false,
+   "level": "S5",
+   "gram": [
+    "quote"
+   ],
+   "words": [
+    "mm",
+    "familiar"
+   ],
+   "blocks": [
+    "\"Mm, the familiar taste of home!\" said Mum."
+   ],
+   "src": "text",
+   "no": 203,
+   "ms0": 537408,
+   "ms1": 541800
+  },
+  {
+   "id": "u6-13",
+   "en": "During the dinner, my uncle told us some jokes and we had a good laugh.",
+   "cn": "吃饭的时候，舅舅还讲了几个笑话，把我们逗得哈哈大笑。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "joke"
+   ],
+   "blocks": [
+    "During the dinner,",
+    "my uncle told us some jokes and we had a good laugh."
+   ],
+   "src": "text",
+   "no": 204,
+   "ms0": 541800,
+   "ms1": 547452
+  },
+  {
+   "id": "u6-14",
+   "en": "Several days later when we were leaving, Grandma held my hands and asked us, \"Will you come home more often?\"",
+   "cn": "几天后，我们准备离开时，外婆拉着我的手问我们：“你们会常回家看看吗？”",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "progressive",
+    "past",
+    "future",
+    "clause",
+    "quote"
+   ],
+   "words": [
+    "several"
+   ],
+   "blocks": [
+    "Several days later when we were leaving, Grandma held my hands and asked us, \"Will you come home more often?\""
+   ],
+   "src": "text",
+   "no": 205,
+   "ms0": 547452,
+   "ms1": 555624
+  },
+  {
+   "id": "u6-15",
+   "en": "Mum nodded, with tears in her eyes.",
+   "cn": "妈妈点了点头，眼中噙着泪水。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "nod"
+   ],
+   "blocks": [
+    "Mum nodded, with tears",
+    "in her eyes."
+   ],
+   "src": "text",
+   "no": 206,
+   "ms0": 555624,
+   "ms1": 559404
+  },
+  {
+   "id": "u6-16",
+   "en": "Where did the writer go for the Spring Festival?",
+   "cn": "作者在春节时去了哪里？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "writer"
+   ],
+   "blocks": [
+    "Where did the writer go for the Spring Festival?"
+   ],
+   "src": "text",
+   "no": 207,
+   "ms0": 559404,
+   "ms1": 563112
+  },
+  {
+   "id": "u6-17",
+   "en": "In the text, what words are used to describe people's feelings?",
+   "cn": "文中用了哪些词汇描述人物的情感？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "text",
+    "describe"
+   ],
+   "blocks": [
+    "In the text, what words are used to describe people's feelings?"
+   ],
+   "src": "text",
+   "no": 209,
+   "ms0": 566064,
+   "ms1": 571032
+  },
+  {
+   "id": "u6-18",
+   "en": "Grandpa helped us pull our luggage into the house.",
+   "cn": "外公帮我们把沉重的行李拉进屋里。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "pull",
+    "luggage"
+   ],
+   "blocks": [
+    "Grandpa helped us pull our luggage",
+    "into the house."
+   ],
+   "src": "text",
+   "no": 213,
+   "ms0": 584460,
+   "ms1": 589248
+  },
+  {
+   "id": "u6-19",
+   "en": "It was fun to decorate your room last month.",
+   "cn": "上个月一起布置你的房间真的很有意思。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "decorate"
+   ],
+   "blocks": [
+    "It was fun",
+    "to decorate your room last month."
+   ],
+   "src": "text",
+   "no": 222,
+   "ms0": 618264,
+   "ms1": 621684
+  },
+  {
+   "id": "u6-20",
+   "en": "There are cute animals on them, but the animals look too childish for us.",
+   "cn": "上面有一些可爱的动物，但这些动物对我们来说太幼稚了。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "therebe"
+   ],
+   "words": [
+    "childish"
+   ],
+   "blocks": [
+    "There are cute animals on them,",
+    "but the animals look too childish for us."
+   ],
+   "src": "text",
+   "no": 226,
+   "ms0": 635040,
+   "ms1": 640584
+  },
+  {
+   "id": "u6-21",
+   "en": "We want to cover the animals and paint the walls with warm colours.",
+   "cn": "我们想把这些动物遮住，给墙壁涂上暖色调。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "cover"
+   ],
+   "blocks": [
+    "We want",
+    "to cover the animals and paint the walls",
+    "with warm colours."
+   ],
+   "src": "text",
+   "no": 227,
+   "ms0": 640584,
+   "ms1": 645336
+  },
+  {
+   "id": "u6-22",
+   "en": "Wait until the elders are seated before taking your seat, and wait for them to start eating first.",
+   "cn": "等长辈落座后再入座，在他们动筷后再开吃。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "past",
+    "clause"
+   ],
+   "words": [
+    "until"
+   ],
+   "blocks": [
+    "Wait until the elders are seated",
+    "before taking your seat, and wait for them",
+    "to start eating first."
+   ],
+   "src": "text",
+   "no": 283,
+   "ms0": 796644,
+   "ms1": 804420
+  },
+  {
+   "id": "u6-23",
+   "en": "Cover your mouth with your hand when using a toothpick.",
+   "cn": "使用牙签时要用手遮住嘴巴。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "clause"
+   ],
+   "words": [
+    "cover"
+   ],
+   "blocks": [
+    "Cover your mouth",
+    "with your hand",
+    "when using a toothpick."
+   ],
+   "src": "text",
+   "no": 287,
+   "ms0": 820836,
+   "ms1": 825372
+  }
+ ]
+}

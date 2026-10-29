@@ -1,0 +1,584 @@
+{
+ "version": 1,
+ "unit": "unit03",
+ "unitName": "Unit 3 A Day to Remember",
+ "sents": [
+  {
+   "id": "u3-01",
+   "en": "What did Peter like about the museum?",
+   "cn": "彼得喜欢博物馆的什么？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "museum"
+   ],
+   "blocks": [
+    "What did Peter like about the museum?"
+   ],
+   "src": "text",
+   "no": 23,
+   "ms0": 69552,
+   "ms1": 72576
+  },
+  {
+   "id": "u3-02",
+   "en": "How was your school trip to the wastewater plant?",
+   "cn": "你们去污水处理厂的游学之旅怎么样？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "wastewater",
+    "plant"
+   ],
+   "blocks": [
+    "How was your school trip to the wastewater plant?"
+   ],
+   "src": "text",
+   "no": 98,
+   "ms0": 230004,
+   "ms1": 233496
+  },
+  {
+   "id": "u3-03",
+   "en": "Then, special screens remove large pieces of waste from the water.",
+   "cn": "然后，特制的滤网会把水里的大块垃圾过滤掉。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "remove",
+    "piece",
+    "waste"
+   ],
+   "blocks": [
+    "Then, special screens remove large pieces of waste",
+    "from the water."
+   ],
+   "src": "text",
+   "no": 108,
+   "ms0": 256212,
+   "ms1": 261036
+  },
+  {
+   "id": "u3-04",
+   "en": "Well, large machines remove germs and other things from the water.",
+   "cn": "嗯，大型机器会去除水中的细菌和其他杂质。",
+   "cnFixed": true,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "machine",
+    "remove",
+    "germ"
+   ],
+   "blocks": [
+    "Well, large machines remove germs and other things",
+    "from the water."
+   ],
+   "src": "text",
+   "no": 110,
+   "ms0": 263160,
+   "ms1": 268848
+  },
+  {
+   "id": "u3-05",
+   "en": "It takes a few more steps after that before the water becomes clean again.",
+   "cn": "之后还需要几个步骤，水才能重新变得干净。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "clause"
+   ],
+   "words": [
+    "step"
+   ],
+   "blocks": [
+    "It takes a few more steps after that",
+    "before the water becomes clean again."
+   ],
+   "src": "text",
+   "no": 112,
+   "ms0": 271836,
+   "ms1": 277236
+  },
+  {
+   "id": "u3-06",
+   "en": "The plant turned dirty water into clean water.",
+   "cn": "这个工厂把脏水变成干净的水。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "plant",
+    "into"
+   ],
+   "blocks": [
+    "The plant turned dirty water",
+    "into clean water."
+   ],
+   "src": "text",
+   "no": 130,
+   "ms0": 327636,
+   "ms1": 331488
+  },
+  {
+   "id": "u3-07",
+   "en": "Then the plant uses screens to remove large pieces of waste from the dirty water.",
+   "cn": "然后，工厂用滤网过滤掉脏水中的大块垃圾。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "plant",
+    "remove",
+    "piece",
+    "waste"
+   ],
+   "blocks": [
+    "Then the plant uses screens",
+    "to remove large pieces of waste",
+    "from the dirty water."
+   ],
+   "src": "text",
+   "no": 133,
+   "ms0": 340380,
+   "ms1": 347472
+  },
+  {
+   "id": "u3-08",
+   "en": "Next, large machines clean the water.",
+   "cn": "接着，大型机器对水进行清洁。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "machine"
+   ],
+   "blocks": [
+    "Next, large machines clean the water."
+   ],
+   "src": "text",
+   "no": 134,
+   "ms0": 347472,
+   "ms1": 351252
+  },
+  {
+   "id": "u3-09",
+   "en": "It takes a few more steps before the water becomes clean again.",
+   "cn": "再经过几个步骤，水才会重新变得干净。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "clause"
+   ],
+   "words": [
+    "step"
+   ],
+   "blocks": [
+    "It takes a few more steps",
+    "before the water becomes clean again."
+   ],
+   "src": "text",
+   "no": 136,
+   "ms0": 354744,
+   "ms1": 359964
+  },
+  {
+   "id": "u3-10",
+   "en": "Did you see anything interesting at the science museum yesterday?",
+   "cn": "你昨天在科学博物馆看到了什么有趣的东西吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "museum"
+   ],
+   "blocks": [
+    "Did you see anything interesting at the science museum yesterday?"
+   ],
+   "src": "text",
+   "no": 156,
+   "ms0": 406224,
+   "ms1": 411408
+  },
+  {
+   "id": "u3-11",
+   "en": "There was a space exhibition.",
+   "cn": "那里有一个太空展览。",
+   "cnFixed": true,
+   "level": "S1",
+   "gram": [
+    "past",
+    "therebe"
+   ],
+   "words": [
+    "exhibition"
+   ],
+   "blocks": [
+    "There was a space exhibition."
+   ],
+   "src": "text",
+   "no": 158,
+   "ms0": 413064,
+   "ms1": 415620
+  },
+  {
+   "id": "u3-12",
+   "en": "Did Teng Fei give the tourists the right directions last weekend?",
+   "cn": "上个周末，腾飞给游客们指对路了吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "direction"
+   ],
+   "blocks": [
+    "Did Teng Fei give the tourists the right directions last weekend?"
+   ],
+   "src": "text",
+   "no": 160,
+   "ms0": 417276,
+   "ms1": 422568
+  },
+  {
+   "id": "u3-13",
+   "en": "We went to a wastewater plant.",
+   "cn": "我们去了污水处理厂。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "wastewater",
+    "plant"
+   ],
+   "blocks": [
+    "We went",
+    "to a wastewater plant."
+   ],
+   "src": "text",
+   "no": 165,
+   "ms0": 431856,
+   "ms1": 434484
+  },
+  {
+   "id": "u3-14",
+   "en": "We saw many things such as old photos, paintings, and guns.",
+   "cn": "我们看见了许多物品，比如老照片、画作和枪支。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "gun"
+   ],
+   "blocks": [
+    "We saw",
+    "many things such as old photos, paintings, and guns."
+   ],
+   "src": "text",
+   "no": 188,
+   "ms0": 518436,
+   "ms1": 523872
+  },
+  {
+   "id": "u3-15",
+   "en": "We walked along the mountain roads and thought about the past.",
+   "cn": "我们走在山路上，回想着过去。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "along",
+    "road"
+   ],
+   "blocks": [
+    "We walked",
+    "along the mountain roads and thought",
+    "about the past."
+   ],
+   "src": "text",
+   "no": 190,
+   "ms0": 527724,
+   "ms1": 532080
+  },
+  {
+   "id": "u3-16",
+   "en": "Many people back then worked hard to create what we have today.",
+   "cn": "那时候，很多人辛勤工作，才有了我们今天的生活。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "create"
+   ],
+   "blocks": [
+    "Many people",
+    "back then worked hard",
+    "to create what we have today."
+   ],
+   "src": "text",
+   "no": 191,
+   "ms0": 532080,
+   "ms1": 537120
+  },
+  {
+   "id": "u3-17",
+   "en": "Do you keep a diary?",
+   "cn": "你有写日记的习惯吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "diary"
+   ],
+   "blocks": [
+    "Do you keep a diary?"
+   ],
+   "src": "text",
+   "no": 199,
+   "ms0": 567180,
+   "ms1": 569268
+  },
+  {
+   "id": "u3-18",
+   "en": "Do you think it is a good idea to keep a diary?",
+   "cn": "你认为写日记好吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "diary"
+   ],
+   "blocks": [
+    "Do you think it is a good idea to keep a diary?"
+   ],
+   "src": "text",
+   "no": 200,
+   "ms0": 569268,
+   "ms1": 572868
+  },
+  {
+   "id": "u3-19",
+   "en": "In the morning, we explored the farm.",
+   "cn": "上午，我们参观了农场。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "explore"
+   ],
+   "blocks": [
+    "In the morning,",
+    "we explored the farm."
+   ],
+   "src": "text",
+   "no": 211,
+   "ms0": 603540,
+   "ms1": 606816
+  },
+  {
+   "id": "u3-20",
+   "en": "There were large tents with tomatoes, cucumbers, and many other fruits and vegetables.",
+   "cn": "那里有种满了番茄、黄瓜和许多其他果蔬的大棚。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past",
+    "therebe"
+   ],
+   "words": [
+    "tent",
+    "cucumber"
+   ],
+   "blocks": [
+    "There were large tents with tomatoes, cucumbers,",
+    "and many other fruits and vegetables."
+   ],
+   "src": "text",
+   "no": 212,
+   "ms0": 606816,
+   "ms1": 613152
+  },
+  {
+   "id": "u3-21",
+   "en": "Then we got straight to work!",
+   "cn": "然后，我们就开始干活了！",
+   "cnFixed": false,
+   "level": "S5",
+   "gram": [],
+   "words": [
+    "straight"
+   ],
+   "blocks": [
+    "Then we got",
+    "straight to work!"
+   ],
+   "src": "text",
+   "no": 215,
+   "ms0": 625212,
+   "ms1": 627804
+  },
+  {
+   "id": "u3-22",
+   "en": "Slowly, we filled many baskets.",
+   "cn": "慢慢地，我们的篮子一个个装满了。",
+   "cnFixed": true,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "fill",
+    "basket"
+   ],
+   "blocks": [
+    "Slowly, we filled",
+    "many baskets."
+   ],
+   "src": "text",
+   "no": 218,
+   "ms0": 635832,
+   "ms1": 639540
+  },
+  {
+   "id": "u3-23",
+   "en": "In the afternoon, the farmer taught us how to cut branches and leaves from tomato plants.",
+   "cn": "下午，农场主教我们如何剪掉番茄植株的枝叶。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "teach",
+    "branch",
+    "leaf",
+    "plant"
+   ],
+   "blocks": [
+    "In the afternoon,",
+    "the farmer taught us how",
+    "to cut branches and leaves",
+    "from tomato plants."
+   ],
+   "src": "text",
+   "no": 219,
+   "ms0": 639540,
+   "ms1": 646092
+  },
+  {
+   "id": "u3-24",
+   "en": "Finally, we watered the plants.",
+   "cn": "最后，我们还给植物浇水。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "finally",
+    "plant"
+   ],
+   "blocks": [
+    "Finally, we watered the plants."
+   ],
+   "src": "text",
+   "no": 221,
+   "ms0": 649080,
+   "ms1": 652176
+  },
+  {
+   "id": "u3-25",
+   "en": "My mum cooked some for dinner, and they were fresh and delicious!",
+   "cn": "我妈妈煮了一些当晚餐，吃起来新鲜又美味！",
+   "cnFixed": false,
+   "level": "S5",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "fresh"
+   ],
+   "blocks": [
+    "My mum cooked some for dinner,",
+    "and they were fresh and delicious!"
+   ],
+   "src": "text",
+   "no": 228,
+   "ms0": 671976,
+   "ms1": 676548
+  },
+  {
+   "id": "u3-26",
+   "en": "They certainly taste better when you work for them!",
+   "cn": "只有辛勤劳作，食物才会变得更加美味！",
+   "cnFixed": false,
+   "level": "S5",
+   "gram": [
+    "clause"
+   ],
+   "words": [
+    "certainly"
+   ],
+   "blocks": [
+    "They certainly taste better",
+    "when you work for them!"
+   ],
+   "src": "text",
+   "no": 229,
+   "ms0": 676548,
+   "ms1": 680112
+  },
+  {
+   "id": "u3-27",
+   "en": "What do you think \"Every grain comes from hard work\" means?",
+   "cn": "你认为“粒粒皆辛苦”是什么意思？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "quote"
+   ],
+   "words": [
+    "grain"
+   ],
+   "blocks": [
+    "What do you think \"Every grain comes from hard work\" means?"
+   ],
+   "src": "text",
+   "no": 244,
+   "ms0": 722268,
+   "ms1": 726804
+  },
+  {
+   "id": "u3-28",
+   "en": "Do you agree with Sam that food tastes better when you work for it?",
+   "cn": "你认同萨姆说的“通过自己劳动得来的食物尝起来更美味”吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "clause"
+   ],
+   "words": [
+    "agree"
+   ],
+   "blocks": [
+    "Do you agree with Sam that food tastes better when you work for it?"
+   ],
+   "src": "text",
+   "no": 245,
+   "ms0": 726804,
+   "ms1": 731880
+  }
+ ]
+}

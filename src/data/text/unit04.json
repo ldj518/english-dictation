@@ -1,0 +1,274 @@
+{
+ "version": 1,
+ "unit": "unit04",
+ "unitName": "Once upon a Time",
+ "unitNameCn": "从前",
+ "stories": [
+  {
+   "id": "u4-ugly-duckling",
+   "title": "The Ugly Duckling",
+   "titleCn": "丑小鸭",
+   "section": "Section B",
+   "paraCount": 7,
+   "sents": [
+    {
+     "no": 4,
+     "en": "Once upon a time, there was a mother duck.",
+     "cn": "从前，有一只鸭妈妈。",
+     "ms0": 601704,
+     "ms1": 605304,
+     "para": 0
+    },
+    {
+     "no": 5,
+     "en": "She had six little ducklings.",
+     "cn": "她孵出了六只小鸭子。",
+     "ms0": 605304,
+     "ms1": 607896,
+     "para": 0
+    },
+    {
+     "no": 6,
+     "en": "Five of the ducklings were small and yellow, but the last duckling was big and grey.",
+     "cn": "五只小鸭子又小又黄，可最后一只又大又灰。",
+     "ms0": 607896,
+     "ms1": 614376,
+     "para": 0
+    },
+    {
+     "no": 7,
+     "en": "\"He doesn't look like us!\"",
+     "cn": "“他长得跟我们不一样！”",
+     "ms0": 614376,
+     "ms1": 616464,
+     "para": 1
+    },
+    {
+     "no": 8,
+     "en": "\"What an ugly duckling!\" the other ducklings said.",
+     "cn": "“多丑的小鸭子啊！”其他小鸭子说。",
+     "ms0": 616464,
+     "ms1": 620820,
+     "para": 1
+    },
+    {
+     "no": 9,
+     "en": "\"That's not nice!\" said Mother Duck.",
+     "cn": "“这话可不好听！”鸭妈妈说。",
+     "ms0": 620820,
+     "ms1": 624600,
+     "para": 1
+    },
+    {
+     "no": 10,
+     "en": "\"He's still a duck like us!\"",
+     "cn": "“他跟我们一样，也是只鸭子！”",
+     "ms0": 624600,
+     "ms1": 627480,
+     "para": 1
+    },
+    {
+     "no": 11,
+     "en": "In the river, the ugly duckling swam well, just like all the other ducklings.",
+     "cn": "在河里，丑小鸭游得很好，跟其他小鸭子一样。",
+     "ms0": 627480,
+     "ms1": 633996,
+     "para": 2
+    },
+    {
+     "no": 12,
+     "en": "But the other ducklings still laughed at him and told him to go away.",
+     "cn": "可其他小鸭子还是嘲笑他，还让他走开。",
+     "ms0": 633996,
+     "ms1": 639288,
+     "para": 2
+    },
+    {
+     "no": 13,
+     "en": "It made the poor duckling very sad, so he decided to search for a new home.",
+     "cn": "这让可怜的丑小鸭很难过，于是他决定去找一个新家。",
+     "ms0": 639288,
+     "ms1": 645552,
+     "para": 3
+    },
+    {
+     "no": 14,
+     "en": "He met many other birds, but all of them thought that he was ugly too.",
+     "cn": "他遇到很多别的鸟，可它们都觉得他也丑。",
+     "ms0": 645552,
+     "ms1": 651420,
+     "para": 3
+    },
+    {
+     "no": 15,
+     "en": "They did not want him to live with them.",
+     "cn": "它们不愿让他和自己住在一起。",
+     "ms0": 651420,
+     "ms1": 654804,
+     "para": 3
+    },
+    {
+     "no": 16,
+     "en": "One day, the duckling met a cat and a hen.",
+     "cn": "一天，小鸭子遇到一只猫和一只母鸡。",
+     "ms0": 654804,
+     "ms1": 658656,
+     "para": 4
+    },
+    {
+     "no": 17,
+     "en": "\"May I stay with you?\" he asked hopefully.",
+     "cn": "“我可以和你们住在一起吗？”他满怀希望地问。",
+     "ms0": 658656,
+     "ms1": 662436,
+     "para": 4
+    },
+    {
+     "no": 18,
+     "en": "But the two animals said no.",
+     "cn": "可那两只动物说不行。",
+     "ms0": 662436,
+     "ms1": 665244,
+     "para": 4
+    },
+    {
+     "no": 19,
+     "en": "They did not like him because he could not purr or lay eggs!",
+     "cn": "它们不喜欢他，因为他既不会打呼噜，也不会下蛋。",
+     "ms0": 665244,
+     "ms1": 670212,
+     "para": 4
+    },
+    {
+     "no": 20,
+     "en": "Some days later, the ugly duckling came to a lake.",
+     "cn": "几天后，丑小鸭来到一个湖边。",
+     "ms0": 670212,
+     "ms1": 674892,
+     "para": 5
+    },
+    {
+     "no": 21,
+     "en": "There, he saw three beautiful swans with long necks and white feathers.",
+     "cn": "在那里，他看到三只美丽的天鹅，脖子长长的，羽毛雪白。",
+     "ms0": 674892,
+     "ms1": 680688,
+     "para": 5
+    },
+    {
+     "no": 22,
+     "en": "\"I wish I looked like you!\" he cried.",
+     "cn": "“我真希望自己长得像你们一样！”他喊道。",
+     "ms0": 680688,
+     "ms1": 684468,
+     "para": 5
+    },
+    {
+     "no": 23,
+     "en": "\"My friend, you do look like us!\"",
+     "cn": "“朋友，你确实长得和我们一样！”",
+     "ms0": 684468,
+     "ms1": 687492,
+     "para": 6
+    },
+    {
+     "no": 24,
+     "en": "\"Look in the water!\" one of the swans said.",
+     "cn": "“看看水里！”其中一只天鹅说。",
+     "ms0": 687492,
+     "ms1": 691092,
+     "para": 6
+    },
+    {
+     "no": 25,
+     "en": "The duckling looked down, and to his surprise, he saw that he was a beautiful white swan too.",
+     "cn": "小鸭子低头一看，让他吃惊的是，他发现自己也是一只美丽的白天鹅。",
+     "ms0": 691092,
+     "ms1": 698364,
+     "para": 6
+    }
+   ]
+  },
+  {
+   "id": "u4-genie",
+   "title": "The Fisherman and the Genie",
+   "titleCn": "渔夫与精灵",
+   "section": "Section B",
+   "paraCount": 3,
+   "sents": [
+    {
+     "no": 46,
+     "en": "Once upon a time, a fisherman caught a bottle in his fishing net.",
+     "cn": "从前，一个渔夫在渔网里捞到一个瓶子。",
+     "ms0": 774540,
+     "ms1": 779508,
+     "para": 0
+    },
+    {
+     "no": 47,
+     "en": "When he opened it, a great cloud came out and became a genie.",
+     "cn": "他打开瓶子，一团巨大的烟雾冒出来，变成了一个精灵。",
+     "ms0": 779508,
+     "ms1": 784512,
+     "para": 0
+    },
+    {
+     "no": 48,
+     "en": "\"Prepare to die!\" shouted the genie.",
+     "cn": "“准备受死吧！”精灵喊道。",
+     "ms0": 784512,
+     "ms1": 788148,
+     "para": 1
+    },
+    {
+     "no": 49,
+     "en": "\"A long time ago, I made a promise.",
+     "cn": "“很久以前，我许下过一个诺言。",
+     "ms0": 788148,
+     "ms1": 791208,
+     "para": 2
+    },
+    {
+     "no": 50,
+     "en": "If someone set me free, I would make them rich and powerful.",
+     "cn": "谁要是放我出来，我就让他又有钱又有势。",
+     "ms0": 791208,
+     "ms1": 795744,
+     "para": 2
+    },
+    {
+     "no": 51,
+     "en": "But no one ever came.",
+     "cn": "可一直没有人来。",
+     "ms0": 795744,
+     "ms1": 797796,
+     "para": 2
+    },
+    {
+     "no": 52,
+     "en": "After years and years of waiting, I became very angry.",
+     "cn": "年复一年地等，我变得非常愤怒。",
+     "ms0": 797796,
+     "ms1": 802620,
+     "para": 2
+    },
+    {
+     "no": 53,
+     "en": "If anyone set me free, I would kill them instead of giving them anything.",
+     "cn": "现在谁放我出来，我就杀了他，什么也不给。",
+     "ms0": 802620,
+     "ms1": 808380,
+     "para": 2
+    },
+    {
+     "no": 54,
+     "en": "So, you must die!\"",
+     "cn": "所以，你必须死！”",
+     "ms0": 808380,
+     "ms1": 810576,
+     "para": 2
+    }
+   ]
+  }
+ ]
+}

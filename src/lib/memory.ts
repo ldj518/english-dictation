@@ -49,11 +49,37 @@ export function newState(now = Date.now()): WordState {
   return { S: 1, due: bjAddDays(bjDayKey(now), 1), lapses: 0, streak: 0, master: 0, at: now, ok: 0, n: 0 }
 }
 
+/**
+ * 作答通道。决定「答对」到底算什么会了。
+ *
+ *  认得档：pick（听音选义）/ sent（句子拼装）/ mean（句意选择）
+ *    这几关的正确答案就摆在眼前，选对了只能说明「认得」，
+ *    不能证明会写。所以 S 最多推到 4（刚好跨进「已掌握」的门槛），
+ *    不进连续答对，永远不可能靠选择题毕业。
+ *
+ *  产出档：spell（拼写）/ paper（纸笔）/ dict（整句听写）
+ *    从零写出来才算真会，正常翻倍、正常累计 streak、能毕业。
+ *
+ * 为什么必须分：原来只有一个入口，且同一个词当天只判一次（gradedRef 去重）。
+ * 如果当天的识别题排在拼写题前面，这个词的记忆状态就由那一次选择题定下来了，
+ * 后面真正写出来的那次反而不记——「会选被记成会写」，实测已经攒了 449 条脏数据。
+ */
+export type Channel = 'pick' | 'sent' | 'mean' | 'spell' | 'paper' | 'dict'
+
+/** 认得档通道：答对只推到这个强度，不进 streak */
+const RECOGNIZE_CAP = 4
+
+function isRecognize(ch?: Channel): boolean {
+  return ch === 'pick' || ch === 'sent' || ch === 'mean'
+}
+
 export interface GradeOpts {
   /** 用了提示（首字母/音节/看答案后重做）→ 只涨 1.5 倍 */
   hinted?: boolean
   /** 速答（<1.5 秒）→ 只涨 1.5 倍，不进 streak */
   fast?: boolean
+  /** 作答通道，不传按产出档处理（兼容老调用点） */
+  channel?: Channel
   /** 覆写当前时间（单测用） */
   now?: number
 }
@@ -78,6 +104,22 @@ export function gradeWord(prev: WordState | undefined, correct: boolean, opts: G
   }
 
   cur.ok += 1
+
+  if (isRecognize(opts.channel)) {
+    // 认得档：往 4 推，但绝不往下拉。
+    // 已经练到 S=8 的词，某天被选择题答对一次，不能因此降回 4——
+    // 那不是「学得少了」，只是换了个通道考。
+    const bump = Math.max(cur.S, Math.min(RECOGNIZE_CAP, cur.S * 1.5))
+    cur.S = Math.min(S_MAX, Math.max(1, Math.round(bump * 10) / 10))
+    // streak / master 只升不降：
+    //  - streak 不重置，否则一个快毕业的词做了一道选择题就被打回原点，纯属冤
+    //  - streak 也不递增，认得不能算独立答对，否则靠选择题就能毕业
+    //  - master 跟着 S 走，但只往上抬（S≥4 算已掌握），不会被选择题抬到毕业
+    if (cur.S >= 4 && cur.master < 1) cur.master = 1
+    cur.due = bjAddDays(bjDayKey(now), Math.max(1, Math.round(cur.S)))
+    return cur
+  }
+
   const soft = !!opts.hinted || !!opts.fast
   const next = soft ? cur.S * 1.5 : cur.S * 2
   cur.S = Math.min(S_MAX, Math.max(1, Math.round(next * 10) / 10))

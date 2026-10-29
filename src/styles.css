@@ -485,7 +485,10 @@ button.fg:active{transform:scale(.96)}
 
 /* ── 句子拼装 ── */
 .v4sentcn{font-size:15.5px;font-weight:700;text-align:center;margin:6px 0 12px;line-height:1.55}
-.v4slot{min-height:56px;border:1.5px dashed var(--line);border-radius:12px;padding:9px;
+/* 句意选择的题干：整句英文居中，行高放宽（这是要一句读下来的，不能挤） */
+.v4meanen{font-size:17px;line-height:1.85;color:var(--ink);text-align:center;
+  margin:4px 0 18px;padding:14px 12px;background:var(--blue-soft);
+  border-radius:12px;border:1px solid #d3e0ff;letter-spacing:.1px}.v4slot{min-height:56px;border:1.5px dashed var(--line);border-radius:12px;padding:9px;
   display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start;background:#fafbfe;margin-bottom:12px}
 .v4toks{display:flex;flex-wrap:wrap;gap:6px}
 .v4tok{padding:8px 12px;border:1.5px solid var(--line);border-radius:9px;
@@ -591,3 +594,25 @@ button.fg:active{transform:scale(.96)}
 .pv4tr .ok{color:var(--ok);font-weight:700}
 .pv4tr .warn{color:#b57708;font-weight:700}
 .chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+/* ── 课文页（v6）───────────────────────────── */
+.tbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tbt{border:1px solid var(--line);background:#fff;color:var(--sub);font-size:13px;
+  padding:7px 13px;border-radius:99px;cursor:pointer;font-family:inherit}
+.tbt.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.tpara{margin:0 0 20px}
+.ten{margin:0;font-size:17px;line-height:2.05;color:var(--ink);letter-spacing:.1px}
+.tw{cursor:pointer;border-radius:5px;padding:1px;transition:background .12s,color .12s}
+@media (hover:hover){.tw:hover{background:var(--blue-soft)}}
+.tw.on{background:var(--blue);color:#fff}
+.tcn{margin:9px 0 0;padding-left:11px;border-left:2px solid var(--line);
+  font-size:14px;line-height:1.85;color:var(--sub)}
+.tword{display:flex;align-items:center;gap:9px;margin-top:10px;padding:9px 11px;
+  background:var(--blue-soft);border:1px solid #d3e0ff;border-radius:12px}
+.tword b{font-size:16px;color:var(--blue);white-space:nowrap}
+.tword span{flex:1;font-size:13px;line-height:1.5;color:var(--ink)}
+.tplay{border:0;background:var(--blue);color:#fff;font-size:13px;padding:7px 11px;
+  border-radius:9px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.tx{border:0;background:transparent;color:var(--sub);font-size:15px;
+  padding:4px 2px;cursor:pointer;line-height:1}
+.tfoot{margin:4px 0 14px;font-size:12px;color:#9aa3b2;text-align:center}

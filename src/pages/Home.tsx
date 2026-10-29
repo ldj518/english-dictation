@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Shell from '../components/Shell'
 import ProfileSwitcher from '../components/ProfileSwitcher'
 import { useStore } from '../lib/store'
+import { textUnitIds } from '../lib/text'
 import { levelOf } from '../lib/gamify'
 import { getPlanTrack, DAILY } from '../lib/data'
 import { fetchWordbooks, fetchParentRules } from '../lib/api'
@@ -331,6 +332,10 @@ export default function Home() {
           </>
         ) : null}
         <button className="chip" onClick={() => nav('/print/plan')}>🖨️ 今日纸质卷</button>
+        {/* 课文入口：只列出已导入语篇的单元，没数据的单元不出现，避免点了空页 */}
+        {textUnitIds().map(u => (
+          <button key={u} className="chip" onClick={() => nav('/text/' + u)}>📖 读课文</button>
+        ))}
         {examDays !== null && (
           <button className="chip hot" onClick={goSprint}>
             🎯 考前 {examDays === 0 ? '不到 1' : examDays} 天 · 一键冲刺卷

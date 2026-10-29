@@ -1,0 +1,530 @@
+{
+ "version": 1,
+ "unit": "unit07",
+ "unitName": "Unit 7 Avoid Danger, Keep Safe",
+ "sents": [
+  {
+   "id": "u7-01",
+   "en": "How can you avoid them?",
+   "cn": "怎样避免这些危险？",
+   "cnFixed": true,
+   "level": "S2",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "avoid"
+   ],
+   "blocks": [
+    "How can you avoid them?"
+   ],
+   "src": "text",
+   "no": 11,
+   "ms0": 37152,
+   "ms1": 39132
+  },
+  {
+   "id": "u7-02",
+   "en": "John was alone at home.",
+   "cn": "约翰独自待在家里。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "alone"
+   ],
+   "blocks": [
+    "John was",
+    "alone at home."
+   ],
+   "src": "text",
+   "no": 22,
+   "ms0": 72648,
+   "ms1": 75384
+  },
+  {
+   "id": "u7-03",
+   "en": "Let me get the ladder for you.",
+   "cn": "我去给你拿把梯子。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "ladder"
+   ],
+   "blocks": [
+    "Let me get the ladder for you."
+   ],
+   "src": "text",
+   "no": 29,
+   "ms0": 93312,
+   "ms1": 95544
+  },
+  {
+   "id": "u7-04",
+   "en": "How did the accident happen?",
+   "cn": "这场事故是怎么发生的？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "accident"
+   ],
+   "blocks": [
+    "How did the accident happen?"
+   ],
+   "src": "text",
+   "no": 30,
+   "ms0": 95544,
+   "ms1": 98676
+  },
+  {
+   "id": "u7-05",
+   "en": "The housewife forgot to turn off the gas after cooking.",
+   "cn": "那位主妇做完饭后忘了关煤气。",
+   "cnFixed": true,
+   "level": "S4",
+   "gram": [
+    "clause"
+   ],
+   "words": [
+    "housewife",
+    "gas"
+   ],
+   "blocks": [
+    "The housewife forgot",
+    "to turn off the gas after cooking."
+   ],
+   "src": "text",
+   "no": 31,
+   "ms0": 98676,
+   "ms1": 103032
+  },
+  {
+   "id": "u7-06",
+   "en": "Well, first, never play with matches or lighters.",
+   "cn": "首先，千万不要玩火柴或打火机。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "neg"
+   ],
+   "words": [
+    "lighter"
+   ],
+   "blocks": [
+    "Well, first, never play with matches or lighters."
+   ],
+   "src": "text",
+   "no": 57,
+   "ms0": 182268,
+   "ms1": 186624
+  },
+  {
+   "id": "u7-07",
+   "en": "Don't stick anything into them, or you could get shocked.",
+   "cn": "不要把任何东西插进去，否则你可能会触电。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past",
+    "modal"
+   ],
+   "words": [
+    "stick",
+    "shock"
+   ],
+   "blocks": [
+    "Don't stick anything into them,",
+    "or you could get shocked."
+   ],
+   "src": "text",
+   "no": 63,
+   "ms0": 198216,
+   "ms1": 202500
+  },
+  {
+   "id": "u7-08",
+   "en": "Be careful about things like the stove and the iron.",
+   "cn": "要小心像炉子和熨斗这类东西。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "stove",
+    "iron"
+   ],
+   "blocks": [
+    "Be careful",
+    "about things like the stove and the iron."
+   ],
+   "src": "text",
+   "no": 66,
+   "ms0": 205560,
+   "ms1": 209556
+  },
+  {
+   "id": "u7-09",
+   "en": "Don't touch them when they are hot.",
+   "cn": "烫的时候别碰。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "clause"
+   ],
+   "words": [
+    "touch"
+   ],
+   "blocks": [
+    "Don't touch them",
+    "when they are hot."
+   ],
+   "src": "text",
+   "no": 67,
+   "ms0": 209556,
+   "ms1": 212004
+  },
+  {
+   "id": "u7-10",
+   "en": "Remember to wear your helmet.",
+   "cn": "记得戴好头盔。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "helmet"
+   ],
+   "blocks": [
+    "Remember to wear your helmet."
+   ],
+   "src": "text",
+   "no": 75,
+   "ms0": 228600,
+   "ms1": 231012
+  },
+  {
+   "id": "u7-11",
+   "en": "Peter's mum tells him never to open the door for a stranger.",
+   "cn": "彼得的妈妈告诉他千万别给陌生人开门。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "neg"
+   ],
+   "words": [
+    "stranger"
+   ],
+   "blocks": [
+    "Peter's mum tells him never",
+    "to open the door",
+    "for a stranger."
+   ],
+   "src": "text",
+   "no": 88,
+   "ms0": 260136,
+   "ms1": 265068
+  },
+  {
+   "id": "u7-12",
+   "en": "Stay away from electrical outlets.",
+   "cn": "远离电源插座。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "electrical",
+    "outlet"
+   ],
+   "blocks": [
+    "Stay away",
+    "from electrical outlets."
+   ],
+   "src": "text",
+   "no": 103,
+   "ms0": 293580,
+   "ms1": 296928
+  },
+  {
+   "id": "u7-13",
+   "en": "She is watching the races on TV.",
+   "cn": "她在电视上看比赛。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "progressive"
+   ],
+   "words": [
+    "race"
+   ],
+   "blocks": [
+    "She is",
+    "watching the races on TV."
+   ],
+   "src": "text",
+   "no": 124,
+   "ms0": 345492,
+   "ms1": 348768
+  },
+  {
+   "id": "u7-14",
+   "en": "Could you please get the ladder for me?",
+   "cn": "你能帮我拿一下梯子吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "ladder"
+   ],
+   "blocks": [
+    "Could you please get the ladder for me?"
+   ],
+   "src": "text",
+   "no": 134,
+   "ms0": 375012,
+   "ms1": 377856
+  },
+  {
+   "id": "u7-15",
+   "en": "Could you please check the gas stove?",
+   "cn": "你能看看煤气炉关了没有吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "check",
+    "gas",
+    "stove"
+   ],
+   "blocks": [
+    "Could you please check the gas stove?"
+   ],
+   "src": "text",
+   "no": 157,
+   "ms0": 423396,
+   "ms1": 426708
+  },
+  {
+   "id": "u7-16",
+   "en": "How can we avoid getting hurt?",
+   "cn": "如何避免受伤？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "avoid"
+   ],
+   "blocks": [
+    "How can we avoid getting hurt?"
+   ],
+   "src": "text",
+   "no": 173,
+   "ms0": 465408,
+   "ms1": 467856
+  },
+  {
+   "id": "u7-17",
+   "en": "How can we protect ourselves when riding a skateboard?",
+   "cn": "我们在玩滑板时如何保护自己？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "modal",
+    "clause"
+   ],
+   "words": [
+    "protect"
+   ],
+   "blocks": [
+    "How can we protect ourselves when riding a skateboard?"
+   ],
+   "src": "text",
+   "no": 177,
+   "ms0": 476424,
+   "ms1": 480780
+  },
+  {
+   "id": "u7-18",
+   "en": "With a push, he was off.",
+   "cn": "他用脚轻轻一蹬，顺势滑了下去。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "push"
+   ],
+   "blocks": [
+    "With a push,",
+    "he was off."
+   ],
+   "src": "text",
+   "no": 187,
+   "ms0": 513576,
+   "ms1": 515844
+  },
+  {
+   "id": "u7-19",
+   "en": "The wind brushed against his face as he picked up speed.",
+   "cn": "他加快滑行的速度，风则轻轻拂过他的脸庞。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "speed"
+   ],
+   "blocks": [
+    "The wind brushed",
+    "against his face as he picked up speed."
+   ],
+   "src": "text",
+   "no": 188,
+   "ms0": 515844,
+   "ms1": 519984
+  },
+  {
+   "id": "u7-20",
+   "en": "But suddenly, the skateboard hit a stone on the ground.",
+   "cn": "但突然，滑板撞到了地上的一块石头。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "hit",
+    "stone"
+   ],
+   "blocks": [
+    "But suddenly,",
+    "the skateboard hit a stone",
+    "on the ground."
+   ],
+   "src": "text",
+   "no": 190,
+   "ms0": 523116,
+   "ms1": 527220
+  },
+  {
+   "id": "u7-21",
+   "en": "He rolled over and over and finally came to a stop.",
+   "cn": "他在地上滚了又滚，最后停了下来。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "roll"
+   ],
+   "blocks": [
+    "He rolled over and",
+    "over and finally came",
+    "to a stop."
+   ],
+   "src": "text",
+   "no": 192,
+   "ms0": 531324,
+   "ms1": 535536
+  },
+  {
+   "id": "u7-22",
+   "en": "Luckily, he found that there was nothing seriously wrong with him.",
+   "cn": "幸运的是，他发现自己并无大碍。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "progressive",
+    "past",
+    "therebe",
+    "clause"
+   ],
+   "words": [
+    "luckily",
+    "seriously"
+   ],
+   "blocks": [
+    "Luckily, he found",
+    "that there was nothing seriously wrong with him."
+   ],
+   "src": "text",
+   "no": 196,
+   "ms0": 546228,
+   "ms1": 551376
+  },
+  {
+   "id": "u7-23",
+   "en": "His helmet kept him safe and he didn't get seriously hurt.",
+   "cn": "他的头盔保护了他的安全，他没有受重伤。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "helmet",
+    "seriously"
+   ],
+   "blocks": [
+    "His helmet kept him safe",
+    "and he didn't get seriously hurt."
+   ],
+   "src": "text",
+   "no": 205,
+   "ms0": 603468,
+   "ms1": 608796
+  },
+  {
+   "id": "u7-24",
+   "en": "How can we avoid danger and stay safe in life?",
+   "cn": "如何才能在生活中避免危险并确保安全？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "avoid"
+   ],
+   "blocks": [
+    "How can we avoid danger and stay safe in life?"
+   ],
+   "src": "text",
+   "no": 260,
+   "ms0": 767556,
+   "ms1": 772056
+  },
+  {
+   "id": "u7-25",
+   "en": "Now, he can relax or even sleep for a while during the bus ride to and from school.",
+   "cn": "现在，他可以在上下学的校车上放松休息，甚至还能睡上一会儿。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "modal",
+    "clause"
+   ],
+   "words": [
+    "during"
+   ],
+   "blocks": [
+    "Now, he can relax",
+    "or even sleep for a while",
+    "during the bus ride",
+    "to and from school."
+   ],
+   "src": "text",
+   "no": 280,
+   "ms0": 882684,
+   "ms1": 889812
+  }
+ ]
+}

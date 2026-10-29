@@ -1,0 +1,586 @@
+{
+ "version": 1,
+ "unit": "unit02",
+ "unitName": "Unit 2 Rain or Shine",
+ "sents": [
+  {
+   "id": "u2-01",
+   "en": "How does the weather affect us?",
+   "cn": "天气对我们有何影响？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "affect"
+   ],
+   "blocks": [
+    "How does the weather affect us?"
+   ],
+   "src": "text",
+   "no": 1,
+   "ms0": 4068,
+   "ms1": 6552
+  },
+  {
+   "id": "u2-02",
+   "en": "My brother John's here too.",
+   "cn": "我的弟弟约翰也在这儿呢。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "John"
+   ],
+   "blocks": [
+    "My brother John's here too."
+   ],
+   "src": "text",
+   "no": 94,
+   "ms0": 208368,
+   "ms1": 210816
+  },
+  {
+   "id": "u2-03",
+   "en": "How's the weather in Stockholm?",
+   "cn": "斯德哥尔摩的天气怎么样？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "Stockholm"
+   ],
+   "blocks": [
+    "How's the weather in Stockholm?"
+   ],
+   "src": "text",
+   "no": 98,
+   "ms0": 217656,
+   "ms1": 220212
+  },
+  {
+   "id": "u2-04",
+   "en": "Well, it's cold and snowy.",
+   "cn": "嗯，这里又冷又下雪。",
+   "cnFixed": true,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "snowy"
+   ],
+   "blocks": [
+    "Well, it's cold and snowy."
+   ],
+   "src": "text",
+   "no": 99,
+   "ms0": 220212,
+   "ms1": 223092
+  },
+  {
+   "id": "u2-05",
+   "en": "Some of the tourists are from South China.",
+   "cn": "一些游客来自中国南方。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "south"
+   ],
+   "blocks": [
+    "Some of the tourists are",
+    "from South China."
+   ],
+   "src": "text",
+   "no": 193,
+   "ms0": 486648,
+   "ms1": 490428
+  },
+  {
+   "id": "u2-06",
+   "en": "We're at a rest area now.",
+   "cn": "我们现在在一个休息区。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "rest"
+   ],
+   "blocks": [
+    "We're at a rest area now."
+   ],
+   "src": "text",
+   "no": 213,
+   "ms0": 554508,
+   "ms1": 557496
+  },
+  {
+   "id": "u2-07",
+   "en": "I'm so glad we're here at Bright Peak.",
+   "cn": "真高兴我们来到了光明顶。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "glad",
+    "peak"
+   ],
+   "blocks": [
+    "I'm so glad we're here",
+    "at Bright Peak."
+   ],
+   "src": "text",
+   "no": 220,
+   "ms0": 584208,
+   "ms1": 587844
+  },
+  {
+   "id": "u2-08",
+   "en": "Everything looks grey, and you can't see much because of the heavy fog.",
+   "cn": "一切看起来灰蒙蒙的，因为雾太大了，我们看不清什么东西。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "modal",
+    "clause"
+   ],
+   "words": [
+    "grey",
+    "fog"
+   ],
+   "blocks": [
+    "Everything looks grey,",
+    "and you can't see much",
+    "because of the heavy fog."
+   ],
+   "src": "text",
+   "no": 224,
+   "ms0": 600480,
+   "ms1": 606168
+  },
+  {
+   "id": "u2-09",
+   "en": "The ground is very wet, so we have to climb slowly.",
+   "cn": "地面很湿，所以我们得慢慢爬。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "ground",
+    "wet"
+   ],
+   "blocks": [
+    "The ground is very wet,",
+    "so we have to climb slowly."
+   ],
+   "src": "text",
+   "no": 225,
+   "ms0": 606168,
+   "ms1": 610704
+  },
+  {
+   "id": "u2-10",
+   "en": "My shoes are all wet and dirty too.",
+   "cn": "我的鞋子全都湿透了，还脏兮兮的。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "wet"
+   ],
+   "blocks": [
+    "My shoes are all wet",
+    "and dirty too."
+   ],
+   "src": "text",
+   "no": 228,
+   "ms0": 617688,
+   "ms1": 621180
+  },
+  {
+   "id": "u2-11",
+   "en": "There are many other tourists at this rest area, but they don't seem tired at all.",
+   "cn": "这片休息区还有很多其他游客，但他们似乎一点也不累。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past",
+    "therebe"
+   ],
+   "words": [
+    "rest",
+    "seem"
+   ],
+   "blocks": [
+    "There are many other tourists",
+    "at this rest area,",
+    "but they don't seem tired at all."
+   ],
+   "src": "text",
+   "no": 229,
+   "ms0": 621180,
+   "ms1": 628596
+  },
+  {
+   "id": "u2-12",
+   "en": "We're here at Bright Peak.",
+   "cn": "我们到了光明顶。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "peak"
+   ],
+   "blocks": [
+    "We're here",
+    "at Bright Peak."
+   ],
+   "src": "text",
+   "no": 233,
+   "ms0": 640152,
+   "ms1": 643212
+  },
+  {
+   "id": "u2-13",
+   "en": "Mount Huangshan is beautiful in the sunlight.",
+   "cn": "阳光下的黄山太美了。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "sunlight"
+   ],
+   "blocks": [
+    "Mount Huangshan is beautiful",
+    "in the sunlight."
+   ],
+   "src": "text",
+   "no": 234,
+   "ms0": 643212,
+   "ms1": 646524
+  },
+  {
+   "id": "u2-14",
+   "en": "The mountain feels like a magical place.",
+   "cn": "这里感觉像个神奇的地方。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "magical"
+   ],
+   "blocks": [
+    "The mountain feels like a magical place."
+   ],
+   "src": "text",
+   "no": 245,
+   "ms0": 683748,
+   "ms1": 687060
+  },
+  {
+   "id": "u2-15",
+   "en": "It is a lovely sight.",
+   "cn": "景色真美。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "sight"
+   ],
+   "blocks": [
+    "It is a lovely sight."
+   ],
+   "src": "text",
+   "no": 251,
+   "ms0": 702648,
+   "ms1": 704916
+  },
+  {
+   "id": "u2-16",
+   "en": "He can't see much because of the heavy fog.",
+   "cn": "因为雾太大了，他看不清什么东西。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "modal",
+    "clause"
+   ],
+   "words": [
+    "fog"
+   ],
+   "blocks": [
+    "He can't see much",
+    "because of the heavy fog."
+   ],
+   "src": "text",
+   "no": 256,
+   "ms0": 711792,
+   "ms1": 715428
+  },
+  {
+   "id": "u2-17",
+   "en": "His shoes are all wet and dirty too.",
+   "cn": "他的鞋子全都湿透了，还脏兮兮的。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "wet"
+   ],
+   "blocks": [
+    "His shoes are all wet",
+    "and dirty too."
+   ],
+   "src": "text",
+   "no": 259,
+   "ms0": 720936,
+   "ms1": 724644
+  },
+  {
+   "id": "u2-18",
+   "en": "What does Helen think about the trees and rocks?",
+   "cn": "海伦对树木和岩石有什么看法？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "rock"
+   ],
+   "blocks": [
+    "What does Helen think about the trees and rocks?"
+   ],
+   "src": "text",
+   "no": 272,
+   "ms0": 757296,
+   "ms1": 761040
+  },
+  {
+   "id": "u2-19",
+   "en": "Who enjoys the experience more at the start?",
+   "cn": "谁一开始更喜欢这次经历？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "experience"
+   ],
+   "blocks": [
+    "Who enjoys the experience more at the start?"
+   ],
+   "src": "text",
+   "no": 273,
+   "ms0": 761040,
+   "ms1": 765216
+  },
+  {
+   "id": "u2-20",
+   "en": "How does Peter feel at the end?",
+   "cn": "彼得最后的感受如何？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "end"
+   ],
+   "blocks": [
+    "How does Peter feel at the end?"
+   ],
+   "src": "text",
+   "no": 275,
+   "ms0": 766908,
+   "ms1": 769896
+  },
+  {
+   "id": "u2-21",
+   "en": "There is a huge storm today.",
+   "cn": "今天有一场大暴雨。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "therebe"
+   ],
+   "words": [
+    "storm"
+   ],
+   "blocks": [
+    "There is a huge storm today."
+   ],
+   "src": "text",
+   "no": 277,
+   "ms0": 775440,
+   "ms1": 778176
+  },
+  {
+   "id": "u2-22",
+   "en": "The rain is pouring down.",
+   "cn": "雨水倾盆而下。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "progressive"
+   ],
+   "words": [
+    "pour"
+   ],
+   "blocks": [
+    "The rain",
+    "is pouring down."
+   ],
+   "src": "text",
+   "no": 280,
+   "ms0": 784584,
+   "ms1": 786924
+  },
+  {
+   "id": "u2-23",
+   "en": "The wind is blowing hard too.",
+   "cn": "风也刮得很猛烈。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "progressive"
+   ],
+   "words": [
+    "wind"
+   ],
+   "blocks": [
+    "The wind",
+    "is blowing hard too."
+   ],
+   "src": "text",
+   "no": 281,
+   "ms0": 786924,
+   "ms1": 789876
+  },
+  {
+   "id": "u2-24",
+   "en": "He is shouting and running after his hat!",
+   "cn": "他一边喊叫着，一边追着他的帽子跑！",
+   "cnFixed": false,
+   "level": "S5",
+   "gram": [
+    "progressive",
+    "clause"
+   ],
+   "words": [
+    "shout"
+   ],
+   "blocks": [
+    "He is shouting and running",
+    "after his hat!"
+   ],
+   "src": "text",
+   "no": 284,
+   "ms0": 796896,
+   "ms1": 800424
+  },
+  {
+   "id": "u2-25",
+   "en": "It's raining heavily today, and the temperature is around 20℃.",
+   "cn": "今天下着大雨，气温大约20℃。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "heavily",
+    "temperature"
+   ],
+   "blocks": [
+    "It's raining heavily today,",
+    "and the temperature is around 20℃."
+   ],
+   "src": "text",
+   "no": 306,
+   "ms0": 855900,
+   "ms1": 861984
+  },
+  {
+   "id": "u2-26",
+   "en": "A few people are still outside.",
+   "cn": "还有几个人在外面。",
+   "cnFixed": true,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "still"
+   ],
+   "blocks": [
+    "A few people",
+    "are still outside."
+   ],
+   "src": "text",
+   "no": 310,
+   "ms0": 869976,
+   "ms1": 872460
+  },
+  {
+   "id": "u2-27",
+   "en": "Thanks to Zhu Kezhen, a great Chinese meteorologist, we have a better understanding of the weather through weather reports.",
+   "cn": "多亏了竺可桢，这位伟大的中国气象学家，我们才能通过天气预报更好地了解天气。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "through"
+   ],
+   "blocks": [
+    "Thanks to Zhu Kezhen,",
+    "a great Chinese meteorologist,",
+    "we have a better understanding of the weather",
+    "through weather reports."
+   ],
+   "src": "text",
+   "no": 330,
+   "ms0": 949464,
+   "ms1": 959040
+  },
+  {
+   "id": "u2-28",
+   "en": "Even on the final day of his life, he recorded in the hospital, \"Clear to cloudy, east wind 1-2.\"",
+   "cn": "即使在他生命的最后一天，他也在医院里记录道：“晴转多云，东风1～2级”。",
+   "cnFixed": false,
+   "level": "S5",
+   "gram": [
+    "past",
+    "quote"
+   ],
+   "words": [
+    "east",
+    "wind"
+   ],
+   "blocks": [
+    "Even on the final day of his life, he recorded",
+    "in the hospital, \"Clear to cloudy,",
+    "east wind 1-2.\""
+   ],
+   "src": "text",
+   "no": 340,
+   "ms0": 1016388,
+   "ms1": 1027224
+  },
+  {
+   "id": "u2-29",
+   "en": "Although Zhu passed away in 1974, he will never be forgotten.",
+   "cn": "虽然竺可桢于1974年去世，但他不会被遗忘。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "past",
+    "future",
+    "clause",
+    "neg"
+   ],
+   "words": [
+    "although"
+   ],
+   "blocks": [
+    "Although Zhu passed away in 1974,",
+    "he will never be forgotten."
+   ],
+   "src": "text",
+   "no": 341,
+   "ms0": 1027224,
+   "ms1": 1033596
+  }
+ ]
+}

@@ -15,6 +15,7 @@ import type { DayPlan, SegKind } from './plan'
 import { WORDS, WORD_MAP } from './data'
 import { seededShuffle, makeSeed } from './shuffle'
 import { bjDayKey } from './bj'
+import { pickSents, cnDistractors, getSentUnit, sentUnitIds, type SentBankItem } from './sentbank'
 import sentencesJson from '../data/sentences.json'
 
 export type QKind =
@@ -22,7 +23,8 @@ export type QKind =
   | 'teach'   // 教学卡：音 → 形 → 义 → 音节，必须点「记住了」
   | 'pick'    // 听音选义：6 选 1，两步确认
   | 'spell'   // 中文 + 首字母 → 输入英文
-  | 'sent'    // 句子拼装：中文 + 乱序词块
+  | 'sent'    // 句子拼装：中文 + 乱序意群块
+  | 'mean'    // 句意选择：整句英文 + 4 个中文句意
   | 'paper'   // 纸笔：显示中文，纸上写，之后自评
 
 export interface Option {
@@ -53,10 +55,19 @@ export interface Q {
   len?: number
   /* sent 专用 */
   en?: string
-  /** 正确词序 */
+  /** 正确词序（单词块或意群块） */
   tokens?: string[]
   /** 展示顺序（打乱后的 tokens 下标）。不打乱就是白送分——实测原样按正确顺序排出 */
   order?: number[]
+  /** 意群块（句子关用；有它就按块拼，没有就按 tokens 逐词拼） */
+  blocks?: string[]
+  /* sent / mean 共用：句子库 id，用于当天去重和战报追溯 */
+  sentId?: string
+  /** 句型分级 S1-S5（战报按档统计用） */
+  sentLevel?: string
+  /* mean 专用：中文句意选项 */
+  cnOptions?: Option[]
+  cnKey?: string
   tip?: string
 }
 
@@ -101,10 +112,21 @@ export function splitTokens(en: string): string[] {
   return en.trim().split(/\s+/).filter(Boolean)
 }
 
-/** 句子判分：拼出来的词块序列与正确序列一致（归一化大小写/标点） */
+/**
+ * 句子判分：拼出来的块序列与正确序列一致。
+ *
+ * 只去句末和词间标点，**撇号必须保留**。原来把 `:'"` 一起 strip 掉，
+ * `its` 和 `it's` 会被判成同一个词——课本句里 don't / it's / Ben's 到处都是，
+ * 这会变成一种系统性错判（少打一个撇号照样算对）。
+ * 弯引号和直引号统一成直引号再比，否则孩子手机输入法一换就判错。
+ */
 export function judgeSentence(picked: string[], answer: string[]): boolean {
-  const norm = (a: string[]) => a.join(' ').toLowerCase().replace(/\s+/g, ' ').trim()
-  const strip = (s: string) => s.replace(/[.,!?;:'"]/g, '')
+  const norm = (a: string[]) => a.join(' ')
+    .toLowerCase()
+    .replace(/[\u2018\u2019\u02bc`]/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+  const strip = (s: string) => s.replace(/[.,!?;:"]/g, '')
   return strip(norm(picked)) === strip(norm(answer))
 }
 
@@ -119,6 +141,8 @@ export function spellHint(word: string): { hint: string; len: number } {
 
 export interface BuildOpts {
   plan: DayPlan
+  /** 当前在学单元（句子关从该单元的句子库取句；不传则按到期词所在单元推断） */
+  unit?: string
   /** 今天该练的到期词（已按风险排好序） */
   dueWords: { word: string; cn: string }[]
   /** 新词（还没学过的） */
@@ -144,6 +168,76 @@ export function makeOptions(word: string, seed: string): { options: Option[]; an
   const picks = seededShuffle(pool, seed).slice(0, 5)
   const all = seededShuffle([right, ...picks], seed + '|shuf').map((text, i) => ({ key: 'k' + i, text }))
   return { options: all, answerKey: all.find(o => o.text === right)!.key }
+}
+
+/**
+ * 打乱顺序，并要求「至少 3 处错位」。
+ * 不打乱到这一步，4 个词的短句有概率洗出原序，等于白送分（实测发生过）。
+ */
+export function scrambleOrder(n: number, seed: string): number[] {
+  const idx = Array.from({ length: n }, (_, i) => i)
+  if (n <= 2) return seededShuffle(idx, seed)
+  let order = seededShuffle(idx, seed)
+  for (let k = 0; k < 8 && order.filter((v, i) => v === i).length > n - 3; k++) {
+    order = seededShuffle(order, `${seed}|r${k}`)
+  }
+  return order
+}
+
+/** 当前句子关用哪个单元：显式指定 > 今天在学的词多数所在单元 > 第一个有句库的单元 */
+function unitOfSent(opts: BuildOpts): string {
+  if (opts.unit) return opts.unit
+  // 新词权重更高：新词所在单元就是课本正在讲的单元。
+  // 学生跨单元复习时到期词会分散，按众数取才不会被一两句旧单元的句子带偏。
+  const cnt: Record<string, number> = {}
+  for (const w of opts.newWords) {
+    const u = unitOf(w.word)
+    if (u && getSentUnit(u)) cnt[u] = (cnt[u] || 0) + 3
+  }
+  for (const w of opts.dueWords) {
+    const u = unitOf(w.word)
+    if (u && getSentUnit(u)) cnt[u] = (cnt[u] || 0) + 1
+  }
+  const best = Object.entries(cnt).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]
+  if (best) return best[0]
+  return sentUnitIds()[0] || 'unit04'
+}
+
+/**
+ * 句子的「锚词」——这一句是为了练哪个词。
+ * 优先级与选句一致：新词 > 钉子词 > 到期词 > 句中第一个词表词。
+ * 锚词决定这句答对后算给谁（记忆打分只沿用词级口径，句子本身不单独建状态）。
+ */
+function anchorOf(it: SentBankItem, opts: BuildOpts): string {
+  const news = opts.newWords.map(x => x.word.toLowerCase())
+  const nails = (opts.nailWords || []).map(x => x.word.toLowerCase())
+  const dues = opts.dueWords.map(x => x.word.toLowerCase())
+  const lw = it.words.map(w => w.toLowerCase())
+  for (const pool of [news, nails, dues]) {
+    const hit = lw.find(w => pool.includes(w))
+    if (hit) return it.words.find(w => w.toLowerCase() === hit) || hit
+  }
+  return it.words[0] || ''
+}
+
+/** 从句子库挑一批句子；库空或全用过了就返回空数组（调用方退回老路径） */
+function pickSentenceBatch(
+  opts: BuildOpts, si: number, seedBase: string, count: number, use: 'block' | 'mean', used: string[]
+): SentBankItem[] {
+  if (count <= 0) return []
+  const unit = unitOfSent(opts)
+  if (!getSentUnit(unit)) return []
+  return pickSents({
+    unit,
+    dayKey: opts.plan.dayKey,
+    profileId: `${opts.profileId}|${seedBase}|${si}`,
+    newWords: opts.newWords.map(w => w.word),
+    nailWords: (opts.nailWords || []).map(w => w.word),
+    dueWords: opts.dueWords.map(w => w.word),
+    count,
+    use,
+    used,
+  })
 }
 
 /**
@@ -177,6 +271,8 @@ export function buildQBank(opts: BuildOpts): QBank {
 
   const qs: Q[] = []
   const segStart: number[] = []
+  /** 当天已经出过的句子 id：同一天两批句子关不能出同一句 */
+  const usedSents: string[] = []
   let n = 0
 
   plan.segs.forEach((s, si) => {
@@ -274,22 +370,67 @@ export function buildQBank(opts: BuildOpts): QBank {
         break
       }
       case 'sent': {
-        const pool = takeDue(Math.max(s.words, 2))
-        const usable = pool.filter(w => SENTENCES[w.word]?.en)
-        const list = usable.length ? usable : pool
-        for (const w of list.slice(0, s.words)) {
-          const sen = SENTENCES[w.word]
-          if (!sen) continue
-          const tokens = splitTokens(sen.en)
-          const idx = tokens.map((_, i) => i)
-          // 打乱到「至少 3 处错位」，否则 4 个词的短句有概率洗出原序
-          let order = seededShuffle(idx, `${seedBase}|sent|${si}|${w.word}`)
-          for (let k = 0; k < 6 && order.filter((v, i) => v === i).length > tokens.length - 3; k++) {
-            order = seededShuffle(order, `${seedBase}|sent|${si}|${w.word}|${k}`)
+        // 句子关：从课文句子库取句，按「含新词 > 钉子词 > 到期词」挑。
+        // 挑不到（该单元没有句子库）就退回老的单词拼装，不让这一关空着。
+        const picked = pickSentenceBatch(opts, si, seedBase, s.words, 'block', usedSents)
+        if (!picked.length) {
+          const pool = takeDue(Math.max(s.words, 2))
+          const usable = pool.filter(w => SENTENCES[w.word]?.en)
+          const list = usable.length ? usable : pool
+          for (const w of list.slice(0, s.words)) {
+            const sen = SENTENCES[w.word]
+            if (!sen) continue
+            const tokens = splitTokens(sen.en)
+            push({
+              kind: 'sent', word: w.word, cn: sen.cn, file: fileOf(w.word),
+              scored: true, must: true, en: sen.en, tokens,
+              order: scrambleOrder(tokens.length, `${seedBase}|sent|${si}|${w.word}`),
+              tip: sen.tip,
+            })
           }
+          break
+        }
+        for (const it of picked) {
+          usedSents.push(it.id)
           push({
-            kind: 'sent', word: w.word, cn: sen.cn, file: fileOf(w.word),
-            scored: true, must: true, en: sen.en, tokens, order, tip: sen.tip,
+            kind: 'sent',
+            word: anchorOf(it, opts),
+            cn: it.cn,
+            file: null,
+            scored: true,
+            must: true,
+            en: it.en,
+            blocks: it.blocks,
+            sentId: it.id,
+            sentLevel: it.level,
+            order: scrambleOrder(it.blocks.length, `${seedBase}|sent|${si}|${it.id}`),
+            tip: it.level === 'S2' ? '问句：助动词提到主语前面' : undefined,
+          })
+        }
+        break
+      }
+      case 'mean': {
+        // 句意选择：整句英文 + 4 个中文句意。
+        // ⚠️ 这一关必须排在拼写之后（plan.ts 保证），否则整句英文里的词就是答案
+        const picked = pickSentenceBatch(opts, si, seedBase, s.words, 'mean', usedSents)
+        for (let i = 0; i < picked.length; i++) {
+          const it = picked[i]
+          usedSents.push(it.id)
+          const distract = cnDistractors(it, unitOfSent(opts), 3)
+          const all = seededShuffle([it.cn, ...distract], `${seedBase}|mean|${si}|${it.id}`)
+            .map((text, k) => ({ key: 'm' + k, text }))
+          push({
+            kind: 'mean',
+            word: anchorOf(it, opts),
+            cn: it.cn,
+            file: fileOf(anchorOf(it, opts)),
+            scored: true,
+            must: false,
+            en: it.en,
+            sentId: it.id,
+            sentLevel: it.level,
+            cnOptions: all,
+            cnKey: all.find(o => o.text === it.cn)!.key,
           })
         }
         break

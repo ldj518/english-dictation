@@ -12,7 +12,7 @@
  *  ③ 两段式确认 —— pick 必须「选中 → 确定」
  *  ④ 看答案扣分母 —— peek 题不进 score 分子分母
  *  ⑤ 有效时间才算 —— EffTimer 只累加间隔 ≤60 秒的时长
- *  ⑥ 同词当日只判一次 —— gradedRef 记已判词
+ *  ⑥ 同词当日按通道判一次 —— 认得档不覆盖产出档（gradedRef 记已判词与档位）
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -24,7 +24,7 @@ import { WORDS } from '../lib/data'
 import { wordFileMap, playWordText } from '../lib/data'
 import { bjDayKey, bjDiffDays, fmtSec, fmtSecCn } from '../lib/bj'
 import { buildPlan, gateCheck, mergeCfg, mustTotalOf, settleDaysLeft, perItemSecOf, rampWeekOf, capHit, type DayPlan } from '../lib/plan'
-import { queueHealth, dueWordList } from '../lib/memory'
+import { queueHealth, dueWordList, type Channel } from '../lib/memory'
 import { buildReport, reportText, reportImage } from '../lib/report'
 import { reportOut } from '../lib/api'
 import {
@@ -88,7 +88,8 @@ export default function Today() {
   const timer = useRef<EffTimer | null>(null)
   const qStart = useRef<number>(Date.now())
   const [tick, setTick] = useState(0)
-  const gradedRef = useRef<Set<string>>(new Set())         // 同词当日只判一次分
+  // 词 → 当日最高判定档（'recog' 认得 / 'prod' 产出）。产出判过就不再被选择题覆盖
+  const gradedRef = useRef<Map<string, 'recog' | 'prod'>>(new Map())
   const audioRef = useRef<Map<string, string>>(new Map())
 
   /* ── 构建今日会话 ──────────────────────────────────── */
@@ -152,7 +153,7 @@ export default function Today() {
     setBank(b)
     setQi(0)
     setRecs([])
-    gradedRef.current = new Set()
+    gradedRef.current = new Map()
     gradedQRef.current = new Set()
     setPhase('start')
   }, [day, profile.id])
@@ -191,8 +192,18 @@ export default function Today() {
 
   /* ── 当前题 ── */
   const q: Q | null = bank ? bank.qs[qi] || null : null
+
+  /** 句子关的块：优先意群块，老数据没有 blocks 时退回逐词 */
+  const sentSegs = (q?.blocks && q.blocks.length ? q.blocks : q?.tokens) || []
   const segs = plan?.segs || []
   const curSeg = q ? segs[q.seg] : null
+
+  // 开发模式把题面挂到 window：E2E 脚本否则读不到「这一题的正确答案是什么」，
+  // 拼写题只能靠点字母键盘硬打。生产构建里这个分支不会执行。
+  useEffect(() => {
+    if (!(import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) return
+    ;(window as unknown as { __qb?: { bank: QBank | null; qi: number; q: Q | null } }).__qb = { bank, qi, q }
+  }, [bank, qi, q])
 
   /** 必做进度 */
   const mustAll = bank ? bank.qs.filter(x => x.must).length : 0
@@ -210,8 +221,13 @@ export default function Today() {
     if (q.kind === 'pick' && q.options) {
       setChoiceOrder(q.options.slice())
     }
-    if (q.kind === 'sent' && q.tokens) {
-      setPool(q.order ? q.order.slice() : q.tokens.map((_, i) => i))
+    if (q.kind === 'mean' && q.cnOptions) {
+      setChoiceOrder(q.cnOptions.slice())
+    }
+    if (q.kind === 'sent') {
+      // 句子关按意群块拼；老数据没有 blocks 的退回逐词
+      const segs = q.blocks && q.blocks.length ? q.blocks : (q.tokens || [])
+      setPool(q.order ? q.order.slice() : segs.map((_, i) => i))
     }
     // 听力题必须自动播：孩子没听到就选＝瞎猜。播不出来由 player 内部兜底提示
     if (q.kind === 'pick' || q.kind === 'flash' || q.kind === 'spell') void play(q)
@@ -271,13 +287,28 @@ export default function Today() {
       if (rec.peek) st.peekN += 1
     }
 
-    // 同词当日只判一次：第二次起只练不判（防重刷把分刷高）
-    if (q.scored && !gradedRef.current.has(q.word)) {
-      gradedRef.current.add(q.word)
-      gradeOne(q.word, rec.correct, {
-        hinted: opts.hinted || !!opts.peek,
-        fast: fast,
-      })
+    // 同一个词，按通道分别只判一次：
+    //  - 产出档（拼写/纸笔）判过就不再改，认得档（选义/句子）不许覆盖它
+    //  - 认得档判过之后，产出档还能再判一次（这是升级，不是重复）
+    // 原来只记一个 Set，谁先判谁说了算，而选择题关排在拼写关前面，
+    // 结果「会写」永远由那次选择题决定——这是「会选被记成会写」的根因。
+    if (q.scored) {
+      const ch: Channel = q.kind === 'spell' ? 'spell'
+        : q.kind === 'paper' ? 'paper'
+          : q.kind === 'sent' ? 'sent'
+            : q.kind === 'mean' ? 'mean'
+              : 'pick'
+      const recog = ch === 'pick' || ch === 'sent' || ch === 'mean'
+      const prev = gradedRef.current.get(q.word)
+      const allow = !prev || (!recog && prev === 'recog')
+      if (allow) {
+        gradedRef.current.set(q.word, recog ? 'recog' : 'prod')
+        gradeOne(q.word, rec.correct, {
+          hinted: opts.hinted || !!opts.peek,
+          fast: fast,
+          channel: ch,
+        })
+      }
     }
   }, [q, cfg.fastMs, gradeOne])
 
@@ -816,6 +847,52 @@ export default function Today() {
           </div>
         )}
 
+        {q?.kind === 'mean' && q.cnOptions && (
+          <div>
+            <div className="v4prompt" style={{ textAlign: 'center' }}>这句英文是什么意思</div>
+            <div className="v4meanen">{q.en}</div>
+            <div className="v4opts">
+              {choiceOrder.map(o => (
+                <button key={o.key}
+                  className={'v4opt' + (sel === o.key ? ' sel' : '')
+                    + (verdict && sel === o.key ? (verdict === 'ok' ? ' ok' : ' bad') : '')}
+                  disabled={!!verdict}
+                  onClick={() => { if (!verdict) { timer.current?.tap(); setSel(o.key) } }}>
+                  {o.text}
+                </button>
+              ))}
+            </div>
+            {!verdict && (
+              <button className="btn" style={{ marginTop: 14 }} disabled={!sel}
+                onClick={() => {
+                  const ok = sel === q.cnKey
+                  setVerdict(ok ? 'ok' : 'bad')
+                  grade(ok, { hinted: tries > 0 })
+                  if (ok) window.setTimeout(() => next(), 520)
+                  else setTries(t => t + 1)
+                }}>
+                {sel ? '确定' : '先选一个'}
+              </button>
+            )}
+            {verdict === 'bad' && (
+              <div className="v4note bad" style={{ marginTop: 12 }}>
+                {peeked ? <>看过了：<b>{q.cn}</b></> : <>这句是：<b>{q.cn}</b></>}
+                {peeked || tries >= 2 ? (
+                  <button className="btn" style={{ marginTop: 10 }} onClick={() => next()}>下一个 →</button>
+                ) : (
+                  <button className="btn ghost" style={{ marginTop: 8 }}
+                    onClick={() => {
+                      setChoiceOrder(o => [...o].sort(() => Math.random() - 0.5))
+                      setSel(null); setVerdict('')
+                    }}>
+                    重新选
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {q?.kind === 'sent' && (
           <div>
             <div className="v4prompt" style={{ textAlign: 'center' }}>把这个句子拼出来</div>
@@ -829,22 +906,22 @@ export default function Today() {
                     setPool(x => [...x, p.idx])
                   }}>{p.text}</button>
               ))}
-              {!picked.length && <span className="sub small">按顺序点下面的词块</span>}
+              {!picked.length && <span className="sub small">按顺序点下面的意群块</span>}
             </div>
             <div className="v4toks">
               {pool.map(idx => (
                 <button key={idx} className="v4tok"
                   onClick={() => {
                     timer.current?.tap()
-                    setPicked(p => [...p, { idx, text: q.tokens![idx] }])
+                    setPicked(p => [...p, { idx, text: sentSegs[idx] }])
                     setPool(p => p.filter(x => x !== idx))
-                  }}>{q.tokens![idx]}</button>
+                  }}>{sentSegs[idx]}</button>
               ))}
             </div>
             {verdict === '' ? (
               <button className="btn" style={{ marginTop: 12 }} disabled={pool.some(x => x >= 0)}
                 onClick={() => {
-                  const ok = judgeSentence(picked.map(x => x.text), q.tokens!)
+                  const ok = judgeSentence(picked.map(x => x.text), sentSegs)
                   setVerdict(ok ? 'ok' : 'bad')
                   grade(ok, { hinted: tries > 0 })
                   if (ok) window.setTimeout(() => next(), 500)
@@ -861,7 +938,7 @@ export default function Today() {
                   <button className="btn" style={{ marginTop: 8 }} onClick={() => next()}>下一个 →</button>
                 ) : (
                   <button className="btn ghost" style={{ marginTop: 8 }}
-                    onClick={() => { setPicked([]); setPool(q.order ? q.order.slice() : q.tokens!.map((_, i) => i)); setVerdict('') }}>
+                    onClick={() => { setPicked([]); setPool(q.order ? q.order.slice() : sentSegs.map((_, i) => i)); setVerdict('') }}>
                     再拼一次
                   </button>
                 )}

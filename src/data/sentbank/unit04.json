@@ -1,0 +1,667 @@
+{
+ "version": 1,
+ "unit": "unit04",
+ "unitName": "Unit 4 Once upon a Time",
+ "sents": [
+  {
+   "id": "u4-01",
+   "en": "The mouse bit through the net.",
+   "cn": "老鼠咬破了网。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "bite",
+    "net"
+   ],
+   "blocks": [
+    "The mouse bit",
+    "through the net."
+   ],
+   "src": "text",
+   "no": 16,
+   "ms0": 51444,
+   "ms1": 54216
+  },
+  {
+   "id": "u4-02",
+   "en": "The hunter caught the lion.",
+   "cn": "猎人抓住了狮子。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "hunter"
+   ],
+   "blocks": [
+    "The hunter",
+    "caught the lion."
+   ],
+   "src": "text",
+   "no": 17,
+   "ms0": 54216,
+   "ms1": 56700
+  },
+  {
+   "id": "u4-03",
+   "en": "The mouse promised to help the lion.",
+   "cn": "老鼠承诺帮助狮子。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "promise"
+   ],
+   "blocks": [
+    "The mouse promised",
+    "to help the lion."
+   ],
+   "src": "text",
+   "no": 20,
+   "ms0": 61920,
+   "ms1": 65088
+  },
+  {
+   "id": "u4-04",
+   "en": "The farmer's son didn't have to join the war.",
+   "cn": "农民的儿子不用去参军。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "war"
+   ],
+   "blocks": [
+    "The farmer's son",
+    "didn't have to join the war."
+   ],
+   "src": "text",
+   "no": 35,
+   "ms0": 95616,
+   "ms1": 99432
+  },
+  {
+   "id": "u4-05",
+   "en": "They pretended to make the clothes.",
+   "cn": "他们假装在做衣服。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "pretend"
+   ],
+   "blocks": [
+    "They pretended",
+    "to make the clothes."
+   ],
+   "src": "text",
+   "no": 90,
+   "ms0": 223416,
+   "ms1": 226476
+  },
+  {
+   "id": "u4-06",
+   "en": "No one wanted to look silly.",
+   "cn": "谁都不想显得自己傻。",
+   "cnFixed": true,
+   "level": "S1",
+   "gram": [
+    "past",
+    "neg"
+   ],
+   "words": [
+    "silly"
+   ],
+   "blocks": [
+    "No one wanted",
+    "to look silly."
+   ],
+   "src": "text",
+   "no": 93,
+   "ms0": 238932,
+   "ms1": 241524
+  },
+  {
+   "id": "u4-07",
+   "en": "The emperor decided to show everyone his new clothes.",
+   "cn": "皇帝决定向大家展示他的“新衣服”。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "emperor",
+    "decide"
+   ],
+   "blocks": [
+    "The emperor decided",
+    "to show everyone his new clothes."
+   ],
+   "src": "text",
+   "no": 94,
+   "ms0": 241524,
+   "ms1": 245736
+  },
+  {
+   "id": "u4-08",
+   "en": "An emperor wanted to buy new clothes.",
+   "cn": "一个皇帝想买新衣服。",
+   "cnFixed": true,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "emperor"
+   ],
+   "blocks": [
+    "An emperor wanted",
+    "to buy new clothes."
+   ],
+   "src": "text",
+   "no": 112,
+   "ms0": 327816,
+   "ms1": 331272
+  },
+  {
+   "id": "u4-09",
+   "en": "Two brothers lied to the emperor.",
+   "cn": "一对兄弟骗了这个皇帝。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "lie",
+    "emperor"
+   ],
+   "blocks": [
+    "Two brothers lied",
+    "to the emperor."
+   ],
+   "src": "text",
+   "no": 113,
+   "ms0": 331272,
+   "ms1": 334224
+  },
+  {
+   "id": "u4-10",
+   "en": "They pretended to make beautiful clothes.",
+   "cn": "他们假装在做漂亮的衣服。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "pretend"
+   ],
+   "blocks": [
+    "They pretended",
+    "to make beautiful clothes."
+   ],
+   "src": "text",
+   "no": 114,
+   "ms0": 334224,
+   "ms1": 337788
+  },
+  {
+   "id": "u4-11",
+   "en": "They started laughing when a boy told the truth.",
+   "cn": "一个小男孩道出真相时，他们大笑起来。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "past",
+    "clause"
+   ],
+   "words": [
+    "truth"
+   ],
+   "blocks": [
+    "They started laughing",
+    "when a boy told the truth."
+   ],
+   "src": "text",
+   "no": 118,
+   "ms0": 348372,
+   "ms1": 352548
+  },
+  {
+   "id": "u4-12",
+   "en": "Why did the emperor and his officials praise the clothes?",
+   "cn": "皇帝和他的臣子们为什么要称赞这件衣服？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "emperor",
+    "official",
+    "praise"
+   ],
+   "blocks": [
+    "Why did the emperor and his officials praise the clothes?"
+   ],
+   "src": "text",
+   "no": 121,
+   "ms0": 360216,
+   "ms1": 364896
+  },
+  {
+   "id": "u4-13",
+   "en": "I hate to be different.",
+   "cn": "我可不想变得不一样。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "hate"
+   ],
+   "blocks": [
+    "I hate",
+    "to be different."
+   ],
+   "src": "text",
+   "no": 139,
+   "ms0": 413892,
+   "ms1": 415656
+  },
+  {
+   "id": "u4-14",
+   "en": "They lied to the emperor.",
+   "cn": "他们骗了皇帝。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "lie",
+    "emperor"
+   ],
+   "blocks": [
+    "They lied",
+    "to the emperor."
+   ],
+   "src": "text",
+   "no": 165,
+   "ms0": 474120,
+   "ms1": 476640
+  },
+  {
+   "id": "u4-15",
+   "en": "Once upon a time, a king asked an artist to paint him a horse.",
+   "cn": "从前，有位国王请一名画师给他画一匹马。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "upon",
+    "king",
+    "artist"
+   ],
+   "blocks": [
+    "Once upon a time,",
+    "a king asked an artist",
+    "to paint him a horse."
+   ],
+   "src": "text",
+   "no": 176,
+   "ms0": 521568,
+   "ms1": 527688
+  },
+  {
+   "id": "u4-16",
+   "en": "Quickly, the artist painted a beautiful picture of a horse.",
+   "cn": "画师很快就画好了一幅骏马图。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "quickly",
+    "artist"
+   ],
+   "blocks": [
+    "Quickly, the artist painted a beautiful picture of a horse."
+   ],
+   "src": "text",
+   "no": 180,
+   "ms0": 540360,
+   "ms1": 544896
+  },
+  {
+   "id": "u4-17",
+   "en": "The artist smiled and took the king to his house.",
+   "cn": "画师笑了笑，带着国王来到了自己的家。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "artist",
+    "king"
+   ],
+   "blocks": [
+    "The artist smiled",
+    "and took the king",
+    "to his house."
+   ],
+   "src": "text",
+   "no": 183,
+   "ms0": 550080,
+   "ms1": 554796
+  },
+  {
+   "id": "u4-18",
+   "en": "Is the ugly duckling a real duck?",
+   "cn": "“丑小鸭”真的是一只小鸭子吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "ugly",
+    "duckling",
+    "real"
+   ],
+   "blocks": [
+    "Is the ugly duckling a real duck?"
+   ],
+   "src": "text",
+   "no": 198,
+   "ms0": 596052,
+   "ms1": 599436
+  },
+  {
+   "id": "u4-19",
+   "en": "One day, the duckling met a cat and a hen.",
+   "cn": "一天，小鸭子遇到了一只猫和一只母鸡。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "duckling",
+    "hen"
+   ],
+   "blocks": [
+    "One day,",
+    "the duckling met a cat",
+    "and a hen."
+   ],
+   "src": "text",
+   "no": 212,
+   "ms0": 654804,
+   "ms1": 658656
+  },
+  {
+   "id": "u4-20",
+   "en": "There, he saw three beautiful swans with long necks and white feathers.",
+   "cn": "在那里，它看到三只美丽的天鹅，脖子长、羽毛雪白。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "swan",
+    "feather"
+   ],
+   "blocks": [
+    "There, he saw three beautiful swans",
+    "with long necks and white feathers."
+   ],
+   "src": "text",
+   "no": 217,
+   "ms0": 674892,
+   "ms1": 680688
+  },
+  {
+   "id": "u4-21",
+   "en": "What did the ugly duckling search for?",
+   "cn": "丑小鸭在寻找什么？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "ugly",
+    "duckling",
+    "search"
+   ],
+   "blocks": [
+    "What did the ugly duckling search for?"
+   ],
+   "src": "text",
+   "no": 225,
+   "ms0": 710424,
+   "ms1": 713844
+  },
+  {
+   "id": "u4-22",
+   "en": "What did the swans look like?",
+   "cn": "天鹅是什么样子的？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "swan"
+   ],
+   "blocks": [
+    "What did the swans look like?"
+   ],
+   "src": "text",
+   "no": 227,
+   "ms0": 714816,
+   "ms1": 717696
+  },
+  {
+   "id": "u4-23",
+   "en": "Were they friendly to the ugly duckling?",
+   "cn": "它们对丑小鸭是否友好？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "ugly",
+    "duckling"
+   ],
+   "blocks": [
+    "Were they friendly to the ugly duckling?"
+   ],
+   "src": "text",
+   "no": 228,
+   "ms0": 717696,
+   "ms1": 721044
+  },
+  {
+   "id": "u4-24",
+   "en": "You are welcome here only if you can purr or lay eggs.",
+   "cn": "只有你会打呼噜或者下蛋，我们才欢迎你留下。",
+   "cnFixed": true,
+   "level": "S4",
+   "gram": [
+    "modal",
+    "clause"
+   ],
+   "words": [
+    "purr",
+    "lay"
+   ],
+   "blocks": [
+    "You are welcome here only",
+    "if you can purr",
+    "or lay eggs."
+   ],
+   "src": "text",
+   "no": 238,
+   "ms0": 744984,
+   "ms1": 749340
+  },
+  {
+   "id": "u4-25",
+   "en": "Once upon a time, a fisherman caught a bottle in his fishing net.",
+   "cn": "从前，有个渔夫在渔网里捞到一个瓶子。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "upon",
+    "fisherman",
+    "fishing",
+    "net"
+   ],
+   "blocks": [
+    "Once upon a time,",
+    "a fisherman caught a bottle",
+    "in his fishing net."
+   ],
+   "src": "text",
+   "no": 248,
+   "ms0": 774540,
+   "ms1": 779508
+  },
+  {
+   "id": "u4-26",
+   "en": "\"Prepare to die!\" shouted the genie.",
+   "cn": "“准备好受死吧！”精灵喊道。",
+   "cnFixed": false,
+   "level": "S5",
+   "gram": [
+    "past",
+    "quote"
+   ],
+   "words": [
+    "die",
+    "genie"
+   ],
+   "blocks": [
+    "\"Prepare to die!\"",
+    "shouted the genie."
+   ],
+   "src": "text",
+   "no": 250,
+   "ms0": 784512,
+   "ms1": 788148
+  },
+  {
+   "id": "u4-27",
+   "en": "If someone set me free, I would make them rich and powerful.",
+   "cn": "要是有人放我出来，我就让他变得富有又强大。",
+   "cnFixed": true,
+   "level": "S4",
+   "gram": [
+    "clause"
+   ],
+   "words": [
+    "someone",
+    "set",
+    "rich",
+    "powerful"
+   ],
+   "blocks": [
+    "If someone set me free,",
+    "I would make them rich and powerful."
+   ],
+   "src": "text",
+   "no": 252,
+   "ms0": 791208,
+   "ms1": 795744
+  },
+  {
+   "id": "u4-28",
+   "en": "If anyone set me free, I would kill them instead of giving them anything.",
+   "cn": "要是有人放我出来，我反倒会杀了他，什么也不给。",
+   "cnFixed": true,
+   "level": "S4",
+   "gram": [
+    "clause"
+   ],
+   "words": [
+    "anyone",
+    "set"
+   ],
+   "blocks": [
+    "If anyone set me free,",
+    "I would kill them instead of giving them anything."
+   ],
+   "src": "text",
+   "no": 255,
+   "ms0": 802620,
+   "ms1": 808380
+  },
+  {
+   "id": "u4-29",
+   "en": "What would the fisherman say to the genie?",
+   "cn": "渔夫会对精灵说什么？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "fisherman",
+    "genie"
+   ],
+   "blocks": [
+    "What would the fisherman say to the genie?"
+   ],
+   "src": "text",
+   "no": 257,
+   "ms0": 810576,
+   "ms1": 813852
+  },
+  {
+   "id": "u4-30",
+   "en": "Would the genie kill the fisherman?",
+   "cn": "精灵会杀死渔夫吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "genie",
+    "fisherman"
+   ],
+   "blocks": [
+    "Would the genie kill the fisherman?"
+   ],
+   "src": "text",
+   "no": 258,
+   "ms0": 813852,
+   "ms1": 816228
+  },
+  {
+   "id": "u4-31",
+   "en": "Would the fisherman succeed in saving himself?",
+   "cn": "渔夫会成功自救吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "fisherman",
+    "himself"
+   ],
+   "blocks": [
+    "Would the fisherman succeed in saving himself?"
+   ],
+   "src": "text",
+   "no": 260,
+   "ms0": 817992,
+   "ms1": 821448
+  }
+ ]
+}

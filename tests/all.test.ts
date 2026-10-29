@@ -21,8 +21,19 @@ import {
 import { bjAddDays, bjDayKey, bjDiffDays } from '../src/lib/bj'
 import { mergeProgress } from '../src/lib/sync'
 import { buildReport, reportText } from '../src/lib/report'
+import { sentUnitIds, getSentUnit, pickSents, cnDistractors } from '../src/lib/sentbank'
+import { scrambleOrder, judgeSentence } from '../src/lib/qbank'
 import type { Progress } from '../src/types'
 import wordsJson from '../src/data/words.json'
+
+/** 造一份计划输入，只写关心的字段 */
+function planIn(o: Partial<PlanInput> & { dayKey: string }): PlanInput {
+  return {
+    dayKey: o.dayKey, gapDays: 0, dueN: 10, weakN: 20, nailN: 0,
+    forgetRate: 0.2, perItemSec: 20, hasNew: false,
+    ...o,
+  } as PlanInput
+}
 
 interface R { name: string; ok: boolean; msgs: string[] }
 const results: R[] = []
@@ -479,6 +490,195 @@ t('组卷：30 题四段齐全，每题都带词', (x: T) => {
   x.eq(new Set(qs.map(q => q.id)).size, qs.length, '题号不重复')
   const again = buildPaper(gateP(Math.ceil(total * 0.9), 6, AT3, '2026-11-01'), unitWords('unit01'), 'seed1')
   x.eq(again.map(q => q.word), qs.map(q => q.word), '同一 seed 题序稳定')
+})
+
+/* ── 句子关（v6）────────────────────────────── */
+
+t('句子库：7 个单元都有句子，字段齐全', (x: T) => {
+  const ids = sentUnitIds()
+  x.eq(ids.length, 7, '7 个单元都有句库')
+  for (const u of ids) {
+    const d = getSentUnit(u)
+    x.ck(!!d && d.sents.length >= 20, `${u} 至少 20 句（实际 ${d?.sents.length}）`)
+    for (const s of d!.sents) {
+      if (!s.en || !s.cn || !s.id) x.ck(false, `${u} 有句子缺 en/cn/id`)
+      if (!s.blocks.length) x.ck(false, `${s.id} 没有意群块`)
+      if (!s.words.length) x.ck(false, `${s.id} 没挂任何词表词`)
+      if (!/^S[1-5]$/.test(s.level)) x.ck(false, `${s.id} 句型档非法：${s.level}`)
+    }
+  }
+})
+
+t('句子库：意群块拼回去必须等于原句（否则拼装题无解）', (x: T) => {
+  for (const u of sentUnitIds()) {
+    for (const s of getSentUnit(u)!.sents) {
+      x.ck(s.blocks.join(' ') === s.en, `${s.id} 块拼回来和原句不一致：${JSON.stringify(s.blocks.join(' '))} ≠ ${s.en}`)
+    }
+  }
+})
+
+t('句子库：中文不是英文原样（漏译检查）', (x: T) => {
+  for (const u of sentUnitIds()) {
+    for (const s of getSentUnit(u)!.sents) {
+      x.ck(/[\u4e00-\u9fa5]/.test(s.cn), `${s.id} 中文里没有汉字：${s.cn}`)
+      x.ck(s.cn !== s.en, `${s.id} 中文等于英文`)
+    }
+  }
+})
+
+t('选句：同一天同一身份，两次调用结果一致', (x: T) => {
+  const opt = {
+    unit: 'unit04', dayKey: '2026-10-29', profileId: 'p1',
+    newWords: ['duckling'], dueWords: ['swan', 'feather'], count: 3, use: 'mean' as const,
+  }
+  const a = pickSents(opt).map(s => s.id)
+  const b = pickSents(opt).map(s => s.id)
+  x.eq(a, b, '同输入同输出')
+  x.eq(a.length, 3, '数量对得上')
+  x.eq(new Set(a).size, a.length, '一批里不重复')
+})
+
+t('选句：含新词的句子优先（不挂词的句子不该挤掉它）', (x: T) => {
+  const got = pickSents({
+    unit: 'unit04', dayKey: '2026-10-29', profileId: 'p2',
+    newWords: ['duckling'], dueWords: [], count: 3, use: 'mean',
+  })
+  x.ck(got.some(s => s.words.includes('duckling')), '至少有一句含今天的新词')
+})
+
+t('选句：意群拼装只给能拆成 ≥2 块的句子', (x: T) => {
+  const got = pickSents({
+    unit: 'unit01', dayKey: '2026-10-29', profileId: 'p3',
+    newWords: [], dueWords: ['subway', 'taxi'], count: 4, use: 'block',
+  })
+  x.eq(got.length, 4, '出满 4 句')
+  x.ck(got.every(s => s.blocks.length >= 2), '每句都能拆块')
+})
+
+t('选句：当天已出过的句子会被排除', (x: T) => {
+  const first = pickSents({
+    unit: 'unit02', dayKey: '2026-10-29', profileId: 'p4',
+    newWords: ['weather'], count: 3, use: 'mean',
+  })
+  const used = first.map(s => s.id)
+  const second = pickSents({
+    unit: 'unit02', dayKey: '2026-10-29', profileId: 'p4',
+    newWords: ['weather'], count: 3, use: 'mean', used,
+  })
+  x.ck(second.every(s => !used.includes(s.id)), '第二批不出第一批的句子')
+})
+
+t('干扰项：3 个、不含正确答案、互不重复', (x: T) => {
+  const target = getSentUnit('unit04')!.sents[0]
+  const ds = cnDistractors(target, 'unit04', 3)
+  x.eq(ds.length, 3, '正好 3 个')
+  x.ck(!ds.includes(target.cn), '不含正确句意')
+  x.eq(new Set(ds).size, ds.length, '干扰项互不重复')
+  x.ck(ds.every(d => /[\u4e00-\u9fa5]/.test(d)), '都是中文')
+})
+
+t('干扰项：句式要跟题干一致（陈述句不能配问句选项）', (x: T) => {
+  // 这条是实机截图里发现的：题干是陈述句，选项里混进「……为什么要称赞这件衣服？」，
+  // 孩子不用读懂英文，看问号就能排除，等于没考。
+  for (const u of sentUnitIds()) {
+    for (const s of getSentUnit(u)!.sents) {
+      const isQ = s.level === 'S2'
+      const ds = cnDistractors(s, u, 3)
+      const bad = ds.filter(d => /？$/.test(d) !== isQ && /？$/.test(d) && !isQ)
+      x.ck(bad.length === 0, `${s.id}（${isQ ? '问句' : '陈述'}）的干扰项里有问句：${bad[0] || ''}`)
+    }
+  }
+})
+
+t('句子库：中文标点统一全角（半角 ?! 在选项里太扎眼）', (x: T) => {
+  for (const u of sentUnitIds()) {
+    for (const s of getSentUnit(u)!.sents) {
+      x.ck(!/[?!]/.test(s.cn), `${s.id} 中文里有半角标点：${s.cn}`)
+    }
+  }
+})
+
+t('拼装乱序：至少 3 处错位', (x: T) => {
+  for (const n of [3, 4, 5]) {
+    for (const seed of ['a', 'b', 'c', 'd']) {
+      const o = scrambleOrder(n, seed)
+      x.eq(o.length, n, '长度不变')
+      x.eq([...o].sort((a, b) => a - b), Array.from({ length: n }, (_, i) => i), '是 0..n-1 的排列')
+      const fixedPos = o.filter((v, i) => v === i).length
+      x.ck(fixedPos <= n - 3, `seed=${seed} n=${n} 只有 ${fixedPos} 处错位，太容易被猜中`)
+    }
+  }
+})
+
+t('句子判分：撇号必须保留（its ≠ it\'s）', (x: T) => {
+  const ans = ["It's", 'great', 'to', 'hear', 'your', 'voice!']
+  x.eq(judgeSentence(["It's", 'great', 'to', 'hear', 'your', 'voice!'], ans), true, '原样拼对')
+  x.eq(judgeSentence(['Its', 'great', 'to', 'hear', 'your', 'voice!'], ans), false, '漏撇号判错')
+  x.eq(judgeSentence(['Its', 'great'], ['Its', 'great']), true, 'its 自己比自己')
+  // 弯引号和直引号要视为同一个，否则手机输入法一换就判错
+  x.eq(judgeSentence(['Don\u2019t', 'go'], ["Don't", 'go']), true, '弯引号等同直引号')
+})
+
+t('记忆通道：选择题答对推不到毕业线', (x: T) => {
+  let cur = newState()
+  for (let i = 0; i < 20; i++) cur = gradeWord(cur, true, { channel: 'pick' })
+  x.eq(cur.S, 4, 'S 封顶 4')
+  x.ck(cur.master !== 2, '连答 20 次选择题也不毕业')
+  x.eq(cur.streak, 0, '选择题不计连续答对')
+  x.eq(gradeWord(newState(), true, { channel: 'mean' }).S, 1.5, '句意选择同样按认得算')
+})
+
+t('记忆通道：选择题不把已经会写的词拉低', (x: T) => {
+  const solid: WordState = {
+    S: 16, due: '2026-11-10', lapses: 0, streak: 2, master: 1,
+    at: Date.parse('2026-10-29T08:00:00+08:00'), ok: 6, n: 6,
+  }
+  const after = gradeWord(solid, true, { channel: 'pick' })
+  x.eq(after.S, 16, 'S 不掉')
+  x.eq(after.streak, 2, '连续答对不被打断')
+  x.eq(after.master, 1, '掌握度不变')
+  // 反过来：拼写答对要能升级
+  const up = gradeWord(solid, true, { channel: 'spell' })
+  x.eq(up.S, 32, '拼写答对正常翻倍')
+  x.eq(up.streak, 3, '拼写答对累计连续')
+  x.eq(up.master, 2, '够了就毕业')
+})
+
+t('记忆通道：句子关答错照样归 1（认得也不是免死金牌）', (x: T) => {
+  const solid: WordState = {
+    S: 16, due: '2026-11-10', lapses: 0, streak: 2, master: 1,
+    at: Date.parse('2026-10-29T08:00:00+08:00'), ok: 6, n: 6,
+  }
+  const after = gradeWord(solid, false, { channel: 'sent' })
+  x.eq(after.S, 1, '错就是错')
+  x.eq(after.lapses, 1, '记一次失误')
+  x.eq(after.streak, 0, '连续答对清零')
+})
+
+t('每日计划：句子关 6 句且排在拼写之后', (x: T) => {
+  const p = buildPlan(planIn({ dayKey: '2026-10-29', gapDays: 0, dueN: 12, weakN: 30, nailN: 0, hasNew: true }))
+  const kinds = p.segs.map(s => s.k)
+  const sentN = p.segs.filter(s => s.k === 'sent').reduce((a, s) => a + s.q, 0)
+  const meanN = p.segs.filter(s => s.k === 'mean').reduce((a, s) => a + s.q, 0)
+  x.eq(sentN, 3, '意群拼装 3 句')
+  x.eq(meanN, 3, '句意选择 3 句')
+  const iSpell = kinds.indexOf('spell')
+  const iMean = kinds.indexOf('mean')
+  const iSent = kinds.indexOf('sent')
+  x.ck(iSpell >= 0 && iMean > iSpell, '句意选择必须在拼写之后（整句英文里含答案）')
+  x.ck(iSent > iMean, '先读懂再拼出')
+})
+
+t('每日计划：清账期只读不拼，重启期只拼老句', (x: T) => {
+  const settle = buildPlan(planIn({ dayKey: '2026-10-29', gapDays: 1, dueN: 60, weakN: 80, nailN: 0, hasNew: false }))
+  x.eq(settle.tier, 'settle', '到期 60 进清账档')
+  x.ck(!settle.segs.some(s => s.k === 'sent'), '清账期不出拼装题')
+  x.eq(settle.segs.filter(s => s.k === 'mean').reduce((a, s) => a + s.q, 0), 2, '只读两句')
+
+  const restart = buildPlan(planIn({ dayKey: '2026-10-29', gapDays: 9, dueN: 30, weakN: 60, nailN: 0, hasNew: true }))
+  x.eq(restart.tier, 'restart', '断 9 天进重启档')
+  x.eq(restart.segs.filter(s => s.k === 'sent').reduce((a, s) => a + s.q, 0), 2, '重启期拼两句老句')
+  x.eq(restart.segs.filter(s => s.k === 'mean').reduce((a, s) => a + s.q, 0), 0, '重启期不出句意选择')
 })
 
 export default { results }

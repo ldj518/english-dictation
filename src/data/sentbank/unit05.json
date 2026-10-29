@@ -1,0 +1,728 @@
+{
+ "version": 1,
+ "unit": "unit05",
+ "unitName": "Unit 5 Happy Holiday",
+ "sents": [
+  {
+   "id": "u5-01",
+   "en": "The landscape there was amazing.",
+   "cn": "那里的景色美不胜收。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "progressive",
+    "past",
+    "therebe"
+   ],
+   "words": [
+    "landscape"
+   ],
+   "blocks": [
+    "The landscape there was amazing."
+   ],
+   "src": "text",
+   "no": 23,
+   "ms0": 74448,
+   "ms1": 77328
+  },
+  {
+   "id": "u5-02",
+   "en": "Yaming saw the Guest-Greeting Pine, the Sea of Clouds, lots of strange rocks, and many ancient buildings.",
+   "cn": "亚明看到了迎客松、云海、许多形态各异的怪石以及众多古建筑。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "strange",
+    "ancient"
+   ],
+   "blocks": [
+    "Yaming saw the Guest-Greeting Pine,",
+    "the Sea of Clouds,",
+    "lots of strange rocks,",
+    "and many ancient buildings."
+   ],
+   "src": "text",
+   "no": 24,
+   "ms0": 77328,
+   "ms1": 85788
+  },
+  {
+   "id": "u5-03",
+   "en": "She went to a strawberry festival near her grandparents' house in Seattle.",
+   "cn": "她去参加了在西雅图爷爷奶奶家附近的草莓节。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "Seattle"
+   ],
+   "blocks": [
+    "She went",
+    "to a strawberry festival",
+    "near her grandparents' house in Seattle."
+   ],
+   "src": "text",
+   "no": 26,
+   "ms0": 89892,
+   "ms1": 95580
+  },
+  {
+   "id": "u5-04",
+   "en": "Did you go anywhere interesting?",
+   "cn": "你去了什么有趣的地方吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "anywhere"
+   ],
+   "blocks": [
+    "Did you go anywhere interesting?"
+   ],
+   "src": "text",
+   "no": 80,
+   "ms0": 200952,
+   "ms1": 203364
+  },
+  {
+   "id": "u5-05",
+   "en": "I did nothing special.",
+   "cn": "我没做什么特别的事情。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "nothing"
+   ],
+   "blocks": [
+    "I did nothing special."
+   ],
+   "src": "text",
+   "no": 81,
+   "ms0": 203364,
+   "ms1": 205200
+  },
+  {
+   "id": "u5-06",
+   "en": "It just took my breath away.",
+   "cn": "美得让我透不过气来。",
+   "cnFixed": true,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "breath"
+   ],
+   "blocks": [
+    "It just",
+    "took my breath away."
+   ],
+   "src": "text",
+   "no": 100,
+   "ms0": 245376,
+   "ms1": 247716
+  },
+  {
+   "id": "u5-07",
+   "en": "Everything tasted good, especially the steamed chicken soup.",
+   "cn": "所有东西都很好吃，特别是汽锅鸡。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "especially"
+   ],
+   "blocks": [
+    "Everything tasted good,",
+    "especially the steamed chicken soup."
+   ],
+   "src": "text",
+   "no": 104,
+   "ms0": 254412,
+   "ms1": 258912
+  },
+  {
+   "id": "u5-08",
+   "en": "Peter had a fantastic holiday.",
+   "cn": "彼得度过了一个非常精彩的假期。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "fantastic"
+   ],
+   "blocks": [
+    "Peter had a fantastic holiday."
+   ],
+   "src": "text",
+   "no": 118,
+   "ms0": 290844,
+   "ms1": 293652
+  },
+  {
+   "id": "u5-09",
+   "en": "I didn't go anywhere special but tried something new—I worked as a tour guide at a museum.",
+   "cn": "我没有去什么特别的地方，不过我尝试了一些新的东西，在博物馆当导游。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "anywhere",
+    "guide"
+   ],
+   "blocks": [
+    "I didn't go anywhere special",
+    "but tried something new—I worked as a tour guide",
+    "at a museum."
+   ],
+   "src": "text",
+   "no": 151,
+   "ms0": 375156,
+   "ms1": 382716
+  },
+  {
+   "id": "u5-10",
+   "en": "Everyone says the scenery around the West Lake is so beautiful.",
+   "cn": "大家都说西湖一带的风景很美。",
+   "cnFixed": true,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "scenery"
+   ],
+   "blocks": [
+    "Everyone says the scenery",
+    "around the West Lake is so beautiful."
+   ],
+   "src": "text",
+   "no": 169,
+   "ms0": 428544,
+   "ms1": 433440
+  },
+  {
+   "id": "u5-11",
+   "en": "Wow, it's a silk scarf.",
+   "cn": "哇，是一条丝巾。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "silk"
+   ],
+   "blocks": [
+    "Wow, it's a silk scarf."
+   ],
+   "src": "text",
+   "no": 179,
+   "ms0": 448524,
+   "ms1": 451332
+  },
+  {
+   "id": "u5-12",
+   "en": "Like everyone else, I was ready to go on a holiday somewhere.",
+   "cn": "我和其他人一样，准备找一个地方去度假。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "ready",
+    "somewhere"
+   ],
+   "blocks": [
+    "Like everyone else,",
+    "I was ready to go",
+    "on a holiday somewhere."
+   ],
+   "src": "text",
+   "no": 190,
+   "ms0": 468468,
+   "ms1": 473688
+  },
+  {
+   "id": "u5-13",
+   "en": "When I got to the town, it started raining heavily.",
+   "cn": "我一到小镇，天就下起了大雨。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "past",
+    "clause"
+   ],
+   "words": [
+    "town"
+   ],
+   "blocks": [
+    "When I got",
+    "to the town,",
+    "it started raining heavily."
+   ],
+   "src": "text",
+   "no": 192,
+   "ms0": 480312,
+   "ms1": 484200
+  },
+  {
+   "id": "u5-14",
+   "en": "The hotel was nice, with a comfortable bed, and everything was very clean.",
+   "cn": "酒店很不错，床很舒服，房间里的一切也都干净整洁。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "hotel",
+    "comfortable"
+   ],
+   "blocks": [
+    "The hotel was nice,",
+    "with a comfortable bed,",
+    "and everything was very clean."
+   ],
+   "src": "text",
+   "no": 194,
+   "ms0": 487620,
+   "ms1": 493920
+  },
+  {
+   "id": "u5-15",
+   "en": "I felt bored, so I decided to look for something to read.",
+   "cn": "我觉得很无聊，于是决定找点东西来看。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "bored"
+   ],
+   "blocks": [
+    "I felt bored,",
+    "so I decided to look for something to read."
+   ],
+   "src": "text",
+   "no": 195,
+   "ms0": 493920,
+   "ms1": 498528
+  },
+  {
+   "id": "u5-16",
+   "en": "I got up and walked towards the window.",
+   "cn": "我起身走向窗户。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "towards"
+   ],
+   "blocks": [
+    "I got up and walked",
+    "towards the window."
+   ],
+   "src": "text",
+   "no": 199,
+   "ms0": 509076,
+   "ms1": 512136
+  },
+  {
+   "id": "u5-17",
+   "en": "There was a beautiful double rainbow in the sky.",
+   "cn": "天空中有一道美丽的双彩虹。",
+   "cnFixed": true,
+   "level": "S3",
+   "gram": [
+    "past",
+    "therebe"
+   ],
+   "words": [
+    "rainbow"
+   ],
+   "blocks": [
+    "There was a beautiful double rainbow",
+    "in the sky."
+   ],
+   "src": "text",
+   "no": 200,
+   "ms0": 512136,
+   "ms1": 515880
+  },
+  {
+   "id": "u5-18",
+   "en": "Today was our first day to visit Moscow.",
+   "cn": "今天是我们在莫斯科的第一天。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "Moscow"
+   ],
+   "blocks": [
+    "Today was our first day",
+    "to visit Moscow."
+   ],
+   "src": "text",
+   "no": 210,
+   "ms0": 536760,
+   "ms1": 539856
+  },
+  {
+   "id": "u5-19",
+   "en": "The weather was fine and everyone felt excited to visit some famous places in Russia.",
+   "cn": "天气很好，大家都兴奋不已，要去游览俄罗斯的一些著名景点。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "Russia"
+   ],
+   "blocks": [
+    "The weather was fine",
+    "and everyone felt excited",
+    "to visit some famous places in Russia."
+   ],
+   "src": "text",
+   "no": 211,
+   "ms0": 539856,
+   "ms1": 545724
+  },
+  {
+   "id": "u5-20",
+   "en": "In the morning, we went to the Victory Museum.",
+   "cn": "上午，我们去了胜利博物馆。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "victory"
+   ],
+   "blocks": [
+    "In the morning, we went",
+    "to the Victory Museum."
+   ],
+   "src": "text",
+   "no": 212,
+   "ms0": 545724,
+   "ms1": 549036
+  },
+  {
+   "id": "u5-21",
+   "en": "The Russian people built this museum to remember their fight against the Nazis during World War II.",
+   "cn": "俄罗斯人民建造这座博物馆，是为了纪念他们在二战期间抗击纳粹的斗争。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "Russian",
+    "fight",
+    "against",
+    "Nazi"
+   ],
+   "blocks": [
+    "The Russian people built this museum",
+    "to remember their fight",
+    "against the Nazis",
+    "during World War II."
+   ],
+   "src": "text",
+   "no": 213,
+   "ms0": 549036,
+   "ms1": 556092
+  },
+  {
+   "id": "u5-22",
+   "en": "In one hall, I saw an artwork with thousands of glass \"tears\" falling down.",
+   "cn": "在一个展厅里，我看见一件艺术作品，上面有成千上万滴玻璃“泪珠”缓缓落下。",
+   "cnFixed": false,
+   "level": "S5",
+   "gram": [
+    "quote"
+   ],
+   "words": [
+    "artwork",
+    "tear"
+   ],
+   "blocks": [
+    "In one hall,",
+    "I saw an artwork",
+    "with thousands of glass \"tears\" falling down."
+   ],
+   "src": "text",
+   "no": 215,
+   "ms0": 561420,
+   "ms1": 567432
+  },
+  {
+   "id": "u5-23",
+   "en": "It reminds us that war is terrible and peace does not come easily.",
+   "cn": "它提醒我们战争的残酷，和平来之不易。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "clause",
+    "neg"
+   ],
+   "words": [
+    "remind",
+    "peace",
+    "easily"
+   ],
+   "blocks": [
+    "It reminds us",
+    "that war is terrible",
+    "and peace does not come easily."
+   ],
+   "src": "text",
+   "no": 216,
+   "ms0": 567432,
+   "ms1": 572724
+  },
+  {
+   "id": "u5-24",
+   "en": "We should not forget that.",
+   "cn": "我们不应该忘记这一点。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "modal",
+    "clause",
+    "neg"
+   ],
+   "words": [
+    "forget"
+   ],
+   "blocks": [
+    "We should",
+    "not forget that."
+   ],
+   "src": "text",
+   "no": 217,
+   "ms0": 572724,
+   "ms1": 574668
+  },
+  {
+   "id": "u5-25",
+   "en": "At noon, we had lunch at a restaurant near the park.",
+   "cn": "中午，我们在公园附近的一家餐厅吃午餐。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "noon"
+   ],
+   "blocks": [
+    "At noon,",
+    "we had lunch",
+    "at a restaurant",
+    "near the park."
+   ],
+   "src": "text",
+   "no": 218,
+   "ms0": 574668,
+   "ms1": 578808
+  },
+  {
+   "id": "u5-26",
+   "en": "But, during dinner, I didn't feel like eating because I felt sick.",
+   "cn": "但晚餐时，我没有胃口，因为我感觉不舒服。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "clause"
+   ],
+   "words": [
+    "sick"
+   ],
+   "blocks": [
+    "But, during dinner,",
+    "I didn't feel like eating",
+    "because I felt sick."
+   ],
+   "src": "text",
+   "no": 220,
+   "ms0": 583308,
+   "ms1": 588420
+  },
+  {
+   "id": "u5-27",
+   "en": "We took the Moscow Metro to travel around.",
+   "cn": "我们搭乘莫斯科地铁四处游览。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "Moscow",
+    "metro"
+   ],
+   "blocks": [
+    "We took the Moscow Metro",
+    "to travel around."
+   ],
+   "src": "text",
+   "no": 225,
+   "ms0": 601848,
+   "ms1": 605556
+  },
+  {
+   "id": "u5-28",
+   "en": "The metro stations are really beautiful.",
+   "cn": "地铁站非常漂亮。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "metro",
+    "station"
+   ],
+   "blocks": [
+    "The metro stations",
+    "are really beautiful."
+   ],
+   "src": "text",
+   "no": 226,
+   "ms0": 605556,
+   "ms1": 608148
+  },
+  {
+   "id": "u5-29",
+   "en": "Sometimes I felt like I was walking inside a palace.",
+   "cn": "有时候，我感觉自己仿佛走进了一座宫殿。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "progressive",
+    "past"
+   ],
+   "words": [
+    "palace"
+   ],
+   "blocks": [
+    "Sometimes I felt like I was walking",
+    "inside a palace."
+   ],
+   "src": "text",
+   "no": 227,
+   "ms0": 608148,
+   "ms1": 612324
+  },
+  {
+   "id": "u5-30",
+   "en": "After that, we went to Red Square.",
+   "cn": "之后，我们去了红场。",
+   "cnFixed": false,
+   "level": "S4",
+   "gram": [
+    "past",
+    "clause"
+   ],
+   "words": [
+    "square"
+   ],
+   "blocks": [
+    "After that, we went",
+    "to Red Square."
+   ],
+   "src": "text",
+   "no": 228,
+   "ms0": 612324,
+   "ms1": 614988
+  },
+  {
+   "id": "u5-31",
+   "en": "We saw some fantastic buildings there.",
+   "cn": "我们在那里看到了一些梦幻般的建筑。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "fantastic"
+   ],
+   "blocks": [
+    "We saw",
+    "some fantastic buildings there."
+   ],
+   "src": "text",
+   "no": 229,
+   "ms0": 614988,
+   "ms1": 617544
+  },
+  {
+   "id": "u5-32",
+   "en": "Later, someone took out his accordion, and soon everyone got together to sing and dance.",
+   "cn": "后来，有人拿出了手风琴，不一会儿，大家就聚在一起唱歌跳舞。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [],
+   "words": [
+    "accordion"
+   ],
+   "blocks": [
+    "Later, someone took",
+    "out his accordion,",
+    "and soon everyone got together",
+    "to sing and dance."
+   ],
+   "src": "text",
+   "no": 232,
+   "ms0": 626544,
+   "ms1": 632988
+  },
+  {
+   "id": "u5-33",
+   "en": "What places did Vincent visit?",
+   "cn": "文森特游览了哪些地方？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "past"
+   ],
+   "words": [
+    "Vincent"
+   ],
+   "blocks": [
+    "What places did Vincent visit?"
+   ],
+   "src": "text",
+   "no": 236,
+   "ms0": 641916,
+   "ms1": 645048
+  },
+  {
+   "id": "u5-34",
+   "en": "What can you learn from Vincent's travel experience?",
+   "cn": "你能从文森特的旅行经历中了解到什么？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "Vincent"
+   ],
+   "blocks": [
+    "What can you learn from Vincent's travel experience?"
+   ],
+   "src": "text",
+   "no": 248,
+   "ms0": 668556,
+   "ms1": 672264
+  }
+ ]
+}

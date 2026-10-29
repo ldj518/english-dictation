@@ -29,7 +29,8 @@ export type SegKind =
   | 'spell'   // 拼写（判分）
   | 'drill'   // 变式重复（同词换题型，填充池）
   | 'paper'   // 纸笔（判分）
-  | 'sent'    // 句子拼装（判分）
+  | 'sent'    // 句子拼装（意群块，判分）
+  | 'mean'    // 句意选择（整句英文四选一，判分）
   | 'test'    // 周测/单元测（判分）
   | 'wrap'    // 结算收尾
 
@@ -197,7 +198,7 @@ const TIER_NOTE: Record<Tier, string> = {
 /** 段规格表：每段的「人均耗时」用于估算（秒/题） */
 const SEG_SEC: Record<SegKind, number> = {
   warm: 8, learn: 25, review: 20, recall: 22, choice: 9,
-  spell: 24, drill: 14, paper: 40, sent: 45, test: 16, wrap: 30,
+  spell: 24, drill: 14, paper: 40, sent: 45, mean: 30, test: 16, wrap: 30,
 }
 
 function seg(k: SegKind, label: string, words: number, q: number): PlanSeg {
@@ -245,7 +246,8 @@ export function buildPlan(inp: PlanInput): DayPlan {
     const n = 12
     segs.push(seg('learn', '本单元重学', n, n))
     segs.push(seg('review', '认回这些词', 8, 8))
-    segs.push(seg('sent', '两句老句子', 2, 2))
+    // 重启档只拼已经学过词的老句子，不引新句
+    segs.push(seg('sent', '拼两句老句子', 2, 2))
   } else if (tier === 'settle' || tier === 'recover') {
     // 只清到期，零新词。清账要清得多，恢复只清一半
     const half = Math.max(6, Math.floor(dueToday / 2))
@@ -253,14 +255,16 @@ export function buildPlan(inp: PlanInput): DayPlan {
     if (inp.nailN > 0) segs.push(seg('drill', `钉子词 ${Math.min(8, inp.nailN)} 个`, Math.min(8, inp.nailN), Math.min(8, inp.nailN) * 2))
     segs.push(seg('choice', '听音选义', half, half))
     segs.push(seg('paper', '纸笔 2 词', 2, 2))
-    if (tier === 'settle') segs.push(seg('sent', '两句短句', 2, 2))
+    // 积压期只读不出：读懂整句不占工作记忆，拼装会拖慢清账节奏
+    if (tier === 'settle') segs.push(seg('mean', '读懂两句', 2, 2))
   } else if (tier === 'sun') {
     // 周日：周测 + 讲卷，零新词
     segs.push(seg('test', '周测 30 题', 30, 30))
     segs.push(seg('review', '到期复习', Math.max(8, Math.floor(dueToday * 0.5)), Math.max(8, Math.floor(dueToday * 0.5))))
     if (inp.nailN > 0) segs.push(seg('drill', `钉子词 ${Math.min(8, inp.nailN)} 个`, Math.min(8, inp.nailN), Math.min(8, inp.nailN) * 2))
     segs.push(seg('paper', '纸笔 6 词', 6, 6))
-    segs.push(seg('sent', '句子 4 句', 4, 4))
+    segs.push(seg('mean', '读懂 4 句', 4, 4))
+    segs.push(seg('sent', '拼出 4 句', 4, 4))
     segs.push(seg('drill', '错题归类复盘', 0, 8))
   } else if (tier === 'sat') {
     // 周六：清账 + 书写，零新词
@@ -268,10 +272,12 @@ export function buildPlan(inp: PlanInput): DayPlan {
     segs.push(seg('review', '到期复习', n, n))
     if (inp.nailN > 0) segs.push(seg('drill', `钉子词 ${Math.min(8, inp.nailN)} 个`, Math.min(8, inp.nailN), Math.min(8, inp.nailN) * 2))
     segs.push(seg('paper', '纸笔 8 词', 8, 8))
-    segs.push(seg('sent', '句子 4 句', 4, 4))
+    segs.push(seg('mean', '读懂 4 句', 4, 4))
+    segs.push(seg('sent', '拼出 4 句', 4, 4))
     segs.push(seg('choice', '混合小测', 20, 20))
   } else {
-    // 正常工作日：六段
+    // 正常工作日：先认词，再读整句，最后拼句。
+    // 顺序不能反：句意选择会显示整句英文，排在拼写前面就等于把答案给出去。
     segs.push(seg('review', '到期复习', dueToday, dueToday))
     if (newN > 0) {
       segs.push(seg('learn', `新词 ${newN} 个`, newN, newN))
@@ -279,7 +285,8 @@ export function buildPlan(inp: PlanInput): DayPlan {
     }
     segs.push(seg('choice', '听音选义', Math.max(5, Math.min(dueToday, 10)), Math.max(5, Math.min(dueToday, 10))))
     segs.push(seg('spell', '拼写', Math.max(5, Math.min(dueToday, 10)), Math.max(5, Math.min(dueToday, 10))))
-    segs.push(seg('sent', '句子 2 句', 2, 2))
+    segs.push(seg('mean', '读懂 3 句', 3, 3))
+    segs.push(seg('sent', '拼出 3 句', 3, 3))
   }
 
   // ── 缺口填充（顺序不能反）：还堆着到期词就先清到期，队列空了才做变式重复 ──

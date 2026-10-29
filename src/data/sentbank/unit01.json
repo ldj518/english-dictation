@@ -1,0 +1,490 @@
+{
+ "version": 1,
+ "unit": "unit01",
+ "unitName": "Unit 1 Here and Now",
+ "sents": [
+  {
+   "id": "u1-01",
+   "en": "What is Adam doing?",
+   "cn": "亚当在做什么？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "Adam"
+   ],
+   "blocks": [
+    "What is Adam doing?"
+   ],
+   "src": "text",
+   "no": 26,
+   "ms0": 77148,
+   "ms1": 79632
+  },
+  {
+   "id": "u1-02",
+   "en": "It's great to hear your voice!",
+   "cn": "听到你的声音真开心！",
+   "cnFixed": false,
+   "level": "S5",
+   "gram": [],
+   "words": [
+    "voice"
+   ],
+   "blocks": [
+    "It's great",
+    "to hear your voice!"
+   ],
+   "src": "text",
+   "no": 86,
+   "ms0": 195588,
+   "ms1": 197856
+  },
+  {
+   "id": "u1-03",
+   "en": "Hao Yi and I are making mooncakes and watching a TV programme about Chang'e.",
+   "cn": "我和郝艺一边做月饼，一边看关于嫦娥的电视节目。",
+   "cnFixed": true,
+   "level": "S3",
+   "gram": [
+    "progressive"
+   ],
+   "words": [
+    "programme"
+   ],
+   "blocks": [
+    "Hao Yi and I are making mooncakes",
+    "and watching a TV programme about Chang'e."
+   ],
+   "src": "text",
+   "no": 92,
+   "ms0": 206856,
+   "ms1": 212976
+  },
+  {
+   "id": "u1-04",
+   "en": "Jane's mum is not feeling well at the moment.",
+   "cn": "简的妈妈目前感觉身体不适。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "neg"
+   ],
+   "words": [
+    "moment"
+   ],
+   "blocks": [
+    "Jane's mum is not feeling well",
+    "at the moment."
+   ],
+   "src": "text",
+   "no": 115,
+   "ms0": 257040,
+   "ms1": 260640
+  },
+  {
+   "id": "u1-05",
+   "en": "Yes, hold on, please.",
+   "cn": "好的，请稍等。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "hold"
+   ],
+   "blocks": [
+    "Yes, hold on, please."
+   ],
+   "src": "text",
+   "no": 138,
+   "ms0": 310104,
+   "ms1": 312480
+  },
+  {
+   "id": "u1-06",
+   "en": "Would you like to leave a message?",
+   "cn": "你要留言吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "message"
+   ],
+   "blocks": [
+    "Would you like to leave a message?"
+   ],
+   "src": "text",
+   "no": 141,
+   "ms0": 318672,
+   "ms1": 321048
+  },
+  {
+   "id": "u1-07",
+   "en": "We're watching a TV programme about Chang'e too.",
+   "cn": "我们也在看关于嫦娥的电视节目。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "programme"
+   ],
+   "blocks": [
+    "We're watching a TV programme",
+    "about Chang'e too."
+   ],
+   "src": "text",
+   "no": 163,
+   "ms0": 365760,
+   "ms1": 369936
+  },
+  {
+   "id": "u1-08",
+   "en": "Are you painting a flower?",
+   "cn": "你是在画一朵花吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "painting"
+   ],
+   "blocks": [
+    "Are you painting a flower?"
+   ],
+   "src": "text",
+   "no": 180,
+   "ms0": 400716,
+   "ms1": 402732
+  },
+  {
+   "id": "u1-09",
+   "en": "I'm painting a tree.",
+   "cn": "我在画一棵树。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "painting"
+   ],
+   "blocks": [
+    "I'm painting a tree."
+   ],
+   "src": "text",
+   "no": 182,
+   "ms0": 404064,
+   "ms1": 406080
+  },
+  {
+   "id": "u1-10",
+   "en": "What are the boys kicking?",
+   "cn": "那些男孩在踢什么？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "kick"
+   ],
+   "blocks": [
+    "What are the boys kicking?"
+   ],
+   "src": "text",
+   "no": 190,
+   "ms0": 422388,
+   "ms1": 424764
+  },
+  {
+   "id": "u1-11",
+   "en": "I know it's near your exams.",
+   "cn": "我知道你快要考试了。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "exam"
+   ],
+   "blocks": [
+    "I know it's",
+    "near your exams."
+   ],
+   "src": "text",
+   "no": 201,
+   "ms0": 454212,
+   "ms1": 456876
+  },
+  {
+   "id": "u1-12",
+   "en": "What is happening in different time zones around the world right now?",
+   "cn": "现在，世界上不同时区正在发生什么？",
+   "cnFixed": true,
+   "level": "S2",
+   "gram": [
+    "progressive"
+   ],
+   "words": [
+    "happen",
+    "zone"
+   ],
+   "blocks": [
+    "What is happening in different time zones around the world right now?"
+   ],
+   "src": "text",
+   "no": 227,
+   "ms0": 523440,
+   "ms1": 528624
+  },
+  {
+   "id": "u1-13",
+   "en": "Lights are shining brightly across the city, and colourful boats are moving slowly down the river.",
+   "cn": "整座城市灯火通明，五彩斑斓的船只在江面上缓缓行驶。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "progressive"
+   ],
+   "words": [
+    "shine",
+    "brightly",
+    "colourful",
+    "slowly"
+   ],
+   "blocks": [
+    "Lights are shining brightly",
+    "across the city,",
+    "and colourful boats are moving slowly",
+    "down the river."
+   ],
+   "src": "text",
+   "no": 233,
+   "ms0": 544140,
+   "ms1": 551808
+  },
+  {
+   "id": "u1-14",
+   "en": "People are eating delicious food, such as Chongqing hot pot and noodles.",
+   "cn": "人们吃着重庆火锅、重庆小面等美味佳肴。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "progressive"
+   ],
+   "words": [
+    "such"
+   ],
+   "blocks": [
+    "People are eating delicious food,",
+    "such as Chongqing hot pot and noodles."
+   ],
+   "src": "text",
+   "no": 234,
+   "ms0": 551808,
+   "ms1": 557856
+  },
+  {
+   "id": "u1-15",
+   "en": "In Nairobi, Kenya, it's 3 p.m.",
+   "cn": "肯尼亚内罗毕现在是下午 3 点。",
+   "cnFixed": true,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "Nairobi",
+    "Kenya"
+   ],
+   "blocks": [
+    "In Nairobi, Kenya,",
+    "it's 3 p.m."
+   ],
+   "src": "text",
+   "no": 235,
+   "ms0": 557856,
+   "ms1": 561600
+  },
+  {
+   "id": "u1-16",
+   "en": "Some people are shopping for gifts, such as paintings and bags, in the markets.",
+   "cn": "一些人在集市上购买礼品，比如画作和包袋。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "progressive"
+   ],
+   "words": [
+    "such",
+    "painting",
+    "market"
+   ],
+   "blocks": [
+    "Some people are shopping for gifts,",
+    "such as paintings and bags,",
+    "in the markets."
+   ],
+   "src": "text",
+   "no": 237,
+   "ms0": 565164,
+   "ms1": 571356
+  },
+  {
+   "id": "u1-17",
+   "en": "In this city, people live side by side with many wonderful animals!",
+   "cn": "在这座城市里，人们与许多奇妙的动物比邻而居！",
+   "cnFixed": false,
+   "level": "S5",
+   "gram": [],
+   "words": [
+    "side"
+   ],
+   "blocks": [
+    "In this city,",
+    "people live side by side",
+    "with many wonderful animals!"
+   ],
+   "src": "text",
+   "no": 239,
+   "ms0": 577620,
+   "ms1": 583560
+  },
+  {
+   "id": "u1-18",
+   "en": "Many people are rushing to the subway.",
+   "cn": "许多人匆匆赶往地铁站。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [
+    "progressive"
+   ],
+   "words": [
+    "subway"
+   ],
+   "blocks": [
+    "Many people are rushing",
+    "to the subway."
+   ],
+   "src": "text",
+   "no": 242,
+   "ms0": 590652,
+   "ms1": 593604
+  },
+  {
+   "id": "u1-19",
+   "en": "Bright yellow taxis are picking up and dropping off passengers.",
+   "cn": "明黄色的出租车在接送着乘客。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "progressive"
+   ],
+   "words": [
+    "bright",
+    "drop",
+    "passenger"
+   ],
+   "blocks": [
+    "Bright yellow taxis are picking up",
+    "and dropping off passengers."
+   ],
+   "src": "text",
+   "no": 244,
+   "ms0": 595440,
+   "ms1": 600516
+  },
+  {
+   "id": "u1-20",
+   "en": "Some people are jogging, walking, and riding bikes in Central Park.",
+   "cn": "一些人在中央公园里慢跑、散步、骑自行车。",
+   "cnFixed": false,
+   "level": "S3",
+   "gram": [
+    "progressive"
+   ],
+   "words": [
+    "ride",
+    "central"
+   ],
+   "blocks": [
+    "Some people are jogging, walking,",
+    "and riding bikes",
+    "in Central Park."
+   ],
+   "src": "text",
+   "no": 245,
+   "ms0": 600516,
+   "ms1": 605952
+  },
+  {
+   "id": "u1-21",
+   "en": "Where can people in Nairobi see big animals like elephants and giraffes?",
+   "cn": "人们在内罗毕的哪个地方能看到大象和长颈鹿这类大型动物？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "Nairobi"
+   ],
+   "blocks": [
+    "Where can people in Nairobi see big animals like elephants and giraffes?"
+   ],
+   "src": "text",
+   "no": 249,
+   "ms0": 618624,
+   "ms1": 625104
+  },
+  {
+   "id": "u1-22",
+   "en": "What are people doing in Central Park?",
+   "cn": "人们在中央公园里做什么？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [],
+   "words": [
+    "central"
+   ],
+   "blocks": [
+    "What are people doing in Central Park?"
+   ],
+   "src": "text",
+   "no": 250,
+   "ms0": 625104,
+   "ms1": 628164
+  },
+  {
+   "id": "u1-23",
+   "en": "Can you explain why the time is different in each city at the same moment?",
+   "cn": "你能解释一下，为什么每座城市在同一时刻的时间都不一样吗？",
+   "cnFixed": false,
+   "level": "S2",
+   "gram": [
+    "modal"
+   ],
+   "words": [
+    "explain",
+    "moment"
+   ],
+   "blocks": [
+    "Can you explain why the time is different in each city at the same moment?"
+   ],
+   "src": "text",
+   "no": 251,
+   "ms0": 628164,
+   "ms1": 634104
+  },
+  {
+   "id": "u1-24",
+   "en": "He likes painting flowers.",
+   "cn": "他喜欢画花。",
+   "cnFixed": false,
+   "level": "S1",
+   "gram": [],
+   "words": [
+    "painting"
+   ],
+   "blocks": [
+    "He likes painting flowers."
+   ],
+   "src": "text",
+   "no": 291,
+   "ms0": 752436,
+   "ms1": 754884
+  }
+ ]
+}

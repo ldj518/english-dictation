@@ -15,7 +15,7 @@ import LetterKeyboard from '../components/LetterKeyboard'
 import { useStore } from '../lib/store'
 import { todayStr, judge, judgeWithFirst } from '../lib/storage'
 import { cnOf, judgeSentence, type Q } from '../lib/qbank'
-import { dueWordList } from '../lib/memory'
+import { dueWordList, type Channel } from '../lib/memory'
 import {
   buildPaper, gateOf, nextGate, gradePaper, makeRun, unitWords, unitName,
   GATE_PASS, SPELL_PASS, type TestItem,
@@ -110,12 +110,18 @@ export default function Gate() {
     const attempt = (progress.tests || []).filter(t => t.kind === 'gate' && t.unit === target.unit).length + 1
     const run = makeRun('gate', target.unit, day, r, attempt, `${target.unit}-${day}-${Date.now()}`)
     setSavedRun(run)
-    // 逐题判词：对了记一次，错了也记一次（这就是补丁期该练的依据）
+    // 逐题判词：对了记一次，错了也记一次（这就是补丁期该练的依据）。
+    // 必须带上题型：测验里选择题和拼写题对半分，不区分通道的话，
+    // 「会选」会被记成「会写」，补丁期排出来的词也跟着失真。
     const seen = new Set<string>()
     for (const x of recs) {
       if (seen.has(x.word)) continue
       seen.add(x.word)
-      gradeOne(x.word, x.correct, { hinted: x.peek })
+      const ch: Channel = x.kind === 'spell' ? 'spell'
+        : x.kind === 'sent' ? 'sent'
+          : x.kind === 'paper' ? 'paper'
+            : 'pick'
+      gradeOne(x.word, x.correct, { hinted: x.peek, channel: ch })
     }
     const items: TestItem[] = recs.map((x, i) => ({
       no: i + 1, word: x.word, qkind: x.kind,

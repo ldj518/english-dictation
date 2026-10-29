@@ -39,6 +39,7 @@ import { nextGate, unitName } from '../lib/gate'
 import { schoolUnitOf } from '../lib/school'
 import { reportDay, newSessionId } from '../lib/api'
 import { enqueueAnswer } from '../lib/answerQueue'
+import { warmAudio } from '../lib/warmAudio'
 import { judge, judgeWithFirst } from '../lib/storage'
 import { syllableText } from '../lib/syllables'
 import type { DayLog } from '../types'
@@ -212,6 +213,10 @@ export default function Today() {
       recentSents: recentSentsOf(pg, day),
     })
     setBank(b)
+    // 音频预热：把这一场要用的词音频在开局时悄悄拉进缓存。
+    // 不做的话，页面上得快、一点发音还是要等一趟跨境请求（晚上 1–9 秒）。
+    // 失败不影响答题，弱网下会自己停手（见 warmAudio 里的连续失败计数）。
+    void warmAudio(b.qs.map(q => q.file))
     setQi(0)
     qiRef.current = 0
     // 每次重建题库（换天/换身份）都算新的一场，会话 id 也要换，

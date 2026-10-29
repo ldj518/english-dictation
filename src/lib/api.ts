@@ -626,3 +626,49 @@ export async function fetchDayLog(studentId: string, from?: string, to?: string)
   const r = await req<{ days: DayRow[] }>('/day?' + q.toString())
   return r?.days || []
 }
+
+/** 一次每日流水线的会话 id。开局生成，逐题与结算共用同一个 */
+export function newSessionId(): string {
+  const t = Date.now().toString(36)
+  const r = Math.random().toString(36).slice(2, 8)
+  return `s_${t}_${r}`
+}
+
+export interface AnswerRow {
+  word: string
+  cn: string
+  input: string
+  correct: number
+  seq: number
+  peek: number
+  fast: number
+  at: number
+}
+
+/** 某天的逐题作答（家长后台「今天这一场」明细用；含中途退出没结算的） */
+export async function fetchDayAnswers(studentId: string, day: string): Promise<AnswerRow[]> {
+  const q = new URLSearchParams({ studentId, plan: day })
+  const r = await req<{ answers: AnswerRow[] }>('/day?' + q.toString())
+  return r?.answers || []
+}
+
+/**
+ * 逐题落库（v6）。fire-and-forget：答完一题顺手报一条，
+ * 失败就算了——不能因为网络把答题卡住。
+ */
+export function postAnswer(a: {
+  studentId: string
+  sessionId: string
+  dayKey: string
+  word: string
+  cn?: string
+  input?: string
+  correct: boolean
+  seq?: number
+  ms?: number
+  attempts?: number
+  peek?: boolean
+  fast?: boolean
+}): void {
+  void req('/answer', { method: 'POST', body: JSON.stringify(a) })
+}

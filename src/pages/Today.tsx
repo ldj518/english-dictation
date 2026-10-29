@@ -34,7 +34,7 @@ import { EffTimer } from '../lib/timer'
 import { unlockAudio } from '../lib/player'
 import { todayStr } from '../lib/storage'
 import { nextGate, unitName } from '../lib/gate'
-import { reportDay } from '../lib/api'
+import { reportDay, postAnswer, newSessionId } from '../lib/api'
 import { judge, judgeWithFirst } from '../lib/storage'
 import { syllableText } from '../lib/syllables'
 import type { DayLog } from '../types'
@@ -90,6 +90,9 @@ export default function Today() {
   const [tick, setTick] = useState(0)
   // 词 → 当日最高判定档（'recog' 认得 / 'prod' 产出）。产出判过就不再被选择题覆盖
   const gradedRef = useRef<Map<string, 'recog' | 'prod'>>(new Map())
+  // v6：本场会话 id（逐题落库与结算共用）+ 当前题号镜像（grade 里读不到最新 state）
+  const sidRef = useRef<string>(newSessionId())
+  const qiRef = useRef(0)
   const audioRef = useRef<Map<string, string>>(new Map())
 
   /* ── 构建今日会话 ──────────────────────────────────── */
@@ -152,6 +155,10 @@ export default function Today() {
     })
     setBank(b)
     setQi(0)
+    qiRef.current = 0
+    // 每次重建题库（换天/换身份）都算新的一场，会话 id 也要换，
+    // 否则昨天的逐题记录会被今天的结算当成同一次会话删掉
+    sidRef.current = newSessionId()
     setRecs([])
     gradedRef.current = new Map()
     gradedQRef.current = new Set()
@@ -287,6 +294,23 @@ export default function Today() {
       if (rec.peek) st.peekN += 1
     }
 
+    // v6：逐题落库。原来这条流水线一条明细都不留，孩子中途退出后
+    // 家长后台只剩分段耗时，看不到「今天错了哪几个词」。
+    // 失败不影响答题（postAnswer 内部吞掉异常），也不重复记（上面 already 去重）。
+    postAnswer({
+      studentId: profile.id,
+      sessionId: sidRef.current,
+      dayKey: day,
+      word: q.word,
+      cn: q.cn,
+      correct: rec.correct,
+      seq: qiRef.current + 1,
+      ms,
+      attempts: 1,
+      peek: !!opts.peek,
+      fast,
+    })
+
     // 同一个词，按通道分别只判一次：
     //  - 产出档（拼写/纸笔）判过就不再改，认得档（选义/句子）不许覆盖它
     //  - 认得档判过之后，产出档还能再判一次（这是升级，不是重复）
@@ -316,6 +340,7 @@ export default function Today() {
   const next = useCallback(() => {
     if (!bank) return
     if (qi + 1 >= bank.qs.length) { setPhase('wrap'); return }
+    qiRef.current = qi + 1
     setQi(i => i + 1)
   }, [bank, qi])
 

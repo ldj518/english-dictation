@@ -32,6 +32,8 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
         ms?: number; attempts?: number; peek?: boolean; fast?: boolean
       }[]
       photoKey?: string
+      /** v6：客户端开局时生成的会话 id。传了就用它，逐题落库的行才挂得上去 */
+      sessionId?: string
       /** v5：首答对（不含看答案）、看答案题数、有效学习秒数、档位 */
       firstRight?: number
       peekN?: number
@@ -53,7 +55,15 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     const seconds = Math.max(0, Math.round(body.seconds || 0))
     const now = Date.now()
     const dk = dayKey(now)
-    const sessionId = uid('s_')
+    // v6：客户端逐题落库时已经用了自己生成的 session id（s_ 开头），
+    // 结算必须复用同一个，否则 answers 里会出现两批互不相干的行。
+    const given = (body.sessionId || '').trim()
+    const sessionId = /^s_[a-zA-Z0-9_]{6,40}$/.test(given) ? given : uid('s_')
+    // 复用客户端的 id 时，逐题那批行已经存在——先删再插，保证最终状态等于结算结果
+    // （同一次会话里孩子可能重做、退出重进，留着旧行会重复计数）
+    if (given === sessionId) {
+      await env.DB.prepare('DELETE FROM answers WHERE session_id = ?').bind(sessionId).run()
+    }
 
     // 1. 写 sessions
     await env.DB.prepare(
@@ -77,10 +87,10 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     // 2. 批量写 answers（D1 batch，一次往返）
     const stmts = records.map((r, i) =>
       env.DB.prepare(
-        `INSERT INTO answers (session_id, word, cn, input, correct, seq, ms, attempts, peek, fast)
-         VALUES (?,?,?,?,?,?,?,?,?,?)`
+        `INSERT INTO answers (session_id, student_id, day_key, at, word, cn, input, correct, seq, ms, attempts, peek, fast)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
       ).bind(
-        sessionId, r.word, r.cn || '', r.input || '', r.correct ? 1 : 0, r.no ?? i + 1,
+        sessionId, studentId, dk, now, r.word, r.cn || '', r.input || '', r.correct ? 1 : 0, r.no ?? i + 1,
         // v5：四个耗时/重做口径列以前一个都不写，后台没法区分「首答」和「重做后答对」
         Math.max(0, Math.round(r.ms || 0)), Math.max(1, Math.round(r.attempts || 1)),
         r.peek ? 1 : 0, r.fast ? 1 : 0

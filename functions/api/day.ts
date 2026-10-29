@@ -183,6 +183,13 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
         `SELECT seg_index, seg_kind, enter_at, leave_at, q_n, right_n, peek_n
          FROM seg_log WHERE student_id = ? AND day_key = ? ORDER BY seg_index`
       ).bind(studentId, wantDay).all()
+      // v6：逐题明细。以前只在结算时批量写，且 /today 不走结算，
+      // 所以这里一直是空的——家长只能看到分段耗时，看不到错了哪几个词。
+      const { results: answers } = await env.DB.prepare(
+        `SELECT word, cn, input, correct, seq, peek, fast, at
+         FROM answers WHERE student_id = ? AND day_key = ?
+         ORDER BY at DESC, id DESC LIMIT 200`
+      ).bind(studentId, wantDay).all()
       return ok({
         dayKey: wantDay,
         plan: plan ? {
@@ -190,6 +197,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
           segs: (() => { try { return JSON.parse(String((plan as Record<string, unknown>).segs || '[]')) } catch { return [] } })(),
         } : null,
         segs: segs || [],
+        answers: answers || [],
       })
     }
 

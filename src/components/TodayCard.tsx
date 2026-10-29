@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import { useStore } from '../lib/store'
 import { WORDS } from '../lib/data'
 import { todayStr } from '../lib/storage'
-import { bjDiffDays, bjDow, fmtSec } from '../lib/bj'
+import { bjDiffDays, bjDow } from '../lib/bj'
 import { buildPlan, mustTotalOf, mergeCfg, perItemSecOf, rampWeekOf, gapDaysOf } from '../lib/plan'
 import { queueHealth } from '../lib/memory'
 
@@ -39,7 +39,7 @@ export default function TodayCard() {
   const { h, gap, plan, cfg, log, mustAll, week } = info
   const done = !!log?.done
   const started = !!log && (log.effSec > 0 || log.mustDone > 0)
-  const effPct = Math.min(100, Math.round(((log?.effSec || 0) / (plan.minMin * 60)) * 100))
+  const usedMin = Math.round((log?.effSec || 0) / 60)
   const dow = bjDow(day)
   const wd = ['日', '一', '二', '三', '四', '五', '六'][dow]
 
@@ -54,22 +54,17 @@ export default function TodayCard() {
             周{wd} · {plan.tierNote}
           </div>
         </div>
-        <div className="v4homeTag">{plan.minMin}′ / {plan.minMin === 60 || plan.minMin >= 60 ? '周末' : '工作日'}</div>
+        <div className="v4homeTag">{plan.weekend ? '周末' : '工作日'} · 约 {plan.estMin}′</div>
       </div>
 
-      {/* 两条进度：时间和必做。孩子进门先看到「还差多少」 */}
+      {/* 只留一条进度：必做。时间那条**故意删掉**——
+          它的存在会让孩子以为「没坐满就是没做完」，正是之前死锁的观感来源。 */}
       <div className="v4homeBars">
-        <div>
-          <div className="v4hbTop">
-            <span>有效时间</span>
-            <b>{fmtSec(log?.effSec || 0)}<i>/{fmtSec(plan.minMin * 60)}</i></b>
-          </div>
-          <div className="v4bar"><i style={{ width: effPct + '%', background: effPct >= 100 ? 'var(--ok)' : 'var(--blue)' }} /></div>
-        </div>
         <div>
           <div className="v4hbTop">
             <span>必做</span>
             <b>{log?.mustDone || 0}<i>/{mustAll}</i></b>
+            <em>（今天用了 {usedMin} 分钟）</em>
           </div>
           <div className="v4bar">
             <i style={{ width: Math.min(100, Math.round(((log?.mustDone || 0) / Math.max(1, mustAll)) * 100)) + '%', background: (log?.mustDone || 0) >= mustAll ? 'var(--ok)' : 'var(--gold)' }} />
@@ -98,20 +93,20 @@ export default function TodayCard() {
       ) : null}
 
       <button className="btn v4homeGo" onClick={() => nav('/today')}>
-        {done ? '✓ 已完成 · 再练一组' : started ? `▶ 继续（还剩 ${Math.max(0, plan.minMin - Math.round((log?.effSec || 0) / 60))} 分钟）` : `▶ 开始 · ${plan.segs.filter(s => s.k !== 'wrap').length} 段 · 约 ${plan.estMin} 分钟`}
+        {done ? '✓ 已完成 · 再练一组' : started ? `▶ 继续（还剩 ${Math.max(0, mustAll - (log?.mustDone || 0))} 题）` : `▶ 开始 · ${plan.segs.filter(s => s.k !== 'wrap').length} 段 · 约 ${plan.estMin} 分钟`}
       </button>
 
       {!done && (
         <div className="v4homeFoot">
-          要满 {plan.minMin} 分钟有效学习 + {mustAll} 题做完才算完成。挂机不算。
-          {plan.maxMin > plan.minMin ? ` 最多 ${plan.maxMin} 分钟就收尾，慢慢做不会加量。` : ''}
+          把 {mustAll} 道必做题做完就算完成，不用凑时长；看答案的题不超过 40%。
+          {plan.maxMin > plan.minMin ? ` 最多 ${plan.maxMin} 分钟封顶，慢慢做不会加量。` : ''}
         </div>
       )}
 
-      {/* 爬坡提示：只有前两周出现，让他知道「今天为什么比明天短」 */}
+      {/* 爬坡提示：默认已关闭（cfg.rampOn=false），家长手动打开才出现 */}
       {week < 2 && !plan.weekend && !done && (
         <div className="v4homeRamp">
-          第 {week + 1} 周先 {plan.minMin} 分钟，{week === 0 ? '下周 24 分钟，第 3 周 30 分钟' : '下周恢复到 30 分钟'}。
+          第 {plan.rampWeek + 1} 周先 {plan.minMin} 分钟。
         </div>
       )}
     </div>

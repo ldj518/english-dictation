@@ -28,7 +28,7 @@ import { queueHealth, dueWordList, type Channel } from '../lib/memory'
 import { buildReport, reportText, reportImage } from '../lib/report'
 import { reportOut } from '../lib/api'
 import {
-  buildQBank, extraDrill, cnOf, judgeSentence, SENTENCES, type Q, type QBank,
+  buildQBank, cnOf, judgeSentence, SENTENCES, type Q, type QBank,
 } from '../lib/qbank'
 import { EffTimer } from '../lib/timer'
 import { unlockAudio } from '../lib/player'
@@ -429,23 +429,9 @@ export default function Today() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
-  /* ── 时间不够：追加练习 ── */
-  const addDrill = useCallback((n = 12) => {
-    if (!bank) return
-    // 已封顶就别再加了，否则 effect 会立刻把它拽回结算页，变成来回跳
-    if (plan && capHit(plan, timer.current?.snap().effSec || 0)) return
-    // 优先用今天做错的词，其次用到期词
-    const wrongOnes = Array.from(new Set(recs.filter(r => !r.correct || r.peek).map(r => r.word)))
-    const pool2 = wrongOnes.length
-      ? wrongOnes.map(w => ({ word: w, cn: cnOf(w) }))
-      : bank.qs.filter(x => x.scored).slice(0, 10).map(x => ({ word: x.word, cn: x.cn }))
-    const extra = extraDrill(pool2, n, audioRef.current, `${day}|${profile.id}|extra|${Date.now()}`, bank.qs.length)
-    if (!extra.length) return
-    setBank({ ...bank, qs: [...bank.qs, ...extra] })
-    // 补练后再结算必须重新落库，否则「补完 30 分钟」的结果写不进去（savedRef 还停在上一次）
-    savedRef.current = ''
-    setPhase('run')
-  }, [bank, recs, day, profile.id, plan])
+  /* 原 addDrill（按剩余秒数追加 drill 题）已删除：
+     时间不再是完成条件，而且 extraDrill 的题 must=false，补不齐必做缺口。
+     没做完就回 run 继续答原题，做完就收工。 */
 
   /* ── 渲染 ── */
 
@@ -468,8 +454,9 @@ export default function Today() {
   if (!plan || !bank) return <Shell title="今天"><div className="empty">加载中…</div></Shell>
 
   const minSec = plan.minMin * 60
-  const timePct = Math.min(100, Math.round((snap.effSec / minSec) * 100))
   const mustPct = mustAll ? Math.round((mustDone / mustAll) * 100) : 100
+  // 主进度改成「做完多少题」，不再用时间百分比——时间不满不该让孩子觉得失败
+  const donePct = bank?.qs.length ? Math.round((recs.length / bank.qs.length) * 100) : 0
 
   /* 开始页 */
   if (phase === 'start') {
@@ -563,7 +550,6 @@ export default function Today() {
       mustTotal: mustAll, peekN: recs.filter(r => r.peek).length, qN: recs.length,
     })
     const wrongList = Array.from(new Set(recs.filter(r => !r.correct || r.peek).map(r => r.word)))
-    const restSec = Math.max(0, minSec - snap.effSec)
     // 今天达标了、又正好有单元够格考 → 结算页直接给入口，不用回首页再点一次
     const gateNext = gate.done ? nextGate(progRef.current, day) : null
 
@@ -579,10 +565,9 @@ export default function Today() {
 
           <div className="v4kpis">
             <div className="v4kpi">
-              <div className="v" style={{ color: gate.timeOk ? 'var(--ok)' : 'var(--bad)' }}>
-                {fmtSec(snap.effSec)}
-              </div>
-              <div className="l">有效 / {fmtSec(minSec)}</div>
+              {/* 时间只报数，不再判红绿：做完了就是做完了，做得快不是错 */}
+              <div className="v">{fmtSec(snap.effSec)}</div>
+              <div className="l">用时 / 目标 {fmtSec(minSec)}</div>
             </div>
             <div className="v4kpi">
               <div className="v" style={{ color: gate.mustOk ? 'var(--ok)' : 'var(--bad)' }}>
@@ -603,7 +588,6 @@ export default function Today() {
           {!gate.done && (
             <div className="v4note bad">
               <b>{gate.note}</b>
-              {!gate.timeOk && <div style={{ marginTop: 4 }}>挂机的时间不算有效学习，只有连续操作才算。</div>}
             </div>
           )}
           {peekRate > 0.4 && (
@@ -666,18 +650,21 @@ export default function Today() {
               </>
             ) : (
               <>
-                <button className="btn" style={{ flex: 1.4 }} onClick={() => addDrill(Math.max(8, Math.ceil(restSec / 25) * 2 || 8))}>
-                  {restSec > 0
-                    ? `继续补 ${Math.min(10, Math.max(1, Math.ceil(restSec / 60)))} 分钟`
-                    : `补 ${gate.needQ} 题`}
-                </button>
-                <button className="btn ghost" style={{ flex: 0.8 }} onClick={() => nav('/')}>先退出</button>
+                {/* 必做没做完 → 直接回答题继续答剩下的，不加新题。
+                    以前这个按钮走 addDrill，而 extraDrill 出的题 must=false，
+                    补一辈子也补不上 mustDone——「差 3 题」能挂到明天。 */}
+                {!gate.mustOk && (
+                  <button className="btn" style={{ flex: 1.4 }} onClick={() => setPhase('run')}>
+                    ▶ 继续做完剩下的 {gate.needQ} 题
+                  </button>
+                )}
+                <button className="btn ghost" style={{ flex: gate.mustOk ? 1 : 0.8 }} onClick={() => nav('/')}>先退出</button>
               </>
             )}
           </div>
           {!gate.done && (
             <div className="sub small" style={{ marginTop: 10, textAlign: 'center' }}>
-              没到 {plan.minMin} 分钟不给星、不算打卡，明天首页会提示补上。
+              必做题做完就完成，不用凑时长。今天没做完的部分，明天接着做。
             </div>
           )}
         </div>
@@ -693,9 +680,9 @@ export default function Today() {
       {/* 三格面板：恒定可见，任何时候都知道还差多少 */}
       <div className="v4panel">
         <div className="v4pg">
-          <div className="v4pv">{fmtSec(snap.effSec)}<span>/{fmtSec(minSec)}</span></div>
-          <div className="v4pl">有效学习时间</div>
-          <div className="v4bar"><i style={{ width: timePct + '%', background: timePct >= 100 ? 'var(--ok)' : 'var(--blue)' }} /></div>
+          <div className="v4pv">{recs.length}<span>/{bank.qs.length}</span></div>
+          <div className="v4pl">已做</div>
+          <div className="v4bar"><i style={{ width: donePct + '%', background: 'var(--blue)' }} /></div>
         </div>
         <div className="v4pg">
           <div className="v4pv">{mustDone}<span>/{mustAll}</span></div>
@@ -703,10 +690,8 @@ export default function Today() {
           <div className="v4bar"><i style={{ width: mustPct + '%', background: mustPct >= 100 ? 'var(--ok)' : 'var(--gold)' }} /></div>
         </div>
         <div className="v4pg">
-          <div className="v4pv" style={{ color: snap.effSec >= minSec ? 'var(--ok)' : 'var(--ink)' }}>
-            {snap.effSec >= minSec ? '已达标' : `差 ${Math.ceil((minSec - snap.effSec) / 60)}′`}
-          </div>
-          <div className="v4pl">距下限</div>
+          <div className="v4pv">{fmtSec(snap.effSec)}</div>
+          <div className="v4pl">用时</div>
         </div>
       </div>
 

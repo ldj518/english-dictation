@@ -8,7 +8,13 @@ import {
 import { gradeWord, type WordState, type Channel } from './memory'
 import type { DayLog, LiveSession, TestRun } from '../types'
 import type { TestItem } from './gate'
-import type { StudyConfig } from './plan'
+import { migrateStudyCfg, DEFAULT_CFG, type StudyConfig } from './plan'
+
+/** 旧版学习参数作废（cfgRev 对不上就丢掉），保证新默认值真的生效 */
+function withCfgRev(p: Progress): Progress {
+  const sc = migrateStudyCfg(p.studyCfg)
+  return sc === p.studyCfg ? p : { ...p, studyCfg: sc }
+}
 import { settle, addMinutes, type AwardCtx } from './gamify'
 import { enqueueReview, advanceReview, resetReview, reopenReview, dueReviews } from './reviewQueue'
 import { reportSession, syncStudent, checkBackend, fetchShuffleSalt, pushProgressSnapshot, fetchParentRules, reportTest } from './api'
@@ -100,12 +106,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [profiles, setProfiles] = useState<Profile[]>(() => loadProfiles())
   const [activeId, setActiveId] = useState<string>(() => activeProfileId())
   // v4：首次加载做一次老队列 → 词级记忆强度反推（幂等，migratedV4 标记兜底）
-  const [progress, setProgress] = useState<Progress>(() => migrateV4(load(activeProfileId())))
+  const [progress, setProgress] = useState<Progress>(() => withCfgRev(migrateV4(load(activeProfileId()))))
   const [toast, setToast] = useState<Badge[]>([])
 
   // 活跃身份变化时重载进度
   useEffect(() => {
-    setProgress(migrateV4(load(activeId)))
+    setProgress(withCfgRev(migrateV4(load(activeId))))
   }, [activeId])
 
   // 启动时：探测后端 + 双向同步（身份档案 + 进度快照）+ 拉出题顺序盐
@@ -529,7 +535,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [activeId])
 
   const setStudyCfg = useCallback((patch: Partial<StudyConfig>) => {
-    setProgress(p => ({ ...p, studyCfg: { ...(p.studyCfg || {}), ...patch } }))
+    // 每次写都盖上当前 cfgRev，否则下次加载会被 migrateStudyCfg 当旧配置整份丢掉
+    setProgress(p => ({ ...p, studyCfg: { ...(p.studyCfg || {}), ...patch, cfgRev: DEFAULT_CFG.cfgRev } }))
   }, [])
 
   const saveLive = useCallback((live: LiveSession | null) => {

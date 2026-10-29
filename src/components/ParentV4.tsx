@@ -92,10 +92,9 @@ export default function ParentV4({ studentId }: { studentId: string }) {
           <>
             <div className="pv4kpis">
               <div className="pv4kpi">
-                <div className="v" style={{ color: today.eff_sec >= needEff ? 'var(--ok)' : 'var(--bad)' }}>
-                  {fmtSec(today.eff_sec)}
-                </div>
-                <div className="l">有效 / 要求 {fmtSec(needEff)}</div>
+                {/* 时间不再判红绿：2026-10-29 起完成只看必做题 + 看答案比例 */}
+                <div className="v">{fmtSec(today.eff_sec)}</div>
+                <div className="l">用时 / 目标 {fmtSec(needEff)}</div>
               </div>
               <div className="pv4kpi">
                 <div className="v" style={{ color: today.must_done >= today.must_total ? 'var(--ok)' : 'var(--gold)' }}>
@@ -111,7 +110,7 @@ export default function ParentV4({ studentId }: { studentId: string }) {
                 <div className="v" style={{ color: today.done ? 'var(--ok)' : 'var(--sub)' }}>
                   {today.done ? '完成' : '未完成'}
                 </div>
-                <div className="l">双闸门</div>
+                <div className="l">完成判定</div>
               </div>
             </div>
 

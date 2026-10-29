@@ -42,3 +42,6 @@ scripts/_zz_probe/
 p1_snap.json
 p2_snap.json
 *_snap.json
+# D1 导出的临时分析数据（含学生真实记录，绝不入库）
+_tmp/
+_webdata/

@@ -158,13 +158,17 @@ t('档位：清账期不因「昨天学过」而中断', (x: T) => {
 })
 
 t('档位：断档与重启优先级', (x: T) => {
-  x.eq(tierOf(7, 10, cfg, '2026-10-28'), 'restart', '断 7 天 → 重启')
+  // 阈值 2026-10-29 放宽：断 10 天才重启、断 3 天才恢复
+  // （p1 一周里会开 5–6 天，断 2 天在他是常态，不是事故）
+  x.eq(tierOf(10, 10, cfg, '2026-10-28'), 'restart', '断 10 天 → 重启')
+  x.eq(tierOf(9, 10, cfg, '2026-10-28'), 'recover', '断 9 天还是恢复，不算重启')
   x.eq(tierOf(3, 10, cfg, '2026-10-28'), 'recover', '断 3 天 → 恢复')
+  x.eq(tierOf(2, 10, cfg, '2026-10-28'), 'normal', '工作日断 2 天不惩罚')
   x.eq(tierOf(0, 10, cfg, '2026-10-31'), 'sat', '周六')
   x.eq(tierOf(0, 10, cfg, '2026-11-01'), 'sun', '周日')
 })
 
-t('清账期零新词，每天至少清 26 词', (x: T) => {
+t('清账期零新词，每天清 20 词', (x: T) => {
   const inp: PlanInput = {
     dayKey: '2026-10-28', gapDays: 3, dueN: 182, weakN: 150, nailN: 9,
     forgetRate: 0.1, perItemSec: 20, hasNew: true, cfg: {},
@@ -172,9 +176,9 @@ t('清账期零新词，每天至少清 26 词', (x: T) => {
   const p = buildPlan(inp)
   x.eq(p.tier, 'settle', '进清账')
   x.eq(p.newN, 0, '新词冻结')
-  x.ck(p.dueN >= 26 && p.dueN <= 182, `清账量 ${p.dueN} 落在 26–182`)
+  x.eq(p.dueN, 20, '每天清 20 个（13 分钟口径，26 会撑到 18 分钟）')
   x.ck(p.segs.every(s => s.k !== 'learn' && s.k !== 'recall'), '不出教学段')
-  x.ck(settleDaysLeft(p.dueN, cfg) <= 7, '不超过 7 天')
+  x.ck(settleDaysLeft(p.dueN, cfg) <= 10, '182 词不超过 10 天')
 })
 
 t('新词额度随遗忘率浮动 3–8', (x: T) => {
@@ -196,11 +200,16 @@ t('三周爬坡 18→24→30', (x: T) => {
   x.eq(rampWeekOf('2026-10-01', '2026-10-20'), 2, '第 20 天第 3 周')
   const inp: PlanInput = {
     dayKey: '2026-10-28', gapDays: 0, dueN: 10, weakN: 5, nailN: 0,
-    forgetRate: 0.1, perItemSec: 20, hasNew: true, cfg: {}, rampWeek: 0,
+    forgetRate: 0.1, perItemSec: 20, hasNew: true, cfg: { rampOn: true }, rampWeek: 0,
   }
-  x.eq(buildPlan(inp).minMin, 18, '爬坡期下限 18')
+  const high = buildPlan({ ...inp, cfg: { rampOn: true, minMinWork: 30 } })
+  x.eq(high.minMin, 18, '目标 30 时，爬坡第 1 周压到 18')
+  // 目标本来就比首周档位低（13 < 18），爬坡不会反过来把目标抬高
+  x.eq(buildPlan(inp).minMin, 13, '目标 13 低于首周 18 → 仍 13')
   const weekend = buildPlan({ ...inp, dayKey: '2026-10-31', rampWeek: 0 })
-  x.eq(weekend.minMin, 60, '周末不爬坡，仍 60')
+  x.eq(weekend.minMin, 30, '周末不爬坡，按周末目标 30')
+  // 默认关闭爬坡：不显式打开就按 13 分钟排，不再「三周爬到 30」
+  x.eq(buildPlan({ ...inp, cfg: {} }).minMin, 13, '默认不爬坡 → 13 分钟')
 })
 
 t('题量按手速倒推：手快题多，时间一样', (x: T) => {
@@ -212,11 +221,11 @@ t('题量按手速倒推：手快题多，时间一样', (x: T) => {
   const mid = buildPlan({ ...base, perItemSec: 22 } as PlanInput)
   const slow = buildPlan({ ...base, perItemSec: 30 } as PlanInput)
   x.ck(fast.targetQ > mid.targetQ && mid.targetQ > slow.targetQ, '题量单调递减')
-  x.eq(fast.targetQ, 150, '12 秒/题 → 150 题')
-  x.eq(mid.targetQ, 82, '22 秒/题 → 82 题')
-  x.eq(slow.targetQ, 60, '30 秒/题 → 60 题')
-  x.ck(Math.abs(fast.targetQ * 12 - 30 * 60) <= 60, '总时长仍落在 30 分钟')
-  x.ck(Math.abs(slow.targetQ * 30 - 30 * 60) <= 60, '慢手总时长一致')
+  x.eq(fast.targetQ, 65, '12 秒/题 → 65 题')
+  x.eq(mid.targetQ, 35, '22 秒/题 → 35 题')
+  x.eq(slow.targetQ, 26, '30 秒/题 → 26 题')
+  x.ck(Math.abs(fast.targetQ * 12 - 13 * 60) <= 60, '总时长落在 13 分钟')
+  x.ck(Math.abs(slow.targetQ * 30 - 13 * 60) <= 60, '慢手总时长一致')
 })
 
 t('手速取自实测，没有历史用 20 秒', (x: T) => {
@@ -232,34 +241,39 @@ t('手速取自实测，没有历史用 20 秒', (x: T) => {
   x.eq(perItemSecOf(p, '2026-10-28'), 23, '(1200+900)/(60+30)=23.3 → 23')
 })
 
-t('封顶：到 45 分钟收尾', (x: T) => {
+t('封顶：到 30 分钟收尾', (x: T) => {
   const p = buildPlan({
     dayKey: '2026-10-28', gapDays: 0, dueN: 20, weakN: 5, nailN: 0,
     forgetRate: 0.1, perItemSec: 20, hasNew: false, cfg: {}, rampWeek: 2,
   })
-  x.eq(p.maxMin, 45, '工作日封顶 45')
-  x.ck(!capHit(p, 44 * 60), '44 分钟还没到')
-  x.ck(capHit(p, 45 * 60), '45 分钟到点')
+  x.eq(p.maxMin, 30, '工作日封顶 30（家长给的硬上限）')
+  x.ck(!capHit(p, 29 * 60), '29 分钟还没到')
+  x.ck(capHit(p, 30 * 60), '30 分钟到点')
   const w = buildPlan({
     dayKey: '2026-10-31', gapDays: 0, dueN: 20, weakN: 5, nailN: 0,
     forgetRate: 0.1, perItemSec: 20, hasNew: false, cfg: {}, rampWeek: 2,
   })
-  x.eq(w.maxMin, 80, '周末封顶 80')
+  x.eq(w.maxMin, 50, '周末封顶 50，不按 60 排')
 })
 
-t('双闸门：时间、必做、看答案比例', (x: T) => {
+t('完成判定：必做做完就算完成，不再卡时长', (x: T) => {
   const p = buildPlan({
     dayKey: '2026-10-28', gapDays: 0, dueN: 12, weakN: 6, nailN: 0,
     forgetRate: 0.1, perItemSec: 20, hasNew: false, cfg: {}, rampWeek: 2,
   })
   const total = mustTotalOf(p)
   x.ck(total > 0, '必做题量 > 0')
-  const ok = gateCheck({ effSec: 30 * 60, plan: p, mustDone: total, mustTotal: total, peekN: 0, qN: total })
-  x.ck(ok.done, '全满足 → 完成')
-  const short = gateCheck({ effSec: 18 * 60, plan: p, mustDone: total, mustTotal: total, peekN: 0, qN: total })
-  x.ck(!short.done && !short.timeOk && short.needSec === 12 * 60, '只做 18 分钟不过闸')
-  const peek = gateCheck({ effSec: 30 * 60, plan: p, mustDone: total, mustTotal: total, peekN: Math.ceil(total * 0.5), qN: total })
-  x.ck(!peek.done && !peek.peekOk, '看答案过半不过闸')
+  // 核心回归：5 分钟做完必做 → 算完成。旧逻辑要求「满 minMin 且必做全做」，
+  // p1 每天只坐 2.5–10 分钟，于是 19 天没一天完成，断档越滚越长。
+  const quick = gateCheck({ effSec: 5 * 60, plan: p, mustDone: total, mustTotal: total, peekN: 0, qN: total })
+  x.ck(quick.done, '5 分钟做完必做也算完成')
+  x.ck(!quick.timeOk, 'timeOk 仍如实反映没到目标时长（只做展示，不判完成）')
+  // 反过来：时间给够、题没做完 → 仍然不算完成
+  const miss = gateCheck({ effSec: 40 * 60, plan: p, mustDone: total - 3, mustTotal: total, peekN: 0, qN: total })
+  x.ck(!miss.done && miss.needQ === 3, '少做 3 题不算完成，needQ 报准')
+  x.ck(miss.timeOk, '时间够了也不能替代题目')
+  const peek = gateCheck({ effSec: 5 * 60, plan: p, mustDone: total, mustTotal: total, peekN: Math.ceil(total * 0.5), qN: total })
+  x.ck(!peek.done && !peek.peekOk, '看答案过半不算完成')
 })
 
 t('必做题量不含填充池', (x: T) => {
@@ -275,8 +289,8 @@ t('必做题量不含填充池', (x: T) => {
 })
 
 t('清账剩余天数', (x: T) => {
-  x.eq(settleDaysLeft(182, cfg), 7, '182 ÷ 26 → 7 天')
-  x.eq(settleDaysLeft(26, cfg), 1, '一天清完')
+  x.eq(settleDaysLeft(182, cfg), 10, '182 ÷ 20 → 10 天')
+  x.eq(settleDaysLeft(20, cfg), 1, '一天清完')
 })
 
 /* ══════════ 3. 词表 ══════════ */
@@ -311,7 +325,7 @@ t('合并云端快照不丢 v4/v5 字段', (x: T) => {
     wordState: { look: { S: 4, due: '2026-10-30', lapses: 1, streak: 1, master: 1, at, ok: 2, n: 3 } },
     dayLog: { '2026-10-25': { dayKey: '2026-10-25', tier: 'normal', effSec: 1800, idleSec: 0, mustDone: 20, mustTotal: 20, qN: 20, rightN: 15, peekN: 0, done: true, segs: [], segDone: [], at } },
     tests: [{ id: 'u1', kind: 'gate', unit: 'unit01', dayKey: '2026-10-26', total: 30, right: 25, peekN: 0, score: 83, spellScore: 80, pass: true, passLine: 80, attempt: 1, at }],
-    studyCfg: { minMinWork: 24 },
+    studyCfg: { minMinWork: 24, cfgRev: DEFAULT_CFG.cfgRev },
     migratedV4: 1,
     rampFrom: '2026-10-20',
   } as unknown as Progress
@@ -327,7 +341,13 @@ t('合并云端快照不丢 v4/v5 字段', (x: T) => {
   // 语义变了：以前取「迁移日」，现在取「第一次真正完成的那天」（这里 10-25）。
   // 迁移日只是代码上线，孩子不一定那天就开始学
   x.eq(m.rampFrom, '2026-10-25', '爬坡起点按第一次完成的日子算')
-  x.eq(m.studyCfg?.minMinWork, 24, '学习参数本地优先')
+  x.eq(m.studyCfg?.minMinWork, 24, '学习参数本地优先（版本号对得上就保留）')
+  // 反向：旧版配置（没有 cfgRev，值是 30 分钟 + 爬坡）必须整份丢弃。
+  // 不丢的话，云端快照里的老值会在每次同步时把 10-29 的新默认顶回去，时间死锁复活。
+  const legacy = { ...local, studyCfg: { minMinWork: 30, rampOn: true } } as unknown as Progress
+  const m2 = mergeProgress(legacy, cloud as unknown as Progress)
+  x.eq(m2.studyCfg?.minMinWork, undefined, '旧版学习参数被丢弃')
+  x.eq(m2.studyCfg?.rampOn, undefined, '旧版爬坡开关一并丢掉')
 })
 
 t('合并同一词：取最近一次观测而不是取大 S', (x: T) => {
@@ -736,8 +756,8 @@ t('每日计划：清账期只读不拼，重启期只拼老句', (x: T) => {
   x.ck(!settle.segs.some(s => s.k === 'sent'), '清账期不出拼装题')
   x.eq(settle.segs.filter(s => s.k === 'mean').reduce((a, s) => a + s.q, 0), 2, '只读两句')
 
-  const restart = buildPlan(planIn({ dayKey: '2026-10-29', gapDays: 9, dueN: 30, weakN: 60, nailN: 0, hasNew: true }))
-  x.eq(restart.tier, 'restart', '断 9 天进重启档')
+  const restart = buildPlan(planIn({ dayKey: '2026-10-29', gapDays: 11, dueN: 30, weakN: 60, nailN: 0, hasNew: true }))
+  x.eq(restart.tier, 'restart', '断 11 天进重启档')
   x.eq(restart.segs.filter(s => s.k === 'sent').reduce((a, s) => a + s.q, 0), 2, '重启期拼两句老句')
   x.eq(restart.segs.filter(s => s.k === 'mean').reduce((a, s) => a + s.q, 0), 0, '重启期不出句意选择')
   // 文案写「新词冻结」，newN 就必须是 0。线上实测过一天：标签说冻结，
@@ -750,7 +770,7 @@ t('重启档：教的和考的是同一批词（教 12 考 8）', (x: T) => {
   // 紧接着的 8 道拼写却考到期词——教一批、考另一批，等于白教。
   const wj = wordsJson as { word: string; cn: string }[]
   const due = wj.slice(0, 30).map(w => ({ word: w.word, cn: w.cn }))
-  const plan = buildPlan(planIn({ dayKey: '2026-10-29', gapDays: 9, dueN: 30, weakN: 60, nailN: 0, hasNew: true }))
+  const plan = buildPlan(planIn({ dayKey: '2026-10-29', gapDays: 11, dueN: 30, weakN: 60, nailN: 0, hasNew: true }))
   const bank = buildQBank({
     plan, dueWords: due, newWords: [], fileMap: new Map(), profileId: 't', enter: 1,
   })

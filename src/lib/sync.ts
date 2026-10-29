@@ -10,6 +10,7 @@
 import type { Progress, Profile, WrongWord } from '../types'
 import { fetchStudents, fetchProgressSnapshot, pushProgressSnapshot, syncStudent } from './api'
 import { load, save, saveProfiles, hasLearningData, purgeTestData } from './storage'
+import { migrateStudyCfg } from './plan'
 
 /* ── 身份档案：云端为准 ─────────────────────────────────────────── */
 
@@ -227,8 +228,10 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
     wordState,
     dayLog,
     tests,
-    // 学习参数与迁移标记：本地优先（每台设备自己调过什么，不该被云端改回去）
-    studyCfg: { ...(b.studyCfg || {}), ...(a.studyCfg || {}) },
+    // 学习参数与迁移标记：本地优先（每台设备自己调过什么，不该被云端改回去）。
+    // 但旧版（cfgRev 对不上）的那份配置要整份作废——否则 2026-10-29 改的新默认值
+    // 会被云端快照里的「30 分钟下限 + 爬坡」盖回来，时间死锁原地复活。
+    studyCfg: { ...(migrateStudyCfg(b.studyCfg) || {}), ...(migrateStudyCfg(a.studyCfg) || {}) },
     migratedV4: Math.max(a.migratedV4 || 0, b.migratedV4 || 0) || undefined,
     // 爬坡起点：有「完成过的一天」就按最早那天起算，都没完成过才用迁移日。
     // 直接取两边 rampFrom 的较早者不行——迁移日是 V4 上线的日子，

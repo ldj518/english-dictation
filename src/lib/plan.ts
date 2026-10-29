@@ -46,14 +46,20 @@ export interface PlanSeg {
 }
 
 export interface StudyConfig {
-  /** 工作日有效时间下限（分钟） */
+  /** 工作日目标时长（分钟）：只用来**排版题量**，不再当完成闸门 */
   minMinWork: number
-  /** 周末有效时间下限 */
+  /** 周末目标时长 */
   minMinWeekend: number
   /** 工作日封顶（防磨洋工） */
   maxMinWork: number
   /** 周末封顶 */
   maxMinWeekend: number
+  /**
+   * 配置版本号。云端快照里存着旧版 studyCfg，
+   * 旧版本号一律丢弃、回落到当前默认值——否则改完默认值，
+   * 孩子浏览器里那份老三十分钟的配置会把新值盖回来。
+   */
+  cfgRev?: number
   /** 新词上限（引擎还会按遗忘率下调） */
   newWordCap: number
   /** 清账期每天清多少词 */
@@ -73,26 +79,37 @@ export interface StudyConfig {
 }
 
 /**
- * 默认配置。
- * minMinWork 是**目标下限**（第 3 周起生效）；前两周由 rampMinOf 压到 18 / 24，
- * 直接写 30 会让孩子第一天就当成惩罚（方案 11.5 风险表第一条）。
+ * 默认配置（2026-10-29 按真实数据重定）。
+ *
+ * 旧值 30 / 60 / 45 / 80 是从「家长希望他每天学半小时」推出来的，
+ * 但 p1 的 19 天真实记录是：工作日 2.5–10 分钟、周末 28–35 分钟、秒/题中位 12–14 秒。
+ * 拿 30 分钟当闸门的结果是：他每天都只坐 10 分钟，于是**每天都被判未完成**，
+ * 断档天数一路涨，档位越滑越重（恢复档→清账档），题量反而越堆越大。
+ * 现在的口径：
+ *   - minMin 只是「排多少题」的目标，不是完成条件（见 gateCheck）；
+ *   - 完成 = 必做题做完 + 看答案不超 40%；
+ *   - maxMin 才是有牙齿的那条：到点强制收尾。
+ * 爬坡（18→24→30）一并关掉——基线本来就该是他做到的 13 分钟，不是三周后爬到 30。
  */
 export const DEFAULT_CFG: StudyConfig = {
-  minMinWork: 30,
-  minMinWeekend: 60,
-  maxMinWork: 45,
-  maxMinWeekend: 80,
+  cfgRev: 2,
+  minMinWork: 13,
+  minMinWeekend: 30,
+  maxMinWork: 30,
+  maxMinWeekend: 50,
   newWordCap: 6,
-  settlePerDay: 26,
+  // 清账期每天 20 词：按 13 分钟的口径，26 词会让预计时长撑到 18 分钟，
+  // 孩子看到「约 18 分钟」就懒得开始。20 词排出来约 15 分钟，和真实手速对得上。
+  settlePerDay: 20,
   settleThreshold: 45,
   fastMs: 1500,
   idleGapMs: 60000,
   fillMax: 40,
-  rampOn: true,
+  rampOn: false,
   cutoverDay: '',
 }
 
-/** 爬坡三周的下限（分钟）：第 1 周 / 第 2 周 / 第 3 周起 */
+/** 爬坡三周的下限（分钟）。默认 cfg.rampOn=false，这套只在家长手动打开时生效。 */
 export const RAMP_MIN = [18, 24, 30] as const
 
 /** 第几周（0 起），按 rampStart 到今天的自然日差 ÷ 7，最多 2 周 */
@@ -162,6 +179,22 @@ export function mergeCfg(part?: Partial<StudyConfig>): StudyConfig {
   return { ...DEFAULT_CFG, ...(part || {}) }
 }
 
+/**
+ * 旧版配置作废。
+ *
+ * 云端快照和 localStorage 里存着 v1 的 studyCfg（30/60/45/80、rampOn=true）。
+ * 那份配置会在同步时盖回本地，把新默认值顶掉——死锁会原样复活。
+ * 所以加载时检查 cfgRev：版本对不上就整份丢掉，回落到当前默认值。
+ * 家长之后在后台改的参数都会带 cfgRev（见 setStudyCfg），不会被误伤。
+ */
+export function migrateStudyCfg(sc?: Partial<StudyConfig>): Partial<StudyConfig> | undefined {
+  if (!sc) return undefined
+  const rev = Number(sc.cfgRev || 0)
+  if (rev === DEFAULT_CFG.cfgRev) return sc
+  // 只有确实带了旧值的才丢；空对象留着无害
+  return Object.keys(sc).length ? undefined : sc
+}
+
 /** 新词额度：看近 7 天遗忘率，不是固定数 */
 export function newAllowOf(forgetRate: number, cfg: StudyConfig, hasNew: boolean): number {
   if (!hasNew) return 0
@@ -177,11 +210,17 @@ export function newAllowOf(forgetRate: number, cfg: StudyConfig, hasNew: boolean
  * 清账档**不再要求断档 ≥2 天**：原来写 `dueN > 45 且 gapDays >= 2`，结果是
  * 上线首日清账、第 2 天孩子昨天刚学过（gap=1）就落回 normal，新词额度恢复，
  * 150 个到期词还没清完又开始欠新债。到期堆着就是清账，清到 45 以下自动退出。
+ *
+ * 断档阈值也放宽了（2026-10-29）：原来 2 天就恢复档、7 天就重启档。
+ * 但 p1 的实际节奏是一周里有 1–2 天不开（10-19~10-25 缺 23 号），
+ * 断两天在他是常态，不是事故。所以：
+ *   - 断 3 天以上才算「恢复档」
+ *   - 断 10 天以上才算「重启档」（重启档要冻结新词、重学 12 个旧词，代价很大）
  */
 export function tierOf(gapDays: number, dueN: number, cfg: StudyConfig, dayKey: string): Tier {
-  if (gapDays >= 7) return 'restart'
+  if (gapDays >= 10) return 'restart'
   if (dueN > cfg.settleThreshold) return 'settle'
-  if (gapDays >= 2) return 'recover'
+  if (gapDays >= 3) return 'recover'
   if (bjIsWeekend(dayKey)) return bjDow(dayKey) === 0 ? 'sun' : 'sat'
   return 'normal'
 }
@@ -382,11 +421,12 @@ export interface GateInput {
 }
 
 export interface GateResult {
+  /** 是否达到目标时长。**只用于展示进度，不再是完成条件** */
   timeOk: boolean
   mustOk: boolean
   peekOk: boolean
   done: boolean
-  /** 还差多少秒 */
+  /** 距目标时长还差多少秒（展示用） */
   needSec: number
   /** 还差多少题 */
   needQ: number
@@ -394,20 +434,30 @@ export interface GateResult {
   note: string
 }
 
+/**
+ * 当日完成判定。
+ *
+ * ⚠️ 2026-10-29 拆除时间闸门。原来要求「有效时间满 minMin **且** 必做全做完」，
+ * 而 p1 的真实记录是每天只坐 2.5–10 分钟（19 天里没有一天到 18 分钟）。
+ * 双硬闸的后果是死锁：
+ *   做 10 分钟 → 判未完成 → dayLog.done=false → 断档天数上涨
+ *   → 进恢复/清账档 → 题量变大 → 更做不完 → 干脆不打开
+ * 现在只留两个真闸门：必做题做完 + 看答案不超过 40%。
+ * 时间降级成「今天排了多少题」的排版参数，做快了就早点收工，不额外加量。
+ */
 export function gateCheck(g: GateInput): GateResult {
-  const timeOk = g.effSec >= g.plan.minMin * 60
   const mustOk = g.mustTotal > 0 && g.mustDone >= g.mustTotal
   // 看答案超过 40% 判不过（等于放弃了近一半题）
   const peekOk = g.qN === 0 || g.peekN / Math.max(1, g.qN) <= 0.4
+  const timeOk = g.effSec >= g.plan.minMin * 60
   const needSec = Math.max(0, g.plan.minMin * 60 - g.effSec)
   const needQ = Math.max(0, g.mustTotal - g.mustDone)
   let note = ''
-  if (!timeOk && !mustOk) note = `还差 ${Math.ceil(needSec / 60)} 分钟，还有 ${needQ} 题没做完`
-  else if (!timeOk) note = `内容做完了，但有效时间还差 ${Math.ceil(needSec / 60)} 分钟`
-  else if (!mustOk) note = `时间够了，还有 ${needQ} 题没做完`
-  else if (!peekOk) note = '看答案的题太多了，今天不算完成'
-  else note = '今天完成'
-  return { timeOk, mustOk, peekOk, done: timeOk && mustOk && peekOk, needSec, needQ, note }
+  if (mustOk && peekOk) note = '今天完成'
+  else if (!mustOk && !peekOk) note = `还有 ${needQ} 题没做完，另外看答案的题太多了`
+  else if (!mustOk) note = `再做 ${needQ} 题就收工`
+  else note = '看答案的题太多了，今天不算完成'
+  return { timeOk, mustOk, peekOk, done: mustOk && peekOk, needSec, needQ, note }
 }
 
 /** 计划的「必做」题目总数（判分段才算） */

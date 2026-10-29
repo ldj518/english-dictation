@@ -81,6 +81,12 @@ export interface QBank {
    * 重进时若不传回这个数，bumpEnter 会 +1，题目顺序全变，接着做就接不上了。
    */
   enter: number
+  /**
+   * 今天出过的句子 id（sent / mean 两段合计）。
+   * 结算时写进 dayLog.sentIds，明天抽句时作为 recent 传给 pickSents，
+   * 这就是跨天去重的载体——不落下来，「别重复」无从谈起。
+   */
+  sentIds: string[]
 }
 
 export interface Sentence { en: string; cn: string; tip: string }
@@ -170,6 +176,14 @@ export interface BuildOpts {
   profileId: string
   /** 今日第几次进入（不传则自动计数） */
   enter?: number
+  /**
+   * 近几天做过的句子 id（跨天去重）。
+   *
+   * 一个单元只有 23–34 句，每天出 3–5 句，5–8 天就见底。原来只在同一批内去重，
+   * 跨天零记录，结果第二周孩子做的全是上周原句，家长看到的句子关正确率是假的。
+   * 这里不硬排除（库里句数有限），只是让 pickSents 把它们排到队尾。
+   */
+  recentSents?: string[]
 }
 
 /**
@@ -268,6 +282,7 @@ function pickSentenceBatch(
     count,
     use,
     used,
+    recent: opts.recentSents,
   })
 }
 
@@ -517,7 +532,7 @@ export function buildQBank(opts: BuildOpts): QBank {
     }
   })
 
-  return { dayKey: day, qs, segStart, enter }
+  return { dayKey: day, qs, segStart, enter, sentIds: usedSents }
 }
 
 /**

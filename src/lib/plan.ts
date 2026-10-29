@@ -451,6 +451,32 @@ export function gapDaysOf(p: Progress, dayKey: string): number {
 }
 
 /**
+ * 近几天做过的句子库 id——句子跨天去重的数据源。
+ *
+ * 为什么需要：一个单元只有 23–34 句（194 句 ÷ 7 单元），每天出 3–5 句，
+ * **5–8 天就见底**。qbank 内部的 usedSents 只在同一批内去重，跨天零记录，
+ * 所以第二周开始孩子做的全是上周的原句。家长看到「句子关 90%」，
+ * 实际那是记住了选项位置，不是读懂了。
+ *
+ * 为什么不设时间窗：如果只取近 5 天，单元一循环就重新开始重复；
+ * 取全量才能做到「先把没做过的一遍做完，再第二轮」。日账本本身是
+ * 按天存的、体量很小，扫 60 天也就几十个 id。
+ *
+ * 不含当天：当天已经出过的句子由 qbank 内部的 usedSents 管，
+ * 两边都塞进去会让「从头重做」也拿不到新句。
+ */
+export function recentSentsOf(p: Progress, dayKey: string, days = 60): string[] {
+  const out = new Set<string>()
+  for (const [k, v] of Object.entries(p.dayLog || {})) {
+    if (!v?.sentIds?.length) continue
+    const gap = bjDiffDays(dayKey, k)
+    if (gap < 1 || gap > days) continue    // 当天 / 未来日 / 太久以前都不算
+    for (const id of v.sentIds) out.add(id)
+  }
+  return [...out]
+}
+
+/**
  * 清账轮转：今天优先清哪个单元。
  *
  * 旧逻辑纯按 risk 跨单元乱跳（钉子词 +1000、逾期 +600、S 低 +90），
@@ -570,10 +596,23 @@ export function settleDaysLeft(dueN: number, cfg: StudyConfig): number {
   return Math.max(1, Math.ceil(dueN / Math.max(1, cfg.settlePerDay)))
 }
 
+/** 手速的合理区间（秒/题）。太离谱的值（0 或 300）只可能是脏数据 */
+function clampSec(v: number): number {
+  return Math.min(60, Math.max(6, Math.round(v)))
+}
+
 /**
  * 单题耗时（秒），取自近 7 天**实测**：有效时间 ÷ 作答题数。
  * 以前写死 20，结果「按手速倒推题量」成了空话——手快手慢排出来的题量一模一样。
- * 样本不足 10 题就用 20 秒兜底，免得一两道题把计划带跑。
+ *
+ * 两级数据源（v7）：
+ *  ① 本地日账 dayLog（v5 之后才有）——最准，含分段耗时；
+ *  ② 云端 sessions 近 7 天（cloudPace）——p1 的全部历史都在 sessions 里，
+ *     日账是空的，只靠 ① 就永远按 20 秒算。他真实是 13 秒，
+ *     题量被低估三分之一：本该 60 题的窗口只排了 40 题。
+ *
+ * 顺序是「本地够 10 题就不用云端」——本地含当天、含被掐掉的空转时间，
+ * 云端是整场平均，用在「这块设备刚上手」的兜底更合适。
  */
 export function perItemSecOf(p: Progress, dayKey: string, days = 7): number {
   const from = bjAddDays(dayKey, -(days - 1))
@@ -584,8 +623,12 @@ export function perItemSecOf(p: Progress, dayKey: string, days = 7): number {
     sec += log.effSec || 0
     q += log.qN || 0
   }
-  if (q < 10) return 20
-  return Math.min(60, Math.max(6, Math.round(sec / q)))
+  if (q >= 10 && sec > 0) return clampSec(sec / q)
+  // 本地样本不足 → 用云端近 7 天。样本要求同样是 10 题，
+  // 一两场 3 题的短 session 会把均值带偏。
+  const c = p.cloudPace
+  if (c && c.q >= 10 && c.sec > 0) return clampSec(c.sec / c.q)
+  return 20
 }
 
 /**

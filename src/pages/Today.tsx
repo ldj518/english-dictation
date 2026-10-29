@@ -25,7 +25,7 @@ import { useStore } from '../lib/store'
 import { WORDS } from '../lib/data'
 import { wordFileMap, playWordText } from '../lib/data'
 import { bjDayKey, bjDiffDays, fmtSec, fmtSecCn } from '../lib/bj'
-import { buildPlan, gateCheck, mergeCfg, mustTotalOf, settleDaysLeft, perItemSecOf, rampWeekOf, capHit, gapDaysOf, rotateByUnit, rotateUnitOf, type DayPlan } from '../lib/plan'
+import { buildPlan, gateCheck, mergeCfg, mustTotalOf, settleDaysLeft, perItemSecOf, rampWeekOf, capHit, gapDaysOf, rotateByUnit, rotateUnitOf, recentSentsOf, type DayPlan } from '../lib/plan'
 import { queueHealth, dueWordList, type Channel } from '../lib/memory'
 import { buildReport, reportText, reportImage } from '../lib/report'
 import { reportOut } from '../lib/api'
@@ -206,6 +206,9 @@ export default function Today() {
     const b = buildQBank({
       plan: p, dueWords: due, newWords, nailWords: nails,
       unit: schoolUnit, fileMap: fm, profileId: profile.id,
+      // 跨天去重：前几天做过的句子今天排到队尾（一个单元只有 23–34 句，
+      // 每天 3–5 句，不去重的话第二周开始全是上周原句）
+      recentSents: recentSentsOf(pg, day),
     })
     setBank(b)
     setQi(0)
@@ -414,6 +417,10 @@ export default function Today() {
       word: q.word,
       cn: q.cn,
       correct: rec.correct,
+      // 题型（v7）：家长后台靠它算「拼写 X% / 选义 Y%」。
+      // 用 rec.kind 而不是 q.kind 是同一个值，但 rec 是这条记录的载体，
+      // 万一以后 rec 单题改了类型，也不会跟落库的口径错开。
+      kind: rec.kind,
       seq: qiRef.current + 1,
       ms,
       attempts: 1,
@@ -486,6 +493,10 @@ export default function Today() {
         right: perf.filter(r => r.seg === i && r.correct).length,
       })),
       segDone: [],
+      // 今天出过的句子 id：明天抽句时当 recent，把它们排到队尾。
+      // 用 bank.sentIds 而不是扫 recs——recs 里的 Rec 不带句子 id，
+      // 而 sent/mean 两段的句子在 qbank 里已经按批记下来了。
+      sentIds: bank.sentIds,
       at: Date.now(),
     }
     saveDay(log)

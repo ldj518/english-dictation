@@ -118,6 +118,17 @@ export interface PickOpts {
   use: SentUse
   /** 当天已出过的句子 id，避免同一批重复 */
   used?: string[]
+  /**
+   * 近几天做过的句子 id（跨天去重）。
+   *
+   * 为什么需要：一个单元只有 23–34 句，每天出 3–5 句，**5–8 天就见底**。
+   * 原来的 used 只在同一批内生效，跨天零记录，于是第二周开始孩子做的
+   * 全是上周的原句——家长看到「句子关正确率 90%」，其实是记住了选项位置。
+   *
+   * 不硬排除的理由：库里就这么多句，一旦全做完硬排除就成了「今天没有句子题」。
+   * 所以按 stale 排队——没做过的优先，做过的垫底，只在不够时才拿出来。
+   */
+  recent?: string[]
 }
 
 /** 句子是否含某个词表词。先查预计算的 words，再退回文本匹配（跨单元复习时用） */
@@ -195,6 +206,8 @@ export function pickSents(opts: PickOpts): SentBankItem[] {
   const unit = getSentUnit(opts.unit) || getSentUnit(sentUnitIds()[0])
   if (!unit) return []
   const used = new Set(opts.used || [])
+  // recent 只参与排序，不参与过滤（理由见 PickOpts.recent 注释）
+  const recent = new Set(opts.recent || [])
   const news = opts.newWords.map(w => w.toLowerCase())
   const nails = (opts.nailWords || []).map(w => w.toLowerCase())
   const dues = (opts.dueWords || []).map(w => w.toLowerCase())
@@ -226,10 +239,13 @@ export function pickSents(opts: PickOpts): SentBankItem[] {
     sc += opts.use === 'block' ? blockScore(s.blocks.length) : meanScore(s.level)
     // 长度惩罚：20 词的长句在手机上要滚屏，拼装题尤其难受
     if (s.en.split(/\s+/).length > 15) sc -= 12
-    return { s, sc, rot: rotIdx.get(s.id) ?? 0, sig: contentSet(s.en) }
+    return { s, sc, rot: rotIdx.get(s.id) ?? 0, sig: contentSet(s.en), stale: recent.has(s.id) ? 1 : 0 }
   })
 
-  scored.sort((a, b) => b.sc - a.sc || a.rot - b.rot)
+  // 跨天去重：stale（近几天做过）排在最后，同组内再按挂词分 + 日序轮转。
+  // 放在第一排序位而不是减分，是因为减分挡不住挂词分 100 的吸引力——
+  // 新词所在的句子如果上周做过，减多少分都还是第一名。
+  scored.sort((a, b) => a.stale - b.stale || b.sc - a.sc || a.rot - b.rot)
 
   // 难度均衡：同一 level 最多连出 2 句，避免一次三句全是问句
   // 近似句去重：同一天不出「改了几个词的同段句子」，否则两道拼装题其实是同一题

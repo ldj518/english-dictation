@@ -12,7 +12,7 @@ import {
 import {
   buildPlan, tierOf, gateCheck, mustTotalOf, mergeCfg, newAllowOf,
   rampWeekOf, rampMinOf, perItemSecOf, capHit, settleDaysLeft,
-  lastStudyDay, gapDaysOf, rotateUnitOf, rotateByUnit,
+  lastStudyDay, gapDaysOf, recentSentsOf, rotateUnitOf, rotateByUnit,
   DEFAULT_CFG, type PlanInput,
 } from '../src/lib/plan'
 import {
@@ -268,6 +268,30 @@ t('手速取自实测，没有历史用 20 秒', (x: T) => {
     history: [],
   } as unknown as Progress
   x.eq(perItemSecOf(p, '2026-10-28'), 23, '(1200+900)/(60+30)=23.3 → 23')
+})
+
+t('手速兜底：本地日账空的时候用云端 sessions（否则永远按 20 秒排）', (x: T) => {
+  // p1 的真实情况：全部历史都在 sessions 里，dayLog 是空的
+  const p1 = {
+    dayLog: {},
+    cloudPace: { sec: 4020, q: 300, days: 7, at: 0 },
+  } as unknown as Progress
+  x.eq(perItemSecOf(p1, '2026-10-29'), 13, '4020/300 = 13.4 → 13 秒/题')
+
+  // 云端样本不到 10 题 → 不敢用，退回 20
+  const thin = { dayLog: {}, cloudPace: { sec: 90, q: 6, days: 1, at: 0 } } as unknown as Progress
+  x.eq(perItemSecOf(thin, '2026-10-29'), 20, '只有 6 题 → 20 秒兜底')
+
+  // 脏数据：秒数为 0 或题数为 0 都不能除出 0 秒
+  const bad = { dayLog: {}, cloudPace: { sec: 0, q: 40, days: 3, at: 0 } } as unknown as Progress
+  x.eq(perItemSecOf(bad, '2026-10-29'), 20, '秒数 0 当无效')
+
+  // 本地够 10 题 → 本地优先，云端更大也不采信
+  const local = {
+    dayLog: { '2026-10-28': { effSec: 600, qN: 20 } },
+    cloudPace: { sec: 4020, q: 300, days: 7, at: 0 },
+  } as unknown as Progress
+  x.eq(perItemSecOf(local, '2026-10-29'), 30, '本地 30 秒压过云端 13 秒')
 })
 
 t('封顶：到 30 分钟收尾', (x: T) => {
@@ -618,6 +642,39 @@ t('选句：当天已出过的句子会被排除', (x: T) => {
     newWords: ['weather'], count: 3, use: 'mean', used,
   })
   x.ck(second.every(s => !used.includes(s.id)), '第二批不出第一批的句子')
+})
+
+t('选句：跨天做过的句子排到队尾（第二周不该还在做上周那几句）', (x: T) => {
+  const base = {
+    unit: 'unit02', dayKey: '2026-10-29', profileId: 'p5',
+    newWords: ['weather'], count: 3, use: 'mean' as const,
+  }
+  const first = pickSents({ ...base, dayKey: '2026-10-27' })
+  const recent = first.map(s => s.id)
+  const second = pickSents({ ...base, recent })
+  x.eq(second.length, 3, '照样出满 3 句')
+  x.ck(second.every(s => !recent.includes(s.id)), '换了一批，不是上周那三句')
+  // 不硬排除：整个单元的句子都做过之后，仍要出得满，不能变成「今天没有句子题」
+  const all = getSentUnit('unit02')!.sents.map(s => s.id)
+  const third = pickSents({ ...base, recent: all })
+  x.eq(third.length, 3, '全做过也能出满（退化成轮转，不是空段）')
+})
+
+t('跨天去重：recentSentsOf 只收过去的日子，不含当天和未来', (x: T) => {
+  const p = {
+    dayLog: {
+      '2026-10-29': { sentIds: ['s-today'] },
+      '2026-10-28': { sentIds: ['s-y1', 's-y2'] },
+      '2026-10-20': { sentIds: ['s-old'] },
+      '2026-11-02': { sentIds: ['s-future'] },
+      '2026-10-27': { tier: 'normal' },      // 老账本没有 sentIds，不能崩
+    },
+  } as unknown as Progress
+  const got = recentSentsOf(p, '2026-10-29').sort()
+  x.eq(got, ['s-old', 's-y1', 's-y2'], '当天的、未来的都不算')
+  const near = recentSentsOf(p, '2026-10-29', 2).sort()
+  x.eq(near, ['s-y1', 's-y2'], '窗口 2 天只留 10-28')
+  x.eq(recentSentsOf({ dayLog: {} } as unknown as Progress, '2026-10-29'), [], '空账本不报错')
 })
 
 t('干扰项：3 个、不含正确答案、互不重复', (x: T) => {

@@ -22,11 +22,19 @@ import { type Env, ok, fail, preflight, dayKey } from './_utils'
 
 const SID_RE = /^s_[a-zA-Z0-9_]{6,40}$/
 
+/**
+ * 允许落库的题型（v7）。白名单而不是直接存：
+ * 这一列要拿去 GROUP BY 出家长看的条形图，混进任意串就会多出
+ * 「Other」这种没法解释的行。不认识的题型落空串，前端归到「未分型」。
+ */
+const KINDS = new Set(['flash', 'teach', 'pick', 'spell', 'sent', 'mean', 'paper'])
+
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   try {
     const b = await request.json() as {
       studentId?: string; sessionId?: string; dayKey?: string
       word?: string; cn?: string; input?: string; correct?: boolean
+      kind?: string
       seq?: number; ms?: number; attempts?: number; peek?: boolean; fast?: boolean; at?: number
     }
 
@@ -42,17 +50,19 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const dk = (b.dayKey || '').trim() || dayKey(at)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dk)) return fail('dayKey 不合法')
 
+    const kind = KINDS.has(String(b.kind || '')) ? String(b.kind) : ''
+
     await env.DB.prepare(
       `INSERT INTO answers
-       (session_id, student_id, day_key, at, word, cn, input, correct, seq, ms, attempts, peek, fast)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+       (session_id, student_id, day_key, at, word, cn, input, correct, seq, ms, attempts, peek, fast, kind)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).bind(
       sessionId, studentId, dk, at, word.slice(0, 60), (b.cn || '').slice(0, 120),
       (b.input || '').slice(0, 200), b.correct ? 1 : 0,
       Math.max(0, Math.round(b.seq || 0)),
       Math.max(0, Math.round(b.ms || 0)),
       Math.max(1, Math.round(b.attempts || 1)),
-      b.peek ? 1 : 0, b.fast ? 1 : 0
+      b.peek ? 1 : 0, b.fast ? 1 : 0, kind
     ).run()
 
     return ok({})

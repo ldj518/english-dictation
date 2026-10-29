@@ -274,6 +274,16 @@ export async function pullAndMerge(profileId: string): Promise<Progress | null> 
       merged.lastActiveDay = got.lastActiveDay
     }
   }
+  // 手速兜底（v7）：sessions 表里近 7 天的秒数/题数。
+  // 只在本地日账不足 10 题时才被 perItemSecOf 采用，所以直接覆盖没关系——
+  // 下一次拉取必然是更新的 7 天窗口，旧的留着反而会拖后腿。
+  // 数值没变就别刷 at：否则每次拉取都算「有差异」，白白把快照推一遍云端。
+  if (got.recentPace) {
+    const cur = merged.cloudPace
+    const same = !!cur && cur.sec === got.recentPace.sec
+      && cur.q === got.recentPace.q && cur.days === got.recentPace.days
+    if (!same) merged.cloudPace = { ...got.recentPace, at: Date.now() }
+  }
   // v3.9.1 清洗：云端快照可能带着历史测试词，合并后、diff 前清掉——
   // 这样 cloudDiffers 检出差异会把清洗版推回云端，本地+云端一次收敛
   purgeTestData(merged)

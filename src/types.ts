@@ -50,6 +50,12 @@ export interface DayLog {
   done: boolean
   /** 分段流水账（战报按它画时间条） */
   segs: { k: string; label: string; min: number; q: number; right: number }[]
+  /**
+   * 今天出过的句子库 id（v7）。
+   * 一个单元只有 23–34 句、每天出 3–5 句，5–8 天就循环一遍；不记下来，
+   * 第二周开始孩子做的全是上周原句，句子关正确率是假的。
+   */
+  sentIds?: string[]
   /** 已完成的段下标 */
   segDone: number[]
   /** 最后更新时间戳 */
@@ -204,6 +210,13 @@ export interface Progress {
    * 「4 天没学」算成「22 天没学」，一进就是重启档。
    */
   lastActiveDay?: string
+  /**
+   * 近 7 天真实手速（v7，来自 sessions 表）。
+   * dayLog 是 v5 之后才有的，孩子之前的历史全在 sessions 里，前端读不到，
+   * 排课就只能按默认 20 秒/题算——p1 真实是 13.4 秒，题量被低估了三分之一。
+   * 本地日账攒够 10 题后自动优先用本地，这份只是新设备/新流程的兜底。
+   */
+  cloudPace?: { sec: number; q: number; days: number; at: number }
   /** 已解锁徽章 */
   badges: Record<string, number>
   /** 累计作答数 / 正确数 */

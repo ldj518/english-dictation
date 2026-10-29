@@ -186,7 +186,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
       // v6：逐题明细。以前只在结算时批量写，且 /today 不走结算，
       // 所以这里一直是空的——家长只能看到分段耗时，看不到错了哪几个词。
       const { results: answers } = await env.DB.prepare(
-        `SELECT word, cn, input, correct, seq, peek, fast, at
+        `SELECT word, cn, input, correct, seq, peek, fast, at, kind
          FROM answers WHERE student_id = ? AND day_key = ?
          ORDER BY at DESC, id DESC LIMIT 200`
       ).bind(studentId, wantDay).all()
@@ -198,6 +198,45 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
         } : null,
         segs: segs || [],
         answers: answers || [],
+      })
+    }
+
+    // 分型正确率（v7）：家长后台看「拼写 32% / 选义 78%」。
+    //
+    // 为什么不复用上面那个 wantDay 分支让前端自己 groupBy：
+    //  ① 前端只拿得到单天，而「拼写分级到底有没有把正确率抬起来」得看近 7 天；
+    //  ② 单天拼写只有 5 道，样本太小，一天一个结论会飘得没法用。
+    // 所以聚合放在这里做，一次 SQL 出 N 天，前端只负责画。
+    //
+    // 口径：分母 = 碰过的题（含看答案的），对 = 首答对且没看答案。
+    // peek_n 单独返回，前端可以另算一条「扣掉看答案」的线，
+    // 否则孩子连点「看答案」也能把正确率刷到 90%，这一列就白做了。
+    const kindsParam = Number(u.searchParams.get('kinds') || 0)
+    if (kindsParam > 0) {
+      const days = Math.max(1, Math.min(30, Math.round(kindsParam)))
+      const to = dayKey()
+      const from = dayKey(Date.now() - (days - 1) * 86400000)
+      const { results } = await env.DB.prepare(
+        `SELECT kind,
+                COUNT(*) AS n,
+                SUM(CASE WHEN correct = 1 AND peek = 0 THEN 1 ELSE 0 END) AS right_n,
+                SUM(CASE WHEN peek = 1 THEN 1 ELSE 0 END) AS peek_n,
+                SUM(CASE WHEN fast = 1 THEN 1 ELSE 0 END) AS fast_n,
+                SUM(ms) AS ms_sum
+         FROM answers
+         WHERE student_id = ? AND day_key BETWEEN ? AND ?
+         GROUP BY kind`
+      ).bind(studentId, from, to).all()
+      return ok({
+        from, to, days,
+        kinds: (results || []).map((r: Record<string, unknown>) => ({
+          kind: String(r.kind || ''),
+          n: Number(r.n || 0),
+          rightN: Number(r.right_n || 0),
+          peekN: Number(r.peek_n || 0),
+          fastN: Number(r.fast_n || 0),
+          msSum: Number(r.ms_sum || 0),
+        })),
       })
     }
 

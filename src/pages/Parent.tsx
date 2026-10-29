@@ -6,6 +6,7 @@ import { useStore, applyRules } from '../lib/store'
 import ParentV4 from '../components/ParentV4'
 import ParentV5 from '../components/ParentV5'
 import ParentLive from '../components/ParentLive'
+import ParentTypes from '../components/ParentTypes'
 import { markRevertOwner, clearRevertOwner } from '../lib/storage'
 import {
   fetchStats, checkBackend, fetchPinStatus, setParentPin, fetchPapers, paperFileUrl,
@@ -372,6 +373,9 @@ export default function Parent() {
           {/* v4：今天这一场 / 记忆队列 / 逐日账本（最上面，家长第一眼要看的） */}
           <ParentV4 studentId={profile.id} />
           <ParentLive studentId={profile.id} />
+          {/* v7：分型正确率。放在逐题明细下面——先看今天错在哪，
+              再看「错的是拼写还是认义」，两步能连起来读 */}
+          <ParentTypes studentId={profile.id} />
           <ParentV5 studentId={profile.id} />
 
           {/* 每周报告（v3.4）：本周 vs 上周，只和自己比；一键海报发微信 */}

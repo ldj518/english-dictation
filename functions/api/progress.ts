@@ -34,21 +34,36 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     // 结果线上 p1 学到 10-25，lastDay 却停在 10-07 → 被判断档 22 天 → 天天重启档。
     // 这里把 sessions 的最后一天一并返回，前端合并进断档计算。
     let lastActiveDay: string | null = null
+    // v7：真实手速回填。
+    // 排课要拿「每题多少秒」把目标时长换成题量，而 /today 的日账（dayLog）是
+    // 新流程上线之后才有的——p1 的历史全在 sessions 表里，前端读不到，
+    // 于是一直按默认 20 秒排。可他真实是 13.4 秒：题量被低估三分之一。
+    // 这里把近 7 天 sessions 的秒数/题数一起返回，前端存进快照当兜底，
+    // 等新日账攒够 10 题再自动被本地数据接管。
+    let recentPace: { sec: number; q: number; days: number } | null = null
     try {
       const s = await env.DB.prepare(
         `SELECT MAX(day_key) AS d FROM sessions WHERE student_id = ?`
       ).bind(sid).first<{ d: string | null }>()
       lastActiveDay = s?.d || null
+      const p = await env.DB.prepare(
+        `SELECT SUM(seconds) AS sec, SUM(total) AS q, COUNT(DISTINCT day_key) AS days
+         FROM sessions
+         WHERE student_id = ? AND day_key >= date('now', '+8 hour', '-6 day')`
+      ).bind(sid).first<{ sec: number | null; q: number | null; days: number | null }>()
+      if (p && Number(p.q) > 0) {
+        recentPace = { sec: Number(p.sec || 0), q: Number(p.q || 0), days: Number(p.days || 0) }
+      }
     } catch {
       // sessions 表尚未建立（全新库）时忽略，不影响主流程
     }
     const row = await env.DB.prepare(
       `SELECT data, updated_at FROM progress_snapshots WHERE student_id = ?`
     ).bind(sid).first<{ data: string; updated_at: number }>()
-    if (!row) return ok({ data: null, updatedAt: null, lastActiveDay })
+    if (!row) return ok({ data: null, updatedAt: null, lastActiveDay, recentPace })
     let data: unknown = null
     try { data = JSON.parse(row.data) } catch { data = null }
-    return ok({ data, updatedAt: row.updated_at, lastActiveDay })
+    return ok({ data, updatedAt: row.updated_at, lastActiveDay, recentPace })
   } catch (e) {
     return fail('读取失败: ' + (e as Error).message, 500)
   }

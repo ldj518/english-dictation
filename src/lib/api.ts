@@ -75,15 +75,24 @@ export async function fetchStudents(): Promise<StudentRow[]> {
 /** 拉某孩子的进度快照（云端没有返回 null）。
  *  lastActiveDay 是服务端从 sessions 表算出的「最后一天有练习记录」，
  *  专门给断档判定用——「每日计划」那条线不写 progress.lastDay。 */
+/** 近 7 天真实手速（v7）：来自 sessions 表，排课换算题量用 */
+export interface RecentPace { sec: number; q: number; days: number }
+
 export async function fetchProgressSnapshot(
   studentId: string,
-): Promise<{ data: unknown; lastActiveDay?: string } | null> {
+): Promise<{ data: unknown; lastActiveDay?: string; recentPace?: RecentPace } | null> {
   try {
     const r = await fetch(`${BASE}/progress?studentId=${encodeURIComponent(studentId)}`)
     if (!r.ok) return null
-    const j = await r.json() as { ok: boolean; data?: unknown; lastActiveDay?: string | null }
+    const j = await r.json() as {
+      ok: boolean; data?: unknown; lastActiveDay?: string | null; recentPace?: RecentPace | null
+    }
     if (!j.ok) return null
-    return { data: j.data ?? null, lastActiveDay: j.lastActiveDay || undefined }
+    return {
+      data: j.data ?? null,
+      lastActiveDay: j.lastActiveDay || undefined,
+      recentPace: j.recentPace && j.recentPace.q > 0 ? j.recentPace : undefined,
+    }
   } catch {
     return null
   }
@@ -648,6 +657,27 @@ export interface AnswerRow {
   peek: number
   fast: number
   at: number
+  /** 题型（v7）。老数据没有这一列 → undefined */
+  kind?: string
+}
+
+/**
+ * 分型正确率（v7）：近 N 天按 kind 聚合。
+ * 家长看「拼写 X% / 选义 Y%」用；分母是碰过的题，对 = 首答对且没看答案。
+ */
+export interface KindStat {
+  kind: string
+  n: number
+  rightN: number
+  peekN: number
+  fastN: number
+  msSum: number
+}
+
+export async function fetchKindStats(studentId: string, days = 7): Promise<KindStat[]> {
+  const q = new URLSearchParams({ studentId, kinds: String(days) })
+  const r = await req<{ kinds: KindStat[] }>('/day?' + q.toString())
+  return r?.kinds || []
 }
 
 /** 某天的逐题作答（家长后台「今天这一场」明细用；含中途退出没结算的） */
@@ -669,6 +699,8 @@ export function postAnswer(a: {
   cn?: string
   input?: string
   correct: boolean
+  /** 题型（v7）：pick/spell/sent/mean/paper。不传则后端落空串，归「未分型」 */
+  kind?: string
   seq?: number
   ms?: number
   attempts?: number
